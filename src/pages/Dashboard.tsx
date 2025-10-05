@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
 import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import { useRealtimeBalance } from "@/hooks/useRealtimeBalance";
+import RealtimeStatus from "@/components/RealtimeStatus";
 
 interface WalletBalance {
   token: string;
@@ -33,7 +34,7 @@ const Dashboard = () => {
   const [userId, setUserId] = useState<string | null>(null);
 
   // Use real-time hooks
-  const { transactions } = useRealtimeTransactions(userId);
+  const { transactions, connected } = useRealtimeTransactions(userId);
   const { balances } = useRealtimeBalance(userId);
 
   useEffect(() => {
@@ -78,6 +79,7 @@ const Dashboard = () => {
 
   return (
     <div className="min-h-screen bg-muted pb-20 animate-fade-in">
+      <RealtimeStatus connected={connected} />
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-6 rounded-b-3xl shadow-finmo-lg">
         <div className="flex justify-between items-center mb-6">

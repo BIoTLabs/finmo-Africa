@@ -19,6 +19,7 @@ export interface Transaction {
 export const useRealtimeTransactions = (userId: string | null) => {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [loading, setLoading] = useState(true);
+  const [connected, setConnected] = useState(false);
 
   useEffect(() => {
     if (!userId) return;
@@ -54,6 +55,7 @@ export const useRealtimeTransactions = (userId: string | null) => {
           },
           (payload) => {
             console.log('Transaction change received:', payload);
+            setConnected(true);
             
             if (payload.eventType === 'INSERT') {
               setTransactions(prev => [payload.new as Transaction, ...prev]);
@@ -74,10 +76,17 @@ export const useRealtimeTransactions = (userId: string | null) => {
           },
           (payload) => {
             console.log('Received transaction:', payload);
+            setConnected(true);
             setTransactions(prev => [payload.new as Transaction, ...prev]);
           }
         )
-        .subscribe();
+        .subscribe((status) => {
+          if (status === 'SUBSCRIBED') {
+            setConnected(true);
+          } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
+            setConnected(false);
+          }
+        });
     };
 
     setupRealtimeSubscription();
@@ -89,5 +98,5 @@ export const useRealtimeTransactions = (userId: string | null) => {
     };
   }, [userId]);
 
-  return { transactions, loading };
+  return { transactions, loading, connected };
 };

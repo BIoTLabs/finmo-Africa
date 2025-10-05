@@ -52,86 +52,28 @@ const Send = () => {
     
     setLoading(true);
     try {
-      let recipientWallet = walletAddress;
-      let recipientId = null;
-
-      // For internal transfers, look up recipient by phone
-      if (transferType === "internal") {
-        const { data: registryData, error: registryError } = await supabase
-          .from("user_registry")
-          .select("wallet_address, user_id")
-          .eq("phone_number", phoneNumber)
-          .single();
-
-        if (registryError || !registryData) {
-          toast.error("Recipient not found on FinMo");
-          setLoading(false);
-          return;
-        }
-
-        recipientWallet = registryData.wallet_address;
-        recipientId = registryData.user_id;
+      const { data: { session } } = await supabase.auth.getSession();
+      if (!session) {
+        throw new Error('Not authenticated');
       }
 
-      // Create transaction
-      const { error: txError } = await supabase
-        .from("transactions")
-        .insert({
-          sender_id: profile.id,
-          recipient_id: recipientId,
-          sender_wallet: profile.wallet_address,
-          recipient_wallet: recipientWallet,
+      // Call edge function to process transaction
+      const { data, error } = await supabase.functions.invoke('process-transaction', {
+        body: {
+          recipient_phone: transferType === 'internal' ? phoneNumber : undefined,
+          recipient_wallet: transferType === 'external' ? walletAddress : undefined,
           amount: parseFloat(amount),
           token: token,
           transaction_type: transferType,
-          status: "completed",
-        });
+        },
+      });
 
-      if (txError) throw txError;
+      if (error) throw error;
 
-      // Update sender balance
-      const { data: currentBalance } = await supabase
-        .from("wallet_balances")
-        .select("balance")
-        .eq("user_id", profile.id)
-        .eq("token", token)
-        .single();
-
-      if (currentBalance) {
-        const newBalance = Number(currentBalance.balance) - parseFloat(amount);
-        await supabase
-          .from("wallet_balances")
-          .update({ balance: newBalance })
-          .eq("user_id", profile.id)
-          .eq("token", token);
-      }
-
-      // For internal transfers, update recipient balance
-      if (transferType === "internal" && recipientId) {
-        const { data: recipientBalance } = await supabase
-          .from("wallet_balances")
-          .select("balance")
-          .eq("user_id", recipientId)
-          .eq("token", token)
-          .single();
-
-        if (recipientBalance) {
-          const newBalance = Number(recipientBalance.balance) + parseFloat(amount);
-          await supabase
-            .from("wallet_balances")
-            .update({ balance: newBalance })
-            .eq("user_id", recipientId)
-            .eq("token", token);
-        }
-      }
-
-      toast.success(
-        transferType === "internal"
-          ? "Transfer completed instantly! No fees charged."
-          : "Transaction submitted to blockchain!"
-      );
+      toast.success(data.message || 'Transaction completed!');
       navigate("/dashboard");
     } catch (error: any) {
+      console.error('Transaction error:', error);
       toast.error(error.message || "Transaction failed");
     } finally {
       setLoading(false);
