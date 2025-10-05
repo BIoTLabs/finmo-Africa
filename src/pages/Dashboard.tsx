@@ -131,29 +131,34 @@ const Dashboard = () => {
               <Wallet className="w-8 h-8 opacity-90" />
             </div>
 
-            <div className="flex gap-3">
-              <Button
-                onClick={() => navigate("/receive")}
-                variant="secondary"
-                className="flex-1"
-              >
-                <Wallet className="w-4 h-4 mr-2" />
-                Receive
-              </Button>
+            <div className="grid grid-cols-2 gap-2">
               <Button
                 onClick={() => navigate("/send")}
-                className="flex-1 bg-success hover:bg-success/90 text-success-foreground"
+                className="bg-success hover:bg-success/90 text-success-foreground"
               >
                 <Send className="w-4 h-4 mr-2" />
                 Send
               </Button>
               <Button
-                onClick={() => navigate("/add-funds")}
+                onClick={() => navigate("/receive")}
+                variant="secondary"
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Receive
+              </Button>
+              <Button
+                onClick={() => navigate("/p2p")}
                 variant="outline"
-                className="flex-1"
+              >
+                <ArrowUpRight className="w-4 h-4 mr-2" />
+                P2P Trade
+              </Button>
+              <Button
+                onClick={() => navigate("/virtual-card")}
+                variant="outline"
               >
                 <Coins className="w-4 h-4 mr-2" />
-                Add
+                Cards
               </Button>
             </div>
           </CardContent>

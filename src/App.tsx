@@ -17,6 +17,9 @@ import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import P2P from "./pages/P2P";
 import VirtualCard from "./pages/VirtualCard";
+import P2PCreateListing from "./pages/P2PCreateListing";
+import VirtualCardCreate from "./pages/VirtualCardCreate";
+import VirtualCardFund from "./pages/VirtualCardFund";
 import ProtectedRoute from "./components/ProtectedRoute";
 
 const queryClient = new QueryClient();
@@ -40,7 +43,10 @@ const App = () => (
           <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
+          <Route path="/p2p/create-listing" element={<ProtectedRoute><P2PCreateListing /></ProtectedRoute>} />
           <Route path="/virtual-card" element={<ProtectedRoute><VirtualCard /></ProtectedRoute>} />
+          <Route path="/virtual-card/create" element={<ProtectedRoute><VirtualCardCreate /></ProtectedRoute>} />
+          <Route path="/virtual-card/:cardId/fund" element={<ProtectedRoute><VirtualCardFund /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
