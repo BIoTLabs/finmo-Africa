@@ -62,7 +62,7 @@ const Settings = () => {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-muted pb-20 animate-fade-in">
+    <div className="min-h-screen bg-muted pb-24 animate-fade-in">
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-6 rounded-b-3xl shadow-finmo-lg">
         <div className="flex items-center gap-4 mb-6">
