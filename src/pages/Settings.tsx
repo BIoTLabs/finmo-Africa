@@ -7,6 +7,7 @@ import { Label } from "@/components/ui/label";
 import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import MobileNav from "@/components/MobileNav";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -61,7 +62,7 @@ const Settings = () => {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-muted pb-20">
+    <div className="min-h-screen bg-muted pb-20 animate-fade-in">
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-6 rounded-b-3xl shadow-finmo-lg">
         <div className="flex items-center gap-4 mb-6">
@@ -180,6 +181,7 @@ const Settings = () => {
           Logout
         </Button>
       </div>
+      <MobileNav />
     </div>
   );
 };

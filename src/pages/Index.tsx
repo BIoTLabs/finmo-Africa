@@ -40,7 +40,7 @@ const Index = () => {
   return (
     <div className="min-h-screen bg-gradient-to-b from-background to-muted">
       {/* Hero Section */}
-      <div className="relative overflow-hidden">
+      <div className="relative overflow-hidden animate-fade-in">
         <div className="absolute inset-0 bg-gradient-primary opacity-10"></div>
         <div className="relative container mx-auto px-6 py-20 text-center">
           <div className="mx-auto max-w-3xl">
@@ -89,8 +89,12 @@ const Index = () => {
         </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
-          {features.map((feature) => (
-            <Card key={feature.title} className="shadow-finmo-md hover:shadow-finmo-lg transition-shadow">
+          {features.map((feature, index) => (
+            <Card 
+              key={feature.title} 
+              className="shadow-finmo-md hover:shadow-finmo-lg transition-all hover-scale animate-fade-in"
+              style={{ animationDelay: `${index * 0.1}s` }}
+            >
               <CardContent className="p-6">
                 <div className="mb-4 inline-flex items-center justify-center w-12 h-12 rounded-full bg-gradient-primary">
                   <feature.icon className="w-6 h-6 text-primary-foreground" />

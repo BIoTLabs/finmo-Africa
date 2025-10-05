@@ -6,6 +6,7 @@ import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
+import MobileNav from "@/components/MobileNav";
 
 interface WalletBalance {
   token: string;
@@ -100,7 +101,7 @@ const Dashboard = () => {
   if (loading || !profile) return null;
 
   return (
-    <div className="min-h-screen bg-muted pb-20">
+    <div className="min-h-screen bg-muted pb-20 animate-fade-in">
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-6 rounded-b-3xl shadow-finmo-lg">
         <div className="flex justify-between items-center mb-6">
@@ -165,8 +166,12 @@ const Dashboard = () => {
       {/* Token List */}
       <div className="p-6 space-y-4">
         <h3 className="text-lg font-semibold">Your Assets</h3>
-        {balances.map((balance) => (
-          <Card key={balance.token} className="shadow-finmo-sm hover:shadow-finmo-md transition-shadow">
+        {balances.map((balance, index) => (
+          <Card 
+            key={balance.token} 
+            className="shadow-finmo-sm hover:shadow-finmo-md transition-all hover-scale animate-fade-in"
+            style={{ animationDelay: `${index * 0.1}s` }}
+          >
             <CardContent className="p-4">
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-3">

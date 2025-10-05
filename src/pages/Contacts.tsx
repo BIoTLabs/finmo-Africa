@@ -8,6 +8,7 @@ import { ArrowLeft, Search, RefreshCw, Shield } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import MobileNav from "@/components/MobileNav";
 
 interface Contact {
   id: string;
@@ -103,7 +104,7 @@ const Contacts = () => {
   );
 
   return (
-    <div className="min-h-screen bg-muted pb-20">
+    <div className="min-h-screen bg-muted pb-20 animate-fade-in">
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-6 rounded-b-3xl shadow-finmo-lg">
         <div className="flex items-center gap-4 mb-6">
@@ -202,6 +203,7 @@ const Contacts = () => {
           </div>
         </DialogContent>
       </Dialog>
+      <MobileNav />
     </div>
   );
 };

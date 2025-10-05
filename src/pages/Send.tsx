@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
+import MobileNav from "@/components/MobileNav";
 
 const Send = () => {
   const navigate = useNavigate();
@@ -138,7 +139,7 @@ const Send = () => {
   };
 
   return (
-    <div className="min-h-screen bg-muted pb-20">
+    <div className="min-h-screen bg-muted pb-20 animate-fade-in">
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-6 rounded-b-3xl shadow-finmo-lg">
         <div className="flex items-center gap-4">
@@ -284,6 +285,7 @@ const Send = () => {
           )}
         </Button>
       </div>
+      <MobileNav />
     </div>
   );
 };
