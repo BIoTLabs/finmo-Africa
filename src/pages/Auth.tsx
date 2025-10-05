@@ -47,17 +47,23 @@ const Auth = () => {
 
       if (isLogin) {
         // Sign in
-        const { error } = await supabase.auth.signInWithPassword({
+        const { data, error } = await supabase.auth.signInWithPassword({
           email: `${fullPhone}@finmo.app`,
           password,
         });
 
-        if (error) throw error;
-        toast.success("Welcome back!");
-        navigate("/dashboard");
+        if (error) {
+          console.error("Login error:", error);
+          throw error;
+        }
+        
+        if (data.session) {
+          toast.success("Welcome back!");
+          navigate("/dashboard");
+        }
       } else {
         // Sign up
-        const { error } = await supabase.auth.signUp({
+        const { data, error } = await supabase.auth.signUp({
           email: `${fullPhone}@finmo.app`,
           password,
           options: {
@@ -68,11 +74,20 @@ const Auth = () => {
           },
         });
 
-        if (error) throw error;
-        toast.success("Account created successfully!");
-        navigate("/dashboard");
+        if (error) {
+          console.error("Signup error:", error);
+          throw error;
+        }
+        
+        if (data.session) {
+          toast.success("Account created successfully!");
+          navigate("/dashboard");
+        } else if (data.user) {
+          toast.success("Account created! Please check your email to confirm.");
+        }
       }
     } catch (error: any) {
+      console.error("Auth error:", error);
       toast.error(error.message || "Authentication failed");
     } finally {
       setLoading(false);
