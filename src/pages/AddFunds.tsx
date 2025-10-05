@@ -60,6 +60,19 @@ const AddFunds = () => {
 
       const amountNum = parseFloat(amount);
 
+      // First verify the transaction
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('verify-deposit', {
+        body: {
+          transaction_hash: txHash,
+          expected_amount: amountNum,
+          token: token
+        }
+      });
+
+      if (verifyError || !verifyData?.verified) {
+        throw new Error(verifyData?.error || 'Transaction verification failed');
+      }
+
       // Call blockchain deposit edge function
       const { data, error } = await supabase.functions.invoke('blockchain-deposit', {
         body: {

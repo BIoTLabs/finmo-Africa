@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff, CreditCard, ChevronRight } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
@@ -166,6 +166,30 @@ const Settings = () => {
                   checked={twoFactorEnabled}
                   onCheckedChange={handleTwoFactorToggle}
                 />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Payment Methods */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Payment & Trading</h2>
+          
+          <Card className="shadow-finmo-md cursor-pointer" onClick={() => navigate("/payment-methods")}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Payment Methods</p>
+                    <p className="text-sm text-muted-foreground">
+                      Manage P2P payment options
+                    </p>
+                  </div>
+                </div>
+                <ChevronRight className="w-5 h-5 text-muted-foreground" />
               </div>
             </CardContent>
           </Card>

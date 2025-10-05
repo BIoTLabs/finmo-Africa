@@ -32,6 +32,7 @@ const Dashboard = () => {
   const [profile, setProfile] = useState<any>(null);
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
+  const [syncing, setSyncing] = useState(false);
 
   // Use real-time hooks
   const { transactions, connected } = useRealtimeTransactions(userId);
@@ -75,6 +76,26 @@ const Dashboard = () => {
     return date.toLocaleDateString();
   };
 
+  const handleSyncBlockchain = async () => {
+    setSyncing(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('sync-blockchain-balance');
+      
+      if (error) throw error;
+      
+      if (data.error) {
+        throw new Error(data.error);
+      }
+
+      toast.success("Blockchain balances synced!");
+    } catch (error: any) {
+      console.error('Sync error:', error);
+      toast.error(error.message || "Failed to sync balances");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (!profile) return null;
 
   return (
@@ -112,8 +133,20 @@ const Dashboard = () => {
         <Card className="bg-white/10 backdrop-blur-sm border-white/20">
           <CardContent className="p-6">
             <div className="flex justify-between items-start mb-4">
-              <div>
-                <p className="text-sm opacity-90 mb-1">Total Balance</p>
+              <div className="flex-1">
+                <div className="flex items-center justify-between mb-1">
+                  <p className="text-sm opacity-90">Total Balance</p>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-white/80 hover:bg-white/20 text-xs px-2"
+                    onClick={handleSyncBlockchain}
+                    disabled={syncing}
+                  >
+                    <RefreshCw className={`h-3 w-3 mr-1 ${syncing ? 'animate-spin' : ''}`} />
+                    {syncing ? "Syncing..." : "Sync"}
+                  </Button>
+                </div>
                 <div className="flex items-center gap-3">
                   <h2 className="text-4xl font-bold">
                     {balanceVisible ? `$${totalUsdValue.toFixed(2)}` : "••••••"}
