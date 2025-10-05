@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff, RefreshCw } from "lucide-react";
+import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff, RefreshCw, Coins } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -122,6 +122,14 @@ const Dashboard = () => {
 
             <div className="flex gap-3">
               <Button
+                onClick={() => navigate("/receive")}
+                variant="secondary"
+                className="flex-1"
+              >
+                <Wallet className="w-4 h-4 mr-2" />
+                Receive
+              </Button>
+              <Button
                 onClick={() => navigate("/send")}
                 className="flex-1 bg-success hover:bg-success/90 text-success-foreground"
               >
@@ -129,12 +137,12 @@ const Dashboard = () => {
                 Send
               </Button>
               <Button
-                onClick={() => navigate("/contacts")}
-                variant="secondary"
+                onClick={() => navigate("/add-funds")}
+                variant="outline"
                 className="flex-1"
               >
-                <Users className="w-4 h-4 mr-2" />
-                Contacts
+                <Coins className="w-4 h-4 mr-2" />
+                Add
               </Button>
             </div>
           </CardContent>
@@ -190,7 +198,11 @@ const Dashboard = () => {
             const isInternal = tx.transaction_type === 'internal';
             
             return (
-              <Card key={tx.id} className="shadow-finmo-sm">
+              <Card 
+                key={tx.id} 
+                className="shadow-finmo-sm hover:shadow-finmo-md transition-shadow cursor-pointer"
+                onClick={() => navigate(`/transaction/${tx.id}`)}
+              >
                 <CardContent className="p-4">
                   <div className="flex items-center gap-4">
                     <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
