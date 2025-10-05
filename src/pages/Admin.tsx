@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/button';
 import { ArrowLeft, Database, Zap, Shield, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LoadingScreen from '@/components/LoadingScreen';
+import { AdminFeeSettings } from '@/components/AdminFeeSettings';
 
 interface BackendInfo {
   timestamp: string;
@@ -98,7 +99,12 @@ const Admin = () => {
         </div>
 
         {backendInfo && (
-          <Tabs defaultValue="database" className="space-y-6">
+          <div className="space-y-6">
+            {/* Fee Settings Section */}
+            <AdminFeeSettings />
+
+            {/* Backend Info Tabs */}
+            <Tabs defaultValue="database" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="database">
                 <Database className="h-4 w-4 mr-2" />
@@ -263,7 +269,8 @@ const Admin = () => {
                 </CardContent>
               </Card>
             </TabsContent>
-          </Tabs>
+            </Tabs>
+          </div>
         )}
       </div>
     </div>

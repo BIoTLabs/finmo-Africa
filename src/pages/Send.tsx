@@ -57,8 +57,10 @@ const Send = () => {
         throw new Error('Not authenticated');
       }
 
-      // Call edge function to process transaction
-      const { data, error } = await supabase.functions.invoke('process-transaction', {
+      // Route to appropriate endpoint based on transfer type
+      const endpoint = transferType === 'internal' ? 'process-transaction' : 'blockchain-withdraw';
+      
+      const { data, error } = await supabase.functions.invoke(endpoint, {
         body: {
           recipient_phone: transferType === 'internal' ? phoneNumber : undefined,
           recipient_wallet: transferType === 'external' ? walletAddress : undefined,
@@ -70,7 +72,24 @@ const Send = () => {
 
       if (error) throw error;
 
-      toast.success(data.message || 'Transaction completed!');
+      if (transferType === 'external' && data.explorerUrl) {
+        toast.success(
+          <div>
+            <p>{data.message}</p>
+            <a 
+              href={data.explorerUrl} 
+              target="_blank" 
+              rel="noopener noreferrer"
+              className="text-primary underline text-sm"
+            >
+              View on Explorer
+            </a>
+          </div>
+        );
+      } else {
+        toast.success(data.message || 'Transaction completed!');
+      }
+
       navigate("/dashboard");
     } catch (error: any) {
       console.error('Transaction error:', error);

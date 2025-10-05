@@ -69,7 +69,7 @@ Deno.serve(async (req) => {
     let recipientId: string | null = null;
     let finalRecipientWallet = recipient_wallet;
 
-    // For internal transfers, look up recipient using secure function
+    // Handle internal transfers (FinMo to FinMo)
     if (transaction_type === 'internal' && recipient_phone) {
       const { data: registryData, error: registryError } = await supabase
         .rpc('lookup_user_by_phone', { phone: recipient_phone });
@@ -81,43 +81,38 @@ Deno.serve(async (req) => {
       const recipientInfo = registryData[0];
       finalRecipientWallet = recipientInfo.wallet_address;
       recipientId = recipientInfo.user_id;
-    }
 
-    if (!finalRecipientWallet) {
-      throw new Error('Invalid recipient');
-    }
+      // Create internal transaction record (database only, no blockchain)
+      const { data: transaction, error: txError } = await supabase
+        .from('transactions')
+        .insert({
+          sender_id: user.id,
+          recipient_id: recipientId,
+          sender_wallet: senderProfile.wallet_address,
+          recipient_wallet: finalRecipientWallet,
+          amount: amount,
+          token: token,
+          transaction_type: 'internal',
+          status: 'completed',
+          transaction_hash: null,
+          withdrawal_fee: 0,
+        })
+        .select()
+        .single();
 
-    // Create transaction record
-    const { data: transaction, error: txError } = await supabase
-      .from('transactions')
-      .insert({
-        sender_id: user.id,
-        recipient_id: recipientId,
-        sender_wallet: senderProfile.wallet_address,
-        recipient_wallet: finalRecipientWallet,
-        amount: amount,
-        token: token,
-        transaction_type: transaction_type,
-        status: 'completed',
-        transaction_hash: transaction_type === 'external' ? `0x${Math.random().toString(16).slice(2)}` : null,
-      })
-      .select()
-      .single();
+      if (txError) {
+        throw new Error('Failed to create transaction');
+      }
 
-    if (txError) {
-      throw new Error('Failed to create transaction');
-    }
+      // Update sender balance
+      const newSenderBalance = Number(senderBalance.balance) - amount;
+      await supabase
+        .from('wallet_balances')
+        .update({ balance: newSenderBalance })
+        .eq('user_id', user.id)
+        .eq('token', token);
 
-    // Update sender balance
-    const newSenderBalance = Number(senderBalance.balance) - amount;
-    await supabase
-      .from('wallet_balances')
-      .update({ balance: newSenderBalance })
-      .eq('user_id', user.id)
-      .eq('token', token);
-
-    // For internal transfers, update recipient balance
-    if (transaction_type === 'internal' && recipientId) {
+      // Update recipient balance
       const { data: recipientBalance } = await supabase
         .from('wallet_balances')
         .select('balance')
@@ -133,20 +128,28 @@ Deno.serve(async (req) => {
           .eq('user_id', recipientId)
           .eq('token', token);
       }
+
+      console.log('Internal transfer completed:', transaction.id);
+
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          transaction,
+          message: 'Transfer completed instantly!'
+        }),
+        { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    console.log('Transaction completed:', transaction.id);
+    // Handle external withdrawals (to blockchain)
+    if (transaction_type === 'external' && recipient_wallet) {
+      // External withdrawals are handled by the blockchain-withdraw function
+      // This endpoint just validates and routes to the blockchain function
+      throw new Error('External withdrawals must use /blockchain-withdraw endpoint');
+    }
 
-    return new Response(
-      JSON.stringify({ 
-        success: true, 
-        transaction,
-        message: transaction_type === 'internal' 
-          ? 'Transfer completed instantly!' 
-          : 'Transaction submitted to blockchain'
-      }),
-      { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
-    );
+    throw new Error('Invalid transaction type or missing parameters');
+
 
   } catch (error) {
     console.error('Transaction error:', error);

@@ -14,6 +14,30 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_settings: {
+        Row: {
+          id: string
+          setting_key: string
+          setting_value: Json
+          updated_at: string | null
+          updated_by: string | null
+        }
+        Insert: {
+          id?: string
+          setting_key: string
+          setting_value: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Update: {
+          id?: string
+          setting_key?: string
+          setting_value?: Json
+          updated_at?: string | null
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           contact_name: string
@@ -75,6 +99,7 @@ export type Database = {
           token: string
           transaction_hash: string | null
           transaction_type: string
+          withdrawal_fee: number | null
         }
         Insert: {
           amount: number
@@ -88,6 +113,7 @@ export type Database = {
           token: string
           transaction_hash?: string | null
           transaction_type: string
+          withdrawal_fee?: number | null
         }
         Update: {
           amount?: number
@@ -101,6 +127,7 @@ export type Database = {
           token?: string
           transaction_hash?: string | null
           transaction_type?: string
+          withdrawal_fee?: number | null
         }
         Relationships: []
       }
