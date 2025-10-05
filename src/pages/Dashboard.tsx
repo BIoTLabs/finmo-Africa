@@ -2,11 +2,13 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff } from "lucide-react";
+import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff, RefreshCw } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
+import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
+import { useRealtimeBalance } from "@/hooks/useRealtimeBalance";
 
 interface WalletBalance {
   token: string;
@@ -28,58 +30,32 @@ const Dashboard = () => {
   const navigate = useNavigate();
   const [profile, setProfile] = useState<any>(null);
   const [balanceVisible, setBalanceVisible] = useState(true);
-  const [balances, setBalances] = useState<WalletBalance[]>([]);
-  const [transactions, setTransactions] = useState<Transaction[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  // Use real-time hooks
+  const { transactions } = useRealtimeTransactions(userId);
+  const { balances } = useRealtimeBalance(userId);
 
   useEffect(() => {
-    checkAuth();
+    loadUserData();
   }, []);
 
-  const checkAuth = async () => {
+  const loadUserData = async () => {
     const { data: { session } } = await supabase.auth.getSession();
-    if (!session) {
-      navigate("/auth");
-      return;
-    }
-    await loadUserData(session.user.id);
-  };
+    if (!session) return;
 
-  const loadUserData = async (userId: string) => {
-    try {
-      // Load profile
-      const { data: profileData, error: profileError } = await supabase
-        .from("profiles")
-        .select("*")
-        .eq("id", userId)
-        .single();
+    setUserId(session.user.id);
 
-      if (profileError) throw profileError;
-      setProfile(profileData);
+    const { data: profileData, error } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .single();
 
-      // Load balances
-      const { data: balanceData, error: balanceError } = await supabase
-        .from("wallet_balances")
-        .select("*")
-        .eq("user_id", userId);
-
-      if (balanceError) throw balanceError;
-      setBalances(balanceData || []);
-
-      // Load recent transactions
-      const { data: txData, error: txError } = await supabase
-        .from("transactions")
-        .select("*")
-        .or(`sender_id.eq.${userId},recipient_id.eq.${userId}`)
-        .order("created_at", { ascending: false })
-        .limit(10);
-
-      if (txError) throw txError;
-      setTransactions(txData || []);
-    } catch (error: any) {
+    if (error) {
       toast.error(error.message);
-    } finally {
-      setLoading(false);
+    } else {
+      setProfile(profileData);
     }
   };
 
@@ -98,7 +74,7 @@ const Dashboard = () => {
     return date.toLocaleDateString();
   };
 
-  if (loading || !profile) return null;
+  if (!profile) return null;
 
   return (
     <div className="min-h-screen bg-muted pb-20 animate-fade-in">
