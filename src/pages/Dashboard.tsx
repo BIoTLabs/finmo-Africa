@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff, RefreshCw, Coins } from "lucide-react";
+import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff, RefreshCw, Coins, User } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -88,14 +88,24 @@ const Dashboard = () => {
             <p className="text-sm opacity-90">Welcome back</p>
             <h1 className="text-xl font-semibold">{profile.phone_number}</h1>
           </div>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="text-primary-foreground hover:bg-white/20"
-            onClick={() => navigate("/settings")}
-          >
-            <Settings className="w-5 h-5" />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-white/20"
+              onClick={() => navigate("/profile")}
+            >
+              <User className="w-5 h-5" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              className="text-primary-foreground hover:bg-white/20"
+              onClick={() => navigate("/settings")}
+            >
+              <Settings className="w-5 h-5" />
+            </Button>
+          </div>
         </div>
 
         {/* Balance Card */}

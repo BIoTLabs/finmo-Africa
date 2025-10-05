@@ -38,6 +38,33 @@ export type Database = {
         }
         Relationships: []
       }
+      contact_invitations: {
+        Row: {
+          contact_name: string
+          contact_phone: string
+          created_at: string
+          id: string
+          inviter_id: string
+          status: string
+        }
+        Insert: {
+          contact_name: string
+          contact_phone: string
+          created_at?: string
+          id?: string
+          inviter_id: string
+          status?: string
+        }
+        Update: {
+          contact_name?: string
+          contact_phone?: string
+          created_at?: string
+          id?: string
+          inviter_id?: string
+          status?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           contact_name: string
@@ -64,23 +91,38 @@ export type Database = {
       }
       profiles: {
         Row: {
+          avatar_url: string | null
+          bio: string | null
           created_at: string
+          display_name: string | null
+          email: string | null
           id: string
           phone_number: string
+          socials: Json | null
           updated_at: string
           wallet_address: string
         }
         Insert: {
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string
+          display_name?: string | null
+          email?: string | null
           id: string
           phone_number: string
+          socials?: Json | null
           updated_at?: string
           wallet_address: string
         }
         Update: {
+          avatar_url?: string | null
+          bio?: string | null
           created_at?: string
+          display_name?: string | null
+          email?: string | null
           id?: string
           phone_number?: string
+          socials?: Json | null
           updated_at?: string
           wallet_address?: string
         }

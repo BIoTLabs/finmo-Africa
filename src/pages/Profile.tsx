@@ -1,0 +1,438 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { ArrowLeft, User, Mail, Phone, Share2, Users, CheckCircle2, Clock, X } from "lucide-react";
+import { toast } from "sonner";
+import LoadingScreen from "@/components/LoadingScreen";
+
+interface Profile {
+  id: string;
+  phone_number: string;
+  wallet_address: string;
+  display_name: string | null;
+  bio: string | null;
+  avatar_url: string | null;
+  email: string | null;
+  socials: any;
+}
+
+interface Contact {
+  id: string;
+  contact_name: string;
+  contact_phone: string;
+  is_on_finmo?: boolean;
+  wallet_address?: string;
+}
+
+interface Invitation {
+  id: string;
+  contact_name: string;
+  contact_phone: string;
+  status: string;
+  created_at: string;
+}
+
+const Profile = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [profile, setProfile] = useState<Profile | null>(null);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [invitations, setInvitations] = useState<Invitation[]>([]);
+
+  const [displayName, setDisplayName] = useState("");
+  const [bio, setBio] = useState("");
+  const [email, setEmail] = useState("");
+  const [socials, setSocials] = useState({
+    twitter: "",
+    instagram: "",
+    linkedin: "",
+    facebook: "",
+  });
+
+  useEffect(() => {
+    loadProfileData();
+  }, []);
+
+  const loadProfileData = async () => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        navigate("/auth");
+        return;
+      }
+
+      // Load profile
+      const { data: profileData, error: profileError } = await supabase
+        .from("profiles")
+        .select("*")
+        .eq("id", user.id)
+        .single();
+
+      if (profileError) throw profileError;
+
+      setProfile(profileData);
+      setDisplayName(profileData.display_name || "");
+      setBio(profileData.bio || "");
+      setEmail(profileData.email || "");
+      const socialsData = profileData.socials as any || {};
+      setSocials({
+        twitter: socialsData.twitter || "",
+        instagram: socialsData.instagram || "",
+        linkedin: socialsData.linkedin || "",
+        facebook: socialsData.facebook || "",
+      });
+
+      // Load contacts
+      const { data: contactsData, error: contactsError } = await supabase
+        .from("contacts")
+        .select("*")
+        .eq("user_id", user.id);
+
+      if (contactsError) throw contactsError;
+
+      // Check which contacts are on FinMo
+      const enrichedContacts = await Promise.all(
+        (contactsData || []).map(async (contact) => {
+          const { data: registryData } = await supabase
+            .rpc("lookup_user_by_phone", { phone: contact.contact_phone });
+
+          const registryArray = registryData as any[];
+          const registry = registryArray?.[0];
+
+          return {
+            ...contact,
+            is_on_finmo: !!registry,
+            wallet_address: registry?.wallet_address,
+          };
+        })
+      );
+
+      setContacts(enrichedContacts);
+
+      // Load invitations
+      const { data: invitationsData, error: invitationsError } = await supabase
+        .from("contact_invitations")
+        .select("*")
+        .eq("inviter_id", user.id)
+        .order("created_at", { ascending: false });
+
+      if (invitationsError) throw invitationsError;
+      setInvitations(invitationsData || []);
+    } catch (error: any) {
+      console.error("Error loading profile:", error);
+      toast.error("Failed to load profile");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSaveProfile = async () => {
+    setSaving(true);
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("profiles")
+        .update({
+          display_name: displayName,
+          bio: bio,
+          email: email,
+          socials: socials,
+        })
+        .eq("id", user.id);
+
+      if (error) throw error;
+      toast.success("Profile updated successfully!");
+      await loadProfileData();
+    } catch (error: any) {
+      console.error("Error saving profile:", error);
+      toast.error("Failed to save profile");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleInviteContact = async (contact: Contact) => {
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return;
+
+      const { error } = await supabase
+        .from("contact_invitations")
+        .insert({
+          inviter_id: user.id,
+          contact_phone: contact.contact_phone,
+          contact_name: contact.contact_name,
+        });
+
+      if (error) {
+        if (error.code === "23505") {
+          toast.info("You've already invited this contact");
+        } else {
+          throw error;
+        }
+      } else {
+        toast.success(`Invitation sent to ${contact.contact_name}!`);
+        await loadProfileData();
+      }
+    } catch (error: any) {
+      console.error("Error inviting contact:", error);
+      toast.error("Failed to send invitation");
+    }
+  };
+
+  if (loading) return <LoadingScreen />;
+
+  return (
+    <div className="min-h-screen bg-gradient-subtle p-4 pb-20 animate-fade-in">
+      <div className="max-w-4xl mx-auto space-y-6">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back
+          </Button>
+        </div>
+
+        {/* Profile Header */}
+        <Card>
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4">
+              <Avatar className="w-24 h-24">
+                <AvatarImage src={profile?.avatar_url || ""} />
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground text-2xl">
+                  {displayName?.[0]?.toUpperCase() || profile?.phone_number?.[0] || "U"}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <CardTitle className="text-2xl">
+              {displayName || profile?.phone_number}
+            </CardTitle>
+            <CardDescription className="flex items-center justify-center gap-2 mt-2">
+              <Phone className="w-4 h-4" />
+              {profile?.phone_number}
+            </CardDescription>
+          </CardHeader>
+        </Card>
+
+        {/* Tabs */}
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-3">
+            <TabsTrigger value="profile">Profile</TabsTrigger>
+            <TabsTrigger value="contacts">Contacts</TabsTrigger>
+            <TabsTrigger value="invitations">Invitations</TabsTrigger>
+          </TabsList>
+
+          {/* Profile Tab */}
+          <TabsContent value="profile" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <User className="w-5 h-5" />
+                  Personal Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="displayName">Display Name</Label>
+                  <Input
+                    id="displayName"
+                    value={displayName}
+                    onChange={(e) => setDisplayName(e.target.value)}
+                    placeholder="Enter your name"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="email">Email</Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="bio">Bio</Label>
+                  <Textarea
+                    id="bio"
+                    value={bio}
+                    onChange={(e) => setBio(e.target.value)}
+                    placeholder="Tell us about yourself..."
+                    rows={3}
+                  />
+                </div>
+
+                <Separator />
+
+                <div>
+                  <Label className="flex items-center gap-2 mb-4">
+                    <Share2 className="w-4 h-4" />
+                    Social Links
+                  </Label>
+                  <div className="space-y-3">
+                    <Input
+                      placeholder="Twitter username"
+                      value={socials.twitter || ""}
+                      onChange={(e) => setSocials({ ...socials, twitter: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Instagram username"
+                      value={socials.instagram || ""}
+                      onChange={(e) => setSocials({ ...socials, instagram: e.target.value })}
+                    />
+                    <Input
+                      placeholder="LinkedIn profile URL"
+                      value={socials.linkedin || ""}
+                      onChange={(e) => setSocials({ ...socials, linkedin: e.target.value })}
+                    />
+                    <Input
+                      placeholder="Facebook profile URL"
+                      value={socials.facebook || ""}
+                      onChange={(e) => setSocials({ ...socials, facebook: e.target.value })}
+                    />
+                  </div>
+                </div>
+
+                <Button
+                  onClick={handleSaveProfile}
+                  disabled={saving}
+                  className="w-full bg-gradient-primary"
+                >
+                  {saving ? "Saving..." : "Save Profile"}
+                </Button>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Contacts Tab */}
+          <TabsContent value="contacts" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="w-5 h-5" />
+                  Your Contacts ({contacts.length})
+                </CardTitle>
+                <CardDescription>
+                  See which of your contacts are using FinMo
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {contacts.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    No contacts saved yet. Add contacts from the Contacts page.
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {contacts.map((contact) => (
+                      <div
+                        key={contact.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                      >
+                        <div className="flex items-center gap-3">
+                          <Avatar>
+                            <AvatarFallback className="bg-gradient-primary text-primary-foreground">
+                              {contact.contact_name[0].toUpperCase()}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div>
+                            <p className="font-medium">{contact.contact_name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {contact.contact_phone}
+                            </p>
+                          </div>
+                        </div>
+                        {contact.is_on_finmo ? (
+                          <Badge variant="default" className="bg-green-500">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            On FinMo
+                          </Badge>
+                        ) : (
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => handleInviteContact(contact)}
+                          >
+                            Invite
+                          </Button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          {/* Invitations Tab */}
+          <TabsContent value="invitations" className="space-y-4">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Mail className="w-5 h-5" />
+                  Sent Invitations ({invitations.length})
+                </CardTitle>
+                <CardDescription>
+                  Track your contact invitations
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                {invitations.length === 0 ? (
+                  <p className="text-center text-muted-foreground py-8">
+                    You haven't sent any invitations yet
+                  </p>
+                ) : (
+                  <div className="space-y-3">
+                    {invitations.map((invitation) => (
+                      <div
+                        key={invitation.id}
+                        className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                      >
+                        <div>
+                          <p className="font-medium">{invitation.contact_name}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {invitation.contact_phone}
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {new Date(invitation.created_at).toLocaleDateString()}
+                          </p>
+                        </div>
+                        <Badge
+                          variant={invitation.status === "accepted" ? "default" : "secondary"}
+                          className={invitation.status === "accepted" ? "bg-green-500" : ""}
+                        >
+                          {invitation.status === "pending" && <Clock className="w-3 h-3 mr-1" />}
+                          {invitation.status === "accepted" && <CheckCircle2 className="w-3 h-3 mr-1" />}
+                          {invitation.status}
+                        </Badge>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
+      </div>
+    </div>
+  );
+};
+
+export default Profile;
