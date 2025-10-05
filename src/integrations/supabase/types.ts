@@ -164,6 +164,13 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      lookup_user_by_phone: {
+        Args: { phone: string }
+        Returns: {
+          user_id: string
+          wallet_address: string
+        }[]
+      }
     }
     Enums: {
       [_ in never]: never

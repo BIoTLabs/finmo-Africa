@@ -48,18 +48,18 @@ const Contacts = () => {
     if (contactsData) {
       const enrichedContacts = await Promise.all(
         contactsData.map(async (contact) => {
+          // Use secure lookup function to check if contact is a FinMo user
           const { data: registryData } = await supabase
-            .from("user_registry")
-            .select("wallet_address")
-            .eq("phone_number", contact.contact_phone)
-            .maybeSingle();
+            .rpc("lookup_user_by_phone", { phone: contact.contact_phone });
+
+          const userInfo = registryData && registryData.length > 0 ? registryData[0] : null;
 
           return {
             id: contact.id,
             name: contact.contact_name,
             phone: contact.contact_phone,
-            isFinMoUser: !!registryData,
-            walletAddress: registryData?.wallet_address,
+            isFinMoUser: !!userInfo,
+            walletAddress: userInfo?.wallet_address,
           };
         })
       );

@@ -70,20 +70,18 @@ Deno.serve(async (req) => {
     let recipientId: string | null = null;
     let finalRecipientWallet = recipient_wallet;
 
-    // For internal transfers, look up recipient
+    // For internal transfers, look up recipient using secure function
     if (transaction_type === 'internal' && recipient_phone) {
       const { data: registryData, error: registryError } = await supabase
-        .from('user_registry')
-        .select('wallet_address, user_id')
-        .eq('phone_number', recipient_phone)
-        .single();
+        .rpc('lookup_user_by_phone', { phone: recipient_phone });
 
-      if (registryError || !registryData) {
+      if (registryError || !registryData || registryData.length === 0) {
         throw new Error('Recipient not found on FinMo');
       }
 
-      finalRecipientWallet = registryData.wallet_address;
-      recipientId = registryData.user_id;
+      const recipientInfo = registryData[0];
+      finalRecipientWallet = recipientInfo.wallet_address;
+      recipientId = recipientInfo.user_id;
     }
 
     if (!finalRecipientWallet) {
