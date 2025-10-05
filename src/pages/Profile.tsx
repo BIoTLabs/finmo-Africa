@@ -10,9 +10,10 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, User, Mail, Phone, Share2, Users, CheckCircle2, Clock, X } from "lucide-react";
+import { ArrowLeft, User, Mail, Phone, Share2, Users, CheckCircle2, Clock, X, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import LoadingScreen from "@/components/LoadingScreen";
+import { syncPhoneContacts, saveContactsToDatabase } from "@/utils/contactSync";
 
 interface Profile {
   id: string;
@@ -45,6 +46,7 @@ const Profile = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [syncing, setSyncing] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
@@ -192,6 +194,26 @@ const Profile = () => {
     }
   };
 
+  const handleSyncContacts = async () => {
+    setSyncing(true);
+    try {
+      const phoneContacts = await syncPhoneContacts();
+      
+      if (phoneContacts.length === 0) {
+        setSyncing(false);
+        return;
+      }
+
+      await saveContactsToDatabase(phoneContacts);
+      await loadProfileData(); // Reload contacts after syncing
+    } catch (error) {
+      console.error("Error syncing contacts:", error);
+      toast.error("Failed to sync contacts");
+    } finally {
+      setSyncing(false);
+    }
+  };
+
   if (loading) return <LoadingScreen />;
 
   return (
@@ -326,19 +348,42 @@ const Profile = () => {
           <TabsContent value="contacts" className="space-y-4">
             <Card>
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Users className="w-5 h-5" />
-                  Your Contacts ({contacts.length})
-                </CardTitle>
-                <CardDescription>
-                  See which of your contacts are using FinMo
-                </CardDescription>
+                <div className="flex items-center justify-between">
+                  <div>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5" />
+                      Your Contacts ({contacts.length})
+                    </CardTitle>
+                    <CardDescription>
+                      See which of your contacts are using FinMo
+                    </CardDescription>
+                  </div>
+                  <Button
+                    onClick={handleSyncContacts}
+                    disabled={syncing}
+                    className="bg-gradient-primary"
+                  >
+                    <Smartphone className="w-4 h-4 mr-2" />
+                    {syncing ? "Syncing..." : "Sync Phone"}
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 {contacts.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    No contacts saved yet. Add contacts from the Contacts page.
-                  </p>
+                  <div className="text-center py-8">
+                    <Smartphone className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
+                    <p className="text-muted-foreground mb-4">
+                      No contacts yet. Sync your phone contacts to get started.
+                    </p>
+                    <Button
+                      onClick={handleSyncContacts}
+                      disabled={syncing}
+                      variant="outline"
+                    >
+                      <Smartphone className="w-4 h-4 mr-2" />
+                      {syncing ? "Syncing..." : "Sync Phone Contacts"}
+                    </Button>
+                  </div>
                 ) : (
                   <div className="space-y-3">
                     {contacts.map((contact) => (
