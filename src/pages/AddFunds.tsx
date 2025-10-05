@@ -41,51 +41,52 @@ const AddFunds = () => {
       return;
     }
 
+    if (paymentMethod !== 'crypto') {
+      toast.error("Only crypto deposits are supported. Please deposit to your wallet address and enter the transaction hash.");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      // Simulate adding funds (in production, integrate with payment gateway)
+      // For crypto deposits, user needs to provide transaction hash
+      const txHash = prompt("Please enter the transaction hash of your deposit:");
+      
+      if (!txHash || !txHash.startsWith('0x')) {
+        toast.error("Valid transaction hash required");
+        setLoading(false);
+        return;
+      }
+
       const amountNum = parseFloat(amount);
 
-      // Update balance
-      const { data: currentBalance } = await supabase
-        .from("wallet_balances")
-        .select("balance")
-        .eq("user_id", profile.id)
-        .eq("token", token)
-        .single();
+      // Call blockchain deposit edge function
+      const { data, error } = await supabase.functions.invoke('blockchain-deposit', {
+        body: {
+          token: token,
+          amount: amountNum,
+          transaction_hash: txHash
+        }
+      });
 
-      if (currentBalance) {
-        const newBalance = Number(currentBalance.balance) + amountNum;
-        
-        const { error } = await supabase
-          .from("wallet_balances")
-          .update({ balance: newBalance })
-          .eq("user_id", profile.id)
-          .eq("token", token);
+      if (error) throw error;
 
-        if (error) throw error;
-
-        // Create a transaction record
-        await supabase
-          .from("transactions")
-          .insert({
-            sender_id: profile.id,
-            recipient_id: profile.id,
-            sender_wallet: "0x0000000000000000000000000000000000000000", // External source
-            recipient_wallet: profile.wallet_address,
-            amount: amountNum,
-            token: token,
-            transaction_type: "external",
-            status: "completed",
-            transaction_hash: `0x${Math.random().toString(16).slice(2)}`,
-          });
-
-        toast.success(`Successfully added ${amountNum} ${token} to your wallet!`);
-        navigate("/dashboard");
+      if (data.error) {
+        throw new Error(data.error);
       }
+
+      toast.success(`Successfully deposited ${amountNum} ${token}!`);
+      toast.info("View on explorer", {
+        action: {
+          label: "Open",
+          onClick: () => window.open(data.explorer_url, '_blank')
+        }
+      });
+      
+      navigate("/dashboard");
     } catch (error: any) {
-      toast.error(error.message || "Failed to add funds");
+      console.error('Deposit error:', error);
+      toast.error(error.message || "Failed to process deposit");
     } finally {
       setLoading(false);
     }
@@ -186,46 +187,57 @@ const AddFunds = () => {
             {/* Payment method info */}
             <div className="p-4 bg-muted rounded-lg">
               <p className="text-sm text-muted-foreground">
-                {paymentMethod === 'card' && 'Instant deposit • 2.9% fee'}
-                {paymentMethod === 'bank' && '1-3 business days • No fee'}
-                {paymentMethod === 'mobile' && 'Instant deposit • 1.5% fee'}
-                {paymentMethod === 'crypto' && 'On-chain transfer • Network fees apply'}
+                {paymentMethod === 'crypto' && 'On-chain transfer • Network fees apply • Requires transaction hash'}
+                {paymentMethod !== 'crypto' && 'Coming soon - Only crypto deposits supported currently'}
               </p>
             </div>
           </CardContent>
         </Card>
 
-        {/* Summary */}
-        {amount && (
+        {/* Info Card */}
+        {amount && paymentMethod === 'crypto' && (
           <Card className="shadow-finmo-md">
             <CardContent className="p-6 space-y-3">
               <div className="flex justify-between text-sm">
                 <span className="text-muted-foreground">Amount</span>
-                <span className="font-semibold">${amount}</span>
+                <span className="font-semibold">{amount} {token}</span>
               </div>
               <div className="flex justify-between text-sm">
-                <span className="text-muted-foreground">Fee</span>
-                <span className="font-semibold">
-                  {paymentMethod === 'bank' ? '$0.00' : `$${(parseFloat(amount || '0') * 0.029).toFixed(2)}`}
-                </span>
+                <span className="text-muted-foreground">Network Fee</span>
+                <span className="font-semibold text-muted-foreground">Paid separately</span>
               </div>
-              <div className="pt-2 border-t flex justify-between">
-                <span className="font-semibold">Total</span>
-                <span className="font-bold text-lg">
-                  ${(parseFloat(amount || '0') * (paymentMethod === 'bank' ? 1 : 1.029)).toFixed(2)}
-                </span>
+              <div className="pt-2 border-t">
+                <p className="text-xs text-muted-foreground">
+                  Send {token} to your wallet address on Polygon Mumbai testnet, then enter the transaction hash when prompted.
+                </p>
               </div>
             </CardContent>
           </Card>
         )}
 
-        {/* Add Funds Button */}
+        {/* Deposit Instructions */}
+        {paymentMethod === 'crypto' && profile && (
+          <Card className="shadow-finmo-md bg-primary/5">
+            <CardContent className="p-6 space-y-3">
+              <h3 className="font-semibold">How to Deposit</h3>
+              <ol className="text-sm space-y-2 text-muted-foreground">
+                <li>1. Send {token} to your wallet address</li>
+                <li>2. Your address: <code className="text-xs bg-muted px-1 py-0.5 rounded">{profile.wallet_address}</code></li>
+                <li>3. Network: Polygon Mumbai Testnet</li>
+                <li>4. Click "Deposit" below</li>
+                <li>5. Enter the transaction hash when prompted</li>
+              </ol>
+            </CardContent>
+          </Card>
+        )}
+
+        {/* Deposit Button */}
         <Button
           onClick={handleAddFunds}
-          disabled={!amount || loading || parseFloat(amount) <= 0}
+          disabled={!amount || loading || parseFloat(amount) <= 0 || paymentMethod !== 'crypto'}
           className="w-full h-14 text-lg bg-gradient-success hover:opacity-90"
         >
-          {loading ? "Processing..." : `Add ${amount || '0'} ${token}`}
+          {loading ? "Processing..." : `Deposit ${amount || '0'} ${token}`}
         </Button>
       </div>
 
