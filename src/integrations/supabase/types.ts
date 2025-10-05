@@ -610,9 +610,22 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      can_insert_profile_for_new_user: {
+        Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
       generate_wallet_address: {
         Args: Record<PropertyKey, never>
         Returns: string
+      }
+      get_public_profile: {
+        Args: { user_uuid: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          display_name: string
+          id: string
+        }[]
       }
       has_role: {
         Args: {
