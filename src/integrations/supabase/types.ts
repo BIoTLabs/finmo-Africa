@@ -38,6 +38,53 @@ export type Database = {
         }
         Relationships: []
       }
+      card_transactions: {
+        Row: {
+          amount: number
+          card_id: string
+          created_at: string | null
+          currency: string
+          id: string
+          merchant_category: string | null
+          merchant_name: string | null
+          status: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          card_id: string
+          created_at?: string | null
+          currency: string
+          id?: string
+          merchant_category?: string | null
+          merchant_name?: string | null
+          status?: string | null
+          transaction_type: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string
+          created_at?: string | null
+          currency?: string
+          id?: string
+          merchant_category?: string | null
+          merchant_name?: string | null
+          status?: string | null
+          transaction_type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "card_transactions_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "virtual_cards"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       contact_invitations: {
         Row: {
           contact_name: string
@@ -89,6 +136,235 @@ export type Database = {
         }
         Relationships: []
       }
+      p2p_disputes: {
+        Row: {
+          created_at: string | null
+          evidence_urls: string[] | null
+          id: string
+          order_id: string
+          raised_by: string
+          reason: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          evidence_urls?: string[] | null
+          id?: string
+          order_id: string
+          raised_by: string
+          reason: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          evidence_urls?: string[] | null
+          id?: string
+          order_id?: string
+          raised_by?: string
+          reason?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "p2p_disputes_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "p2p_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      p2p_listings: {
+        Row: {
+          available_amount: number
+          country_code: string
+          created_at: string | null
+          currency_code: string
+          id: string
+          is_active: boolean | null
+          listing_type: Database["public"]["Enums"]["p2p_listing_type"]
+          max_amount: number
+          min_amount: number
+          payment_method_id: string | null
+          payment_time_limit: number | null
+          rate: number
+          terms: string | null
+          token: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          available_amount: number
+          country_code: string
+          created_at?: string | null
+          currency_code: string
+          id?: string
+          is_active?: boolean | null
+          listing_type: Database["public"]["Enums"]["p2p_listing_type"]
+          max_amount: number
+          min_amount: number
+          payment_method_id?: string | null
+          payment_time_limit?: number | null
+          rate: number
+          terms?: string | null
+          token: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          available_amount?: number
+          country_code?: string
+          created_at?: string | null
+          currency_code?: string
+          id?: string
+          is_active?: boolean | null
+          listing_type?: Database["public"]["Enums"]["p2p_listing_type"]
+          max_amount?: number
+          min_amount?: number
+          payment_method_id?: string | null
+          payment_time_limit?: number | null
+          rate?: number
+          terms?: string | null
+          token?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "p2p_listings_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      p2p_orders: {
+        Row: {
+          buyer_id: string
+          cancelled_at: string | null
+          completed_at: string | null
+          created_at: string | null
+          crypto_amount: number
+          currency_code: string
+          expires_at: string
+          fiat_amount: number
+          id: string
+          listing_id: string
+          paid_at: string | null
+          payment_method_id: string | null
+          rate: number
+          seller_id: string
+          status: Database["public"]["Enums"]["p2p_order_status"] | null
+          token: string
+          updated_at: string | null
+        }
+        Insert: {
+          buyer_id: string
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          crypto_amount: number
+          currency_code: string
+          expires_at: string
+          fiat_amount: number
+          id?: string
+          listing_id: string
+          paid_at?: string | null
+          payment_method_id?: string | null
+          rate: number
+          seller_id: string
+          status?: Database["public"]["Enums"]["p2p_order_status"] | null
+          token: string
+          updated_at?: string | null
+        }
+        Update: {
+          buyer_id?: string
+          cancelled_at?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          crypto_amount?: number
+          currency_code?: string
+          expires_at?: string
+          fiat_amount?: number
+          id?: string
+          listing_id?: string
+          paid_at?: string | null
+          payment_method_id?: string | null
+          rate?: number
+          seller_id?: string
+          status?: Database["public"]["Enums"]["p2p_order_status"] | null
+          token?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "p2p_orders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "p2p_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "p2p_orders_payment_method_id_fkey"
+            columns: ["payment_method_id"]
+            isOneToOne: false
+            referencedRelation: "payment_methods"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      payment_methods: {
+        Row: {
+          account_name: string
+          account_number: string
+          additional_info: Json | null
+          bank_name: string | null
+          country_code: string
+          created_at: string | null
+          id: string
+          is_verified: boolean | null
+          method_type: string
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          account_name: string
+          account_number: string
+          additional_info?: Json | null
+          bank_name?: string | null
+          country_code: string
+          created_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          method_type: string
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          account_name?: string
+          account_number?: string
+          additional_info?: Json | null
+          bank_name?: string | null
+          country_code?: string
+          created_at?: string | null
+          id?: string
+          is_verified?: boolean | null
+          method_type?: string
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -125,6 +401,36 @@ export type Database = {
           socials?: Json | null
           updated_at?: string
           wallet_address?: string
+        }
+        Relationships: []
+      }
+      supported_countries: {
+        Row: {
+          country_code: string
+          country_name: string
+          created_at: string | null
+          currency_code: string
+          currency_symbol: string
+          id: string
+          is_active: boolean | null
+        }
+        Insert: {
+          country_code: string
+          country_name: string
+          created_at?: string | null
+          currency_code: string
+          currency_symbol: string
+          id?: string
+          is_active?: boolean | null
+        }
+        Update: {
+          country_code?: string
+          country_name?: string
+          created_at?: string | null
+          currency_code?: string
+          currency_symbol?: string
+          id?: string
+          is_active?: boolean | null
         }
         Relationships: []
       }
@@ -218,6 +524,60 @@ export type Database = {
         }
         Relationships: []
       }
+      virtual_cards: {
+        Row: {
+          balance: number | null
+          card_holder_name: string
+          card_number_encrypted: string
+          created_at: string | null
+          currency: string | null
+          cvv_encrypted: string
+          expiry_month: number
+          expiry_year: number
+          external_card_id: string | null
+          id: string
+          is_active: boolean | null
+          is_frozen: boolean | null
+          spending_limit: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          balance?: number | null
+          card_holder_name: string
+          card_number_encrypted: string
+          created_at?: string | null
+          currency?: string | null
+          cvv_encrypted: string
+          expiry_month: number
+          expiry_year: number
+          external_card_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_frozen?: boolean | null
+          spending_limit?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          balance?: number | null
+          card_holder_name?: string
+          card_number_encrypted?: string
+          created_at?: string | null
+          currency?: string | null
+          cvv_encrypted?: string
+          expiry_month?: number
+          expiry_year?: number
+          external_card_id?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_frozen?: boolean | null
+          spending_limit?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       wallet_balances: {
         Row: {
           balance: number
@@ -271,6 +631,13 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      p2p_listing_type: "buy" | "sell"
+      p2p_order_status:
+        | "pending"
+        | "paid"
+        | "completed"
+        | "cancelled"
+        | "disputed"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -399,6 +766,14 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      p2p_listing_type: ["buy", "sell"],
+      p2p_order_status: [
+        "pending",
+        "paid",
+        "completed",
+        "cancelled",
+        "disputed",
+      ],
     },
   },
 } as const

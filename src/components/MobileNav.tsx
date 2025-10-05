@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, Send, Users, Settings } from "lucide-react";
+import { Home, ArrowLeftRight, CreditCard, User } from "lucide-react";
 
 const MobileNav = () => {
   const navigate = useNavigate();
@@ -7,9 +7,9 @@ const MobileNav = () => {
 
   const navItems = [
     { icon: Home, label: "Home", path: "/dashboard" },
-    { icon: Send, label: "Send", path: "/send" },
-    { icon: Users, label: "Contacts", path: "/contacts" },
-    { icon: Settings, label: "Settings", path: "/settings" },
+    { icon: ArrowLeftRight, label: "P2P", path: "/p2p" },
+    { icon: CreditCard, label: "Card", path: "/virtual-card" },
+    { icon: User, label: "Profile", path: "/profile" },
   ];
 
   return (
