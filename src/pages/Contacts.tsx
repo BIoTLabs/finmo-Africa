@@ -1,12 +1,13 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, UserPlus, RefreshCw, Shield } from "lucide-react";
+import { ArrowLeft, Search, RefreshCw, Shield } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 interface Contact {
   id: string;
@@ -20,43 +21,74 @@ const Contacts = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
   const [showPermissionDialog, setShowPermissionDialog] = useState(false);
-  const [contacts] = useState<Contact[]>([
-    {
-      id: "1",
-      name: "Adebayo Johnson",
-      phone: "+234 801 234 5678",
-      isFinMoUser: true,
-      walletAddress: "0x742d35Cc6634C0532925a3b844Bc9e7595f8a9f1",
-    },
-    {
-      id: "2",
-      name: "Amina Mohammed",
-      phone: "+234 802 345 6789",
-      isFinMoUser: true,
-      walletAddress: "0x8a9f1742d35Cc6634C0532925a3b844Bc9e7595f",
-    },
-    {
-      id: "3",
-      name: "Kwame Osei",
-      phone: "+233 240 123 4567",
-      isFinMoUser: false,
-    },
-    {
-      id: "4",
-      name: "Zainab Okonkwo",
-      phone: "+234 803 456 7890",
-      isFinMoUser: true,
-      walletAddress: "0x9f1742d35Cc6634C0532925a3b844Bc9e7595f8a",
-    },
-  ]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
+  const [userId, setUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+    setUserId(session.user.id);
+    await loadContacts(session.user.id);
+  };
+
+  const loadContacts = async (uid: string) => {
+    const { data: contactsData } = await supabase
+      .from("contacts")
+      .select("*")
+      .eq("user_id", uid);
+
+    if (contactsData) {
+      const enrichedContacts = await Promise.all(
+        contactsData.map(async (contact) => {
+          const { data: registryData } = await supabase
+            .from("user_registry")
+            .select("wallet_address")
+            .eq("phone_number", contact.contact_phone)
+            .maybeSingle();
+
+          return {
+            id: contact.id,
+            name: contact.contact_name,
+            phone: contact.contact_phone,
+            isFinMoUser: !!registryData,
+            walletAddress: registryData?.wallet_address,
+          };
+        })
+      );
+      setContacts(enrichedContacts);
+    }
+  };
 
   const handleSyncContacts = () => {
     setShowPermissionDialog(true);
   };
 
-  const handlePermissionGrant = () => {
+  const handlePermissionGrant = async () => {
     setShowPermissionDialog(false);
-    toast.success("Contacts synced successfully!");
+    
+    // Add some demo contacts
+    if (userId) {
+      const demoContacts = [
+        { contact_name: "Adebayo Johnson", contact_phone: "+234 801 234 5678" },
+        { contact_name: "Amina Mohammed", contact_phone: "+234 802 345 6789" },
+      ];
+
+      for (const contact of demoContacts) {
+        await supabase
+          .from("contacts")
+          .upsert({ user_id: userId, ...contact }, { onConflict: "user_id,contact_phone" });
+      }
+
+      await loadContacts(userId);
+      toast.success("Contacts synced successfully!");
+    }
   };
 
   const handlePermissionDeny = () => {

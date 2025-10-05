@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -9,6 +9,7 @@ import { ArrowLeft, Send as SendIcon, Zap, ExternalLink } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Send = () => {
   const navigate = useNavigate();
@@ -23,20 +24,117 @@ const Send = () => {
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState("USDC");
   const [loading, setLoading] = useState(false);
+  const [profile, setProfile] = useState<any>(null);
+
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+    
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .single();
+    
+    setProfile(profileData);
+  };
 
   const handleSend = async () => {
+    if (!profile) return;
+    
     setLoading(true);
+    try {
+      let recipientWallet = walletAddress;
+      let recipientId = null;
 
-    // Simulate transaction
-    setTimeout(() => {
+      // For internal transfers, look up recipient by phone
       if (transferType === "internal") {
-        toast.success("Transfer completed instantly! No fees charged.");
-      } else {
-        toast.success("Transaction submitted to blockchain!");
+        const { data: registryData, error: registryError } = await supabase
+          .from("user_registry")
+          .select("wallet_address, user_id")
+          .eq("phone_number", phoneNumber)
+          .single();
+
+        if (registryError || !registryData) {
+          toast.error("Recipient not found on FinMo");
+          setLoading(false);
+          return;
+        }
+
+        recipientWallet = registryData.wallet_address;
+        recipientId = registryData.user_id;
       }
+
+      // Create transaction
+      const { error: txError } = await supabase
+        .from("transactions")
+        .insert({
+          sender_id: profile.id,
+          recipient_id: recipientId,
+          sender_wallet: profile.wallet_address,
+          recipient_wallet: recipientWallet,
+          amount: parseFloat(amount),
+          token: token,
+          transaction_type: transferType,
+          status: "completed",
+        });
+
+      if (txError) throw txError;
+
+      // Update sender balance
+      const { data: currentBalance } = await supabase
+        .from("wallet_balances")
+        .select("balance")
+        .eq("user_id", profile.id)
+        .eq("token", token)
+        .single();
+
+      if (currentBalance) {
+        const newBalance = Number(currentBalance.balance) - parseFloat(amount);
+        await supabase
+          .from("wallet_balances")
+          .update({ balance: newBalance })
+          .eq("user_id", profile.id)
+          .eq("token", token);
+      }
+
+      // For internal transfers, update recipient balance
+      if (transferType === "internal" && recipientId) {
+        const { data: recipientBalance } = await supabase
+          .from("wallet_balances")
+          .select("balance")
+          .eq("user_id", recipientId)
+          .eq("token", token)
+          .single();
+
+        if (recipientBalance) {
+          const newBalance = Number(recipientBalance.balance) + parseFloat(amount);
+          await supabase
+            .from("wallet_balances")
+            .update({ balance: newBalance })
+            .eq("user_id", recipientId)
+            .eq("token", token);
+        }
+      }
+
+      toast.success(
+        transferType === "internal"
+          ? "Transfer completed instantly! No fees charged."
+          : "Transaction submitted to blockchain!"
+      );
       navigate("/dashboard");
+    } catch (error: any) {
+      toast.error(error.message || "Transaction failed");
+    } finally {
       setLoading(false);
-    }, 1500);
+    }
   };
 
   return (

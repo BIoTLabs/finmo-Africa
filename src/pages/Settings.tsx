@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -6,24 +6,46 @@ import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 const Settings = () => {
   const navigate = useNavigate();
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [addressVisible, setAddressVisible] = useState(false);
-  
-  const user = JSON.parse(localStorage.getItem("finmo_user") || "{}");
+  const [profile, setProfile] = useState<any>(null);
 
-  const handleLogout = () => {
-    localStorage.removeItem("finmo_user");
+  useEffect(() => {
+    checkAuth();
+  }, []);
+
+  const checkAuth = async () => {
+    const { data: { session } } = await supabase.auth.getSession();
+    if (!session) {
+      navigate("/auth");
+      return;
+    }
+    
+    const { data: profileData } = await supabase
+      .from("profiles")
+      .select("*")
+      .eq("id", session.user.id)
+      .single();
+    
+    setProfile(profileData);
+  };
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
     toast.success("Logged out successfully");
     navigate("/auth");
   };
 
   const copyAddress = () => {
-    navigator.clipboard.writeText(user.walletAddress);
-    toast.success("Wallet address copied!");
+    if (profile?.wallet_address) {
+      navigator.clipboard.writeText(profile.wallet_address);
+      toast.success("Wallet address copied!");
+    }
   };
 
   const handleBiometricToggle = (enabled: boolean) => {
@@ -35,6 +57,8 @@ const Settings = () => {
     setTwoFactorEnabled(enabled);
     toast.success(enabled ? "2FA enabled" : "2FA disabled");
   };
+
+  if (!profile) return null;
 
   return (
     <div className="min-h-screen bg-muted pb-20">
@@ -57,11 +81,11 @@ const Settings = () => {
           <CardContent className="p-4">
             <div className="flex items-center gap-3">
               <div className="w-16 h-16 bg-gradient-success rounded-full flex items-center justify-center text-primary-foreground font-bold text-2xl">
-                {user.phone?.slice(-4) || "FM"}
+                {profile.phone_number?.slice(-4) || "FM"}
               </div>
               <div className="flex-1">
                 <p className="font-semibold text-sm opacity-90">Phone Number</p>
-                <p className="text-lg font-bold">{user.phone}</p>
+                <p className="text-lg font-bold">{profile.phone_number}</p>
               </div>
             </div>
           </CardContent>
@@ -84,7 +108,7 @@ const Settings = () => {
             </div>
             <div className="flex items-center gap-2">
               <code className="flex-1 p-3 bg-muted rounded-lg text-xs font-mono break-all">
-                {addressVisible ? user.walletAddress : "••••••••••••••••••••••••••••••••••••••••"}
+                {addressVisible ? profile.wallet_address : "••••••••••••••••••••••••••••••••••••••••"}
               </code>
               <Button
                 variant="outline"
