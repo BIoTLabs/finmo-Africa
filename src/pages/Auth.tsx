@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -7,6 +7,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Smartphone, Lock, Shield } from "lucide-react";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -26,25 +27,56 @@ const Auth = () => {
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
 
+  useEffect(() => {
+    // Check if user is already logged in
+    const checkSession = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        navigate("/dashboard");
+      }
+    };
+    checkSession();
+  }, [navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
-    // Simulate authentication
-    setTimeout(() => {
+    try {
       const fullPhone = `${countryCode}${phoneNumber}`;
-      
-      // Store user session
-      localStorage.setItem("finmo_user", JSON.stringify({
-        phone: fullPhone,
-        walletAddress: "0x" + Math.random().toString(16).slice(2, 42),
-        authenticated: true
-      }));
 
-      toast.success(isLogin ? "Welcome back!" : "Account created successfully!");
-      navigate("/dashboard");
+      if (isLogin) {
+        // Sign in
+        const { error } = await supabase.auth.signInWithPassword({
+          email: `${fullPhone}@finmo.app`,
+          password,
+        });
+
+        if (error) throw error;
+        toast.success("Welcome back!");
+        navigate("/dashboard");
+      } else {
+        // Sign up
+        const { error } = await supabase.auth.signUp({
+          email: `${fullPhone}@finmo.app`,
+          password,
+          options: {
+            data: {
+              phone_number: fullPhone,
+            },
+            emailRedirectTo: `${window.location.origin}/dashboard`,
+          },
+        });
+
+        if (error) throw error;
+        toast.success("Account created successfully!");
+        navigate("/dashboard");
+      }
+    } catch (error: any) {
+      toast.error(error.message || "Authentication failed");
+    } finally {
       setLoading(false);
-    }, 1000);
+    }
   };
 
   return (
