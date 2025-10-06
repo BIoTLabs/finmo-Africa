@@ -79,19 +79,19 @@ const Receive = () => {
   });
 
   return (
-    <div className="min-h-screen bg-muted pb-24 animate-fade-in">
+    <div className="min-h-screen bg-background pb-20">
       {/* Header */}
-      <div className="bg-gradient-primary text-primary-foreground p-6 rounded-b-3xl shadow-finmo-lg">
-        <div className="flex items-center gap-4 mb-6">
+      <div className="bg-gradient-primary text-primary-foreground p-4 sm:p-6 rounded-b-3xl shadow-finmo-lg">
+        <div className="flex items-center gap-3 mb-4 sm:mb-6">
           <Button
             variant="ghost"
             size="icon"
-            className="text-primary-foreground hover:bg-white/20"
+            className="text-primary-foreground hover:bg-white/20 flex-shrink-0"
             onClick={() => navigate("/dashboard")}
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Receive Money</h1>
+          <h1 className="text-xl sm:text-2xl font-bold">Receive Money</h1>
         </div>
 
         <Card className="bg-white/10 backdrop-blur-sm border-white/20">

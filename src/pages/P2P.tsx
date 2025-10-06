@@ -67,25 +67,26 @@ const P2P = () => {
       {/* Header */}
       <div className="sticky top-0 z-10 bg-card border-b border-border">
         <div className="flex items-center justify-between p-4">
-          <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
+          <Button variant="ghost" size="icon" onClick={() => navigate(-1)} className="flex-shrink-0">
             <ArrowLeft className="h-5 w-5" />
           </Button>
-          <h1 className="text-xl font-semibold">P2P Marketplace</h1>
-          <Button variant="ghost" size="icon">
+          <h1 className="text-lg sm:text-xl font-semibold mx-2 truncate">P2P Marketplace</h1>
+          <Button variant="ghost" size="icon" className="flex-shrink-0">
             <Filter className="h-5 w-5" />
           </Button>
         </div>
       </div>
 
       {/* Country & Token Selector */}
-      <div className="p-4 space-y-4">
-        <div className="flex gap-2 overflow-x-auto">
+      <div className="p-4 space-y-3">
+        <div className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide">
           {countries.map((country) => (
             <Button
               key={country.code}
               variant={selectedCountry === country.code ? "default" : "outline"}
               onClick={() => setSelectedCountry(country.code)}
-              className="whitespace-nowrap"
+              size="sm"
+              className="whitespace-nowrap flex-shrink-0"
             >
               {country.name}
             </Button>

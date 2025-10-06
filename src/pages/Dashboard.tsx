@@ -99,32 +99,32 @@ const Dashboard = () => {
   if (!profile) return null;
 
   return (
-    <div className="min-h-screen bg-muted pb-24 animate-fade-in">
+    <div className="min-h-screen bg-background pb-20">
       <MobileNav />
       <RealtimeStatus connected={connected} />
       {/* Header */}
-      <div className="bg-gradient-primary text-primary-foreground p-6 rounded-b-3xl shadow-finmo-lg">
-        <div className="flex justify-between items-center mb-6">
-          <div>
-            <p className="text-sm opacity-90">Welcome back</p>
-            <h1 className="text-xl font-semibold">{profile.phone_number}</h1>
+      <div className="bg-gradient-primary text-primary-foreground p-4 sm:p-6 rounded-b-3xl shadow-finmo-lg">
+        <div className="flex justify-between items-center mb-4 sm:mb-6">
+          <div className="min-w-0 flex-1">
+            <p className="text-xs sm:text-sm opacity-90">Welcome back</p>
+            <h1 className="text-base sm:text-xl font-semibold truncate">{profile.phone_number}</h1>
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-2 flex-shrink-0">
             <Button
               variant="ghost"
               size="icon"
-              className="text-primary-foreground hover:bg-white/20"
+              className="text-primary-foreground hover:bg-white/20 w-9 h-9 sm:w-10 sm:h-10"
               onClick={() => navigate("/profile")}
             >
-              <User className="w-5 h-5" />
+              <User className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
             <Button
               variant="ghost"
               size="icon"
-              className="text-primary-foreground hover:bg-white/20"
+              className="text-primary-foreground hover:bg-white/20 w-9 h-9 sm:w-10 sm:h-10"
               onClick={() => navigate("/settings")}
             >
-              <Settings className="w-5 h-5" />
+              <Settings className="w-4 h-4 sm:w-5 sm:h-5" />
             </Button>
           </div>
         </div>
