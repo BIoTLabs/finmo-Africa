@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff, RefreshCw, Coins, User } from "lucide-react";
+import { Wallet, Send, Users, Settings, ArrowUpRight, ArrowDownLeft, Eye, EyeOff, RefreshCw, Coins, User, Mail } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -182,18 +182,18 @@ const Dashboard = () => {
                 Receive
               </Button>
               <Button
+                onClick={() => navigate("/request-payment")}
+                variant="outline"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Request
+              </Button>
+              <Button
                 onClick={() => navigate("/p2p")}
                 variant="outline"
               >
                 <ArrowUpRight className="w-4 h-4 mr-2" />
-                P2P Trade
-              </Button>
-              <Button
-                onClick={() => navigate("/virtual-card")}
-                variant="outline"
-              >
-                <Coins className="w-4 h-4 mr-2" />
-                Cards
+                P2P
               </Button>
             </div>
           </CardContent>
