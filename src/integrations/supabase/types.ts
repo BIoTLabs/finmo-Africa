@@ -315,6 +315,13 @@ export type Database = {
             referencedColumns: ["id"]
           },
           {
+            foreignKeyName: "p2p_orders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "p2p_listings_public"
+            referencedColumns: ["id"]
+          },
+          {
             foreignKeyName: "p2p_orders_payment_method_id_fkey"
             columns: ["payment_method_id"]
             isOneToOne: false
@@ -327,10 +334,12 @@ export type Database = {
         Row: {
           account_name: string
           account_number: string
+          account_number_encrypted: string | null
           additional_info: Json | null
           bank_name: string | null
           country_code: string
           created_at: string | null
+          encryption_key_id: string | null
           id: string
           is_verified: boolean | null
           method_type: string
@@ -340,10 +349,12 @@ export type Database = {
         Insert: {
           account_name: string
           account_number: string
+          account_number_encrypted?: string | null
           additional_info?: Json | null
           bank_name?: string | null
           country_code: string
           created_at?: string | null
+          encryption_key_id?: string | null
           id?: string
           is_verified?: boolean | null
           method_type: string
@@ -353,10 +364,12 @@ export type Database = {
         Update: {
           account_name?: string
           account_number?: string
+          account_number_encrypted?: string | null
           additional_info?: Json | null
           bank_name?: string | null
           country_code?: string
           created_at?: string | null
+          encryption_key_id?: string | null
           id?: string
           is_verified?: boolean | null
           method_type?: string
@@ -628,7 +641,60 @@ export type Database = {
       }
     }
     Views: {
-      [_ in never]: never
+      p2p_listings_public: {
+        Row: {
+          available_amount: number | null
+          country_code: string | null
+          created_at: string | null
+          currency_code: string | null
+          id: string | null
+          is_active: boolean | null
+          listing_type: Database["public"]["Enums"]["p2p_listing_type"] | null
+          max_amount: number | null
+          min_amount: number | null
+          payment_time_limit: number | null
+          rate: number | null
+          terms: string | null
+          token: string | null
+          updated_at: string | null
+          user_id: string | null
+        }
+        Insert: {
+          available_amount?: number | null
+          country_code?: string | null
+          created_at?: string | null
+          currency_code?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          listing_type?: Database["public"]["Enums"]["p2p_listing_type"] | null
+          max_amount?: number | null
+          min_amount?: number | null
+          payment_time_limit?: number | null
+          rate?: number | null
+          terms?: string | null
+          token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Update: {
+          available_amount?: number | null
+          country_code?: string | null
+          created_at?: string | null
+          currency_code?: string | null
+          id?: string | null
+          is_active?: boolean | null
+          listing_type?: Database["public"]["Enums"]["p2p_listing_type"] | null
+          max_amount?: number | null
+          min_amount?: number | null
+          payment_time_limit?: number | null
+          rate?: number | null
+          terms?: string | null
+          token?: string | null
+          updated_at?: string | null
+          user_id?: string | null
+        }
+        Relationships: []
+      }
     }
     Functions: {
       can_insert_profile_for_new_user: {
