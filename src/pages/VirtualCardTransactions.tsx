@@ -42,7 +42,13 @@ const VirtualCardTransactions = () => {
         .select("*")
         .eq("id", cardId)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
+      
+      if (!cardData) {
+        toast.error("Virtual card not found");
+        navigate("/virtual-card");
+        return;
+      }
 
       if (cardError) throw cardError;
       setCard(cardData);

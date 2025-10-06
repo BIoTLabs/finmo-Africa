@@ -30,7 +30,7 @@ const TransactionDetails = () => {
       .from("profiles")
       .select("*")
       .eq("id", session.user.id)
-      .single();
+      .maybeSingle();
     
     setUserProfile(profile);
 
@@ -39,7 +39,7 @@ const TransactionDetails = () => {
       .from("transactions")
       .select("*")
       .eq("id", id)
-      .single();
+      .maybeSingle();
 
     if (error) {
       toast.error("Transaction not found");

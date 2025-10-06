@@ -72,7 +72,13 @@ const P2POrderStatus = () => {
           payment_method:payment_methods(*)
         `)
         .eq("id", orderId)
-        .single();
+        .maybeSingle();
+      
+      if (!data) {
+        toast.error("Order not found");
+        navigate("/p2p");
+        return;
+      }
 
       if (error) throw error;
       setOrder(data);

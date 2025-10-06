@@ -42,7 +42,7 @@ const Send = () => {
       .from("profiles")
       .select("*")
       .eq("id", session.user.id)
-      .single();
+      .maybeSingle();
     
     setProfile(profileData);
   };

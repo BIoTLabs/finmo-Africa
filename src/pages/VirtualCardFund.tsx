@@ -68,7 +68,13 @@ const VirtualCardFund = () => {
         .select("balance")
         .eq("id", cardId)
         .eq("user_id", user.id)
-        .single();
+        .maybeSingle();
+      
+      if (!card) {
+        toast.error("Virtual card not found");
+        navigate("/virtual-card");
+        return;
+      }
 
       if (cardError) throw cardError;
 

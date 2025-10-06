@@ -30,9 +30,16 @@ const P2POrderDetail = () => {
         .from("p2p_listings")
         .select("*")
         .eq("id", listingId)
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
+      
+      if (!data) {
+        toast.error("Listing not found");
+        navigate("/p2p");
+        return;
+      }
+      
       setListing(data);
     } catch (error) {
       console.error("Error fetching listing:", error);

@@ -27,7 +27,7 @@ export const AdminFeeSettings = () => {
         .from('admin_settings')
         .select('setting_value')
         .eq('setting_key', 'withdrawal_fees')
-        .single();
+        .maybeSingle();
 
       if (error) throw error;
 
