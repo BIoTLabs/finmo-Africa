@@ -111,37 +111,37 @@ const Contacts = () => {
           <Button
             variant="ghost"
             size="icon"
-            className="text-primary-foreground hover:bg-white/20 flex-shrink-0"
+            className="text-primary-foreground hover:bg-white/20 w-9 h-9 sm:w-10 sm:h-10 flex-shrink-0"
             onClick={() => navigate("/dashboard")}
           >
-            <ArrowLeft className="w-5 h-5" />
+            <ArrowLeft className="w-4 h-4 sm:w-5 sm:h-5" />
           </Button>
-          <h1 className="text-xl sm:text-2xl font-bold flex-1">Your Contacts</h1>
-          <Button
-            onClick={handleSyncContacts}
-            size="sm"
-            className="bg-white/20 hover:bg-white/30 text-primary-foreground border-white/30 h-9 px-3"
-          >
-            <RefreshCw className="w-4 h-4 sm:mr-2" />
-            <span className="hidden sm:inline">Sync</span>
-          </Button>
+          <h1 className="text-xl sm:text-2xl font-bold">Your Contacts</h1>
         </div>
 
         {/* Search Bar */}
-        <div className="relative">
+        <div className="relative mb-3">
           <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 opacity-60" />
           <Input
             placeholder="Search contacts..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9 sm:pl-10 bg-white/10 border-white/20 text-primary-foreground placeholder:text-white/60 h-11"
+            className="pl-9 sm:pl-10 bg-white/10 border-white/20 text-primary-foreground placeholder:text-white/60 h-11 sm:h-12"
           />
         </div>
+
+        {/* Sync Button - Optimized for Mobile */}
+        <Button
+          onClick={handleSyncContacts}
+          className="w-full bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 h-10 sm:h-11 font-medium"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Sync Phone Contacts
+        </Button>
       </div>
 
-
       {/* Contact List */}
-      <div className="px-4 pb-4 space-y-3">
+      <div className="px-4 pt-4 pb-4 space-y-3">
         {filteredContacts.length === 0 ? (
           <Card className="shadow-finmo-sm">
             <CardContent className="p-6 text-center">
