@@ -32,22 +32,41 @@ const Auth = () => {
     // Check if user is already logged in
     const checkSession = async () => {
       try {
-        const { data: { session } } = await supabase.auth.getSession();
-        if (session) {
-          navigate("/dashboard", { replace: true });
-        } else {
+        const { data: { session }, error } = await supabase.auth.getSession();
+        
+        // If there's an error or no session, clear any stale data and show login
+        if (error || !session) {
+          await supabase.auth.signOut();
           setChecking(false);
+          return;
         }
+        
+        // Verify the user actually exists by checking if we can get their data
+        const { data: { user }, error: userError } = await supabase.auth.getUser();
+        
+        if (userError || !user) {
+          // User doesn't exist (deleted) but has a stale token - sign out
+          console.error("User not found, clearing session:", userError);
+          await supabase.auth.signOut();
+          setChecking(false);
+          return;
+        }
+        
+        // Valid session and user exists - redirect to dashboard
+        navigate("/dashboard", { replace: true });
       } catch (error) {
         console.error("Session check error:", error);
+        await supabase.auth.signOut();
         setChecking(false);
       }
     };
     checkSession();
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      if (session && event === 'SIGNED_IN') {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (event === 'SIGNED_OUT') {
+        setChecking(false);
+      } else if (session && event === 'SIGNED_IN') {
         navigate("/dashboard", { replace: true });
       }
     });

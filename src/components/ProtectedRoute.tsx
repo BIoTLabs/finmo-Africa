@@ -32,9 +32,21 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
 
   const checkAuth = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
       
-      if (!session) {
+      if (sessionError || !session) {
+        await supabase.auth.signOut();
+        navigate('/auth');
+        return;
+      }
+
+      // Verify the user actually exists
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      
+      if (userError || !user) {
+        // User deleted but session exists - clear it
+        console.error("User not found, clearing session:", userError);
+        await supabase.auth.signOut();
         navigate('/auth');
         return;
       }
@@ -42,6 +54,7 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
       setAuthenticated(true);
     } catch (error) {
       console.error("Auth check error:", error);
+      await supabase.auth.signOut();
       navigate('/auth');
     } finally {
       setLoading(false);
