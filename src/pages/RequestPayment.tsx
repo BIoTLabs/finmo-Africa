@@ -14,8 +14,10 @@ import MobileNav from "@/components/MobileNav";
 const RequestPayment = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
+  const [sendMethod, setSendMethod] = useState<"email" | "sms">("email");
   const [formData, setFormData] = useState({
     recipient_email: "",
+    recipient_phone: "",
     recipient_name: "",
     amount: "",
     token: "USDC",
@@ -25,8 +27,18 @@ const RequestPayment = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!formData.recipient_email || !formData.amount) {
-      toast.error("Please fill in all required fields");
+    if (sendMethod === "email" && !formData.recipient_email) {
+      toast.error("Please enter recipient email");
+      return;
+    }
+
+    if (sendMethod === "sms" && !formData.recipient_phone) {
+      toast.error("Please enter recipient phone number");
+      return;
+    }
+
+    if (!formData.amount) {
+      toast.error("Please enter an amount");
       return;
     }
 
@@ -73,29 +85,50 @@ const RequestPayment = () => {
 
       if (createError) throw createError;
 
-      // Send email notification
-      const { error: emailError } = await supabase.functions.invoke('send-payment-request', {
-        body: {
-          payment_request_id: paymentRequest.id,
-          recipient_email: formData.recipient_email,
-          recipient_name: formData.recipient_name,
-          requester_name: requesterName,
-          amount: amount,
-          token: formData.token,
-          message: formData.message,
-        },
-      });
+      // Send notification based on method
+      if (sendMethod === "email") {
+        const { error: emailError } = await supabase.functions.invoke('send-payment-request', {
+          body: {
+            payment_request_id: paymentRequest.id,
+            recipient_email: formData.recipient_email,
+            recipient_name: formData.recipient_name,
+            requester_name: requesterName,
+            amount: amount,
+            token: formData.token,
+            message: formData.message,
+          },
+        });
 
-      if (emailError) {
-        console.error('Email error:', emailError);
-        toast.warning("Payment request created but email failed to send");
+        if (emailError) {
+          console.error('Email error:', emailError);
+          toast.warning("Payment request created but email failed to send");
+        } else {
+          toast.success("Payment request sent via email!");
+        }
       } else {
-        toast.success("Payment request sent successfully!");
+        const { error: smsError } = await supabase.functions.invoke('send-payment-request-sms', {
+          body: {
+            payment_request_id: paymentRequest.id,
+            recipient_phone: formData.recipient_phone,
+            recipient_name: formData.recipient_name,
+            requester_name: requesterName,
+            amount: amount,
+            token: formData.token,
+          },
+        });
+
+        if (smsError) {
+          console.error('SMS error:', smsError);
+          toast.warning("Payment request created but SMS failed to send");
+        } else {
+          toast.success("Payment request sent via SMS!");
+        }
       }
 
       // Reset form
       setFormData({
         recipient_email: "",
+        recipient_phone: "",
         recipient_name: "",
         amount: "",
         token: "USDC",
@@ -140,10 +173,38 @@ const RequestPayment = () => {
               <div>
                 <p className="text-sm font-semibold text-info">How it works</p>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Send a payment link to anyone via email. They can pay even without a FinMo account - 
-                  we'll guide them through a quick signup!
+                  Send a payment link via email or SMS. Recipients can pay even without a FinMo account!
                 </p>
               </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Send Method Selector */}
+      <div className="px-4">
+        <Card>
+          <CardContent className="p-4">
+            <Label className="text-sm font-semibold mb-2 block">Send via</Label>
+            <div className="grid grid-cols-2 gap-2">
+              <Button
+                type="button"
+                variant={sendMethod === "email" ? "default" : "outline"}
+                onClick={() => setSendMethod("email")}
+                className="w-full"
+              >
+                <Mail className="w-4 h-4 mr-2" />
+                Email
+              </Button>
+              <Button
+                type="button"
+                variant={sendMethod === "sms" ? "default" : "outline"}
+                onClick={() => setSendMethod("sms")}
+                className="w-full"
+              >
+                <Send className="w-4 h-4 mr-2" />
+                SMS
+              </Button>
             </div>
           </CardContent>
         </Card>
@@ -157,17 +218,32 @@ const RequestPayment = () => {
             <CardDescription>Who are you requesting payment from?</CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Label htmlFor="recipient_email">Recipient Email *</Label>
-              <Input
-                id="recipient_email"
-                type="email"
-                placeholder="john@example.com"
-                value={formData.recipient_email}
-                onChange={(e) => setFormData({ ...formData, recipient_email: e.target.value })}
-                required
-              />
-            </div>
+            {sendMethod === "email" ? (
+              <div className="space-y-2">
+                <Label htmlFor="recipient_email">Recipient Email *</Label>
+                <Input
+                  id="recipient_email"
+                  type="email"
+                  placeholder="john@example.com"
+                  value={formData.recipient_email}
+                  onChange={(e) => setFormData({ ...formData, recipient_email: e.target.value })}
+                  required
+                />
+              </div>
+            ) : (
+              <div className="space-y-2">
+                <Label htmlFor="recipient_phone">Recipient Phone *</Label>
+                <Input
+                  id="recipient_phone"
+                  type="tel"
+                  placeholder="+1234567890"
+                  value={formData.recipient_phone}
+                  onChange={(e) => setFormData({ ...formData, recipient_phone: e.target.value })}
+                  required
+                />
+                <p className="text-xs text-muted-foreground">Include country code (e.g., +1 for US)</p>
+              </div>
+            )}
 
             <div className="space-y-2">
               <Label htmlFor="recipient_name">Recipient Name (Optional)</Label>
