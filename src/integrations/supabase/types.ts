@@ -89,6 +89,7 @@ export type Database = {
         Row: {
           contact_name: string
           contact_phone: string
+          contact_phone_hash: string | null
           created_at: string
           id: string
           inviter_id: string
@@ -97,6 +98,7 @@ export type Database = {
         Insert: {
           contact_name: string
           contact_phone: string
+          contact_phone_hash?: string | null
           created_at?: string
           id?: string
           inviter_id: string
@@ -105,6 +107,7 @@ export type Database = {
         Update: {
           contact_name?: string
           contact_phone?: string
+          contact_phone_hash?: string | null
           created_at?: string
           id?: string
           inviter_id?: string
@@ -138,7 +141,9 @@ export type Database = {
       }
       p2p_disputes: {
         Row: {
+          admin_only_evidence: boolean | null
           created_at: string | null
+          evidence_access_expires_at: string | null
           evidence_urls: string[] | null
           id: string
           order_id: string
@@ -150,7 +155,9 @@ export type Database = {
           status: string | null
         }
         Insert: {
+          admin_only_evidence?: boolean | null
           created_at?: string | null
+          evidence_access_expires_at?: string | null
           evidence_urls?: string[] | null
           id?: string
           order_id: string
@@ -162,7 +169,9 @@ export type Database = {
           status?: string | null
         }
         Update: {
+          admin_only_evidence?: boolean | null
           created_at?: string | null
+          evidence_access_expires_at?: string | null
           evidence_urls?: string[] | null
           id?: string
           order_id?: string
@@ -414,6 +423,30 @@ export type Database = {
           socials?: Json | null
           updated_at?: string
           wallet_address?: string
+        }
+        Relationships: []
+      }
+      rate_limit_log: {
+        Row: {
+          action_type: string
+          created_at: string | null
+          id: string
+          user_id: string | null
+          user_ip: string
+        }
+        Insert: {
+          action_type: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          user_ip: string
+        }
+        Update: {
+          action_type?: string
+          created_at?: string | null
+          id?: string
+          user_id?: string | null
+          user_ip?: string
         }
         Relationships: []
       }
@@ -697,8 +730,21 @@ export type Database = {
       }
     }
     Functions: {
+      can_access_dispute_evidence: {
+        Args: { _dispute_id: string; _user_id: string }
+        Returns: boolean
+      }
       can_insert_profile_for_new_user: {
         Args: Record<PropertyKey, never>
+        Returns: boolean
+      }
+      check_rate_limit: {
+        Args: {
+          _action_type: string
+          _max_requests?: number
+          _time_window_minutes?: number
+          _user_ip: string
+        }
         Returns: boolean
       }
       generate_wallet_address: {
@@ -720,6 +766,10 @@ export type Database = {
           _user_id: string
         }
         Returns: boolean
+      }
+      hash_phone_number: {
+        Args: { _phone: string }
+        Returns: string
       }
       lookup_user_by_phone: {
         Args: { phone: string }
