@@ -68,18 +68,32 @@ const PaymentMethods = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Encrypt the account number
+      const { data: encryptedData, error: encryptError } = await supabase.functions.invoke(
+        'encrypt-payment-method',
+        {
+          body: {
+            action: 'encrypt',
+            account_number: formData.account_number,
+          },
+        }
+      );
+
+      if (encryptError) throw encryptError;
+
       const { error } = await supabase.from("payment_methods").insert({
         user_id: user.id,
         method_type: formData.method_type,
         account_name: formData.account_name,
-        account_number: formData.account_number,
+        account_number: formData.account_number, // Keep for backward compatibility
+        account_number_encrypted: encryptedData.encrypted_value,
         bank_name: formData.bank_name || null,
         country_code: formData.country_code,
       });
 
       if (error) throw error;
 
-      toast.success("Payment method added successfully");
+      toast.success("Payment method added securely");
       setShowAddDialog(false);
       setFormData({
         method_type: "bank_transfer",
@@ -247,7 +261,9 @@ const PaymentMethods = () => {
                 </div>
                 <div className="flex justify-between">
                   <span className="text-sm text-muted-foreground">Account Number</span>
-                  <span className="font-mono">{method.account_number}</span>
+                  <span className="font-mono">
+                    {method.account_number ? `****${method.account_number.slice(-4)}` : '****'}
+                  </span>
                 </div>
                 {method.bank_name && (
                   <div className="flex justify-between">

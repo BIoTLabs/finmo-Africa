@@ -37,12 +37,12 @@ const P2P = () => {
 
   const fetchListings = async () => {
     try {
+      // Use the secure view that excludes payment_method_id
       const { data, error } = await supabase
-        .from("p2p_listings")
+        .from("p2p_listings_public")
         .select("*")
         .eq("country_code", selectedCountry)
         .eq("token", selectedToken)
-        .eq("is_active", true)
         .order("rate", { ascending: true });
 
       if (error) throw error;
