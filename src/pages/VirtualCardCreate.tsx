@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 import { toast } from "sonner";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, AlertCircle } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import MobileNav from "@/components/MobileNav";
 
@@ -84,7 +85,17 @@ const VirtualCardCreate = () => {
         </div>
       </div>
 
-      <div className="p-4 space-y-6">
+      <div className="p-4 space-y-4">
+        {/* Demo Notice */}
+        <Alert className="border-warning/50 bg-warning/10">
+          <AlertCircle className="h-4 w-4 text-warning" />
+          <AlertDescription className="text-sm">
+            <strong className="font-semibold">Demo Mode:</strong> Cards created here are for demonstration only. 
+            They cannot be used for real purchases until production integration is completed.
+          </AlertDescription>
+        </Alert>
+
+        {/* Card Preview */}
         <Card className="bg-gradient-to-br from-primary to-primary/60 p-6 text-white">
           <div className="space-y-4">
             <p className="text-sm opacity-90">Preview</p>

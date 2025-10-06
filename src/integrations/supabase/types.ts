@@ -524,6 +524,27 @@ export type Database = {
         }
         Relationships: []
       }
+      virtual_card_poll: {
+        Row: {
+          created_at: string
+          id: string
+          response: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          response: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          response?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       virtual_cards: {
         Row: {
           balance: number | null

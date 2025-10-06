@@ -31,6 +31,10 @@ All colors MUST be HSL.
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
 
+    /* Warning indicators */
+    --warning: 45 93% 47%;
+    --warning-foreground: 0 0% 100%;
+
     /* Muted colors */
     --muted: 210 20% 96%;
     --muted-foreground: 215 16% 47%;
@@ -77,6 +81,12 @@ All colors MUST be HSL.
 
     --secondary: 142 71% 45%;
     --secondary-foreground: 215 25% 10%;
+
+    --success: 142 71% 45%;
+    --success-foreground: 215 25% 10%;
+
+    --warning: 45 93% 47%;
+    --warning-foreground: 215 25% 10%;
 
     --muted: 215 25% 18%;
     --muted-foreground: 215 16% 65%;

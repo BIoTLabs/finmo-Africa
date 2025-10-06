@@ -11,6 +11,7 @@ import { ArrowLeft, Database, Zap, Shield, RefreshCw } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LoadingScreen from '@/components/LoadingScreen';
 import { AdminFeeSettings } from '@/components/AdminFeeSettings';
+import VirtualCardPollResults from '@/components/VirtualCardPollResults';
 
 interface BackendInfo {
   timestamp: string;
@@ -102,6 +103,9 @@ const Admin = () => {
           <div className="space-y-6">
             {/* Fee Settings Section */}
             <AdminFeeSettings />
+
+            {/* Virtual Card Poll Results */}
+            <VirtualCardPollResults />
 
             {/* Backend Info Tabs */}
             <Tabs defaultValue="database" className="space-y-6">
