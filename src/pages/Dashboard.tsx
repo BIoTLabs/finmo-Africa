@@ -107,7 +107,9 @@ const Dashboard = () => {
         <div className="flex justify-between items-center mb-4 sm:mb-6">
           <div className="min-w-0 flex-1">
             <p className="text-xs sm:text-sm opacity-90">Welcome back</p>
-            <h1 className="text-base sm:text-xl font-semibold truncate">{profile.phone_number}</h1>
+            <h1 className="text-base sm:text-xl font-semibold truncate">
+              {profile.display_name || profile.phone_number}
+            </h1>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <Button

@@ -116,7 +116,15 @@ const Contacts = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-xl sm:text-2xl font-bold">Contacts</h1>
+          <h1 className="text-xl sm:text-2xl font-bold flex-1">Your Contacts</h1>
+          <Button
+            onClick={handleSyncContacts}
+            size="sm"
+            className="bg-white/20 hover:bg-white/30 text-primary-foreground border-white/30 h-9 px-3"
+          >
+            <RefreshCw className="w-4 h-4 sm:mr-2" />
+            <span className="hidden sm:inline">Sync</span>
+          </Button>
         </div>
 
         {/* Search Bar */}
@@ -129,17 +137,6 @@ const Contacts = () => {
             className="pl-9 sm:pl-10 bg-white/10 border-white/20 text-primary-foreground placeholder:text-white/60 h-11"
           />
         </div>
-      </div>
-
-      {/* Sync Button */}
-      <div className="p-4">
-        <Button
-          onClick={handleSyncContacts}
-          className="w-full bg-gradient-success hover:opacity-90 h-11"
-        >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Sync Contacts
-        </Button>
       </div>
 
 
