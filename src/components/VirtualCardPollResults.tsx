@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Progress } from "@/components/ui/progress";
 import { Users, ThumbsUp, ThumbsDown, HelpCircle } from "lucide-react";
 
 interface PollResult {
@@ -58,10 +57,10 @@ const VirtualCardPollResults = () => {
 
   const getColor = (response: string) => {
     switch (response) {
-      case 'yes': return 'bg-success';
-      case 'no': return 'bg-destructive';
-      case 'maybe': return 'bg-warning';
-      default: return 'bg-muted';
+      case 'yes': return 'text-success';
+      case 'no': return 'text-destructive';
+      case 'maybe': return 'text-warning';
+      default: return 'text-muted-foreground';
     }
   };
 
@@ -100,10 +99,16 @@ const VirtualCardPollResults = () => {
                   {result.count} ({percentage.toFixed(1)}%)
                 </span>
               </div>
-              <Progress 
-                value={percentage} 
-                className={`h-3 ${getColor(result.response)}`}
-              />
+              <div className="w-full bg-secondary/20 rounded-full h-3 overflow-hidden">
+                <div 
+                  className={`h-full transition-all duration-300 rounded-full ${
+                    result.response === 'yes' ? 'bg-success' : 
+                    result.response === 'no' ? 'bg-destructive' : 
+                    'bg-warning'
+                  }`}
+                  style={{ width: `${percentage}%` }}
+                />
+              </div>
             </div>
           );
         })}
