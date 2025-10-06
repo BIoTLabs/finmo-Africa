@@ -26,13 +26,21 @@ const Auth = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [checking, setChecking] = useState(true);
 
   useEffect(() => {
     // Check if user is already logged in
     const checkSession = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session) {
-        navigate("/dashboard", { replace: true });
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (session) {
+          navigate("/dashboard", { replace: true });
+        } else {
+          setChecking(false);
+        }
+      } catch (error) {
+        console.error("Session check error:", error);
+        setChecking(false);
       }
     };
     checkSession();
@@ -104,6 +112,14 @@ const Auth = () => {
       setLoading(false);
     }
   };
+
+  if (checking) {
+    return (
+      <div className="min-h-screen bg-gradient-primary flex items-center justify-center">
+        <div className="text-primary-foreground text-lg">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4 animate-fade-in">
