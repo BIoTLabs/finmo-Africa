@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Smartphone, Lock, Shield } from "lucide-react";
+import { Smartphone, Lock, Shield, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 
@@ -142,7 +142,63 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-primary flex items-center justify-center p-4 animate-fade-in">
-      <Card className="w-full max-w-md shadow-finmo-lg animate-scale-in">
+      <div className="w-full max-w-6xl grid md:grid-cols-2 gap-8 items-center">
+        {/* Info Section */}
+        <div className="hidden md:block text-primary-foreground space-y-6">
+          <div className="space-y-4">
+            <h2 className="text-4xl font-bold">Welcome to FinMo</h2>
+            <p className="text-lg opacity-90">
+              Your gateway to instant, secure cryptocurrency payments across Africa
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-2xl font-semibold">What is FinMo?</h3>
+            <p className="opacity-90">
+              FinMo is a mobile-first crypto wallet that makes sending money as easy as sending a text message. 
+              Send USDC and MATIC to anyone using just their phone number - no complex wallet addresses needed.
+            </p>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-xl font-semibold">Key Features:</h3>
+            <ul className="space-y-2 opacity-90">
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <span><strong>Instant Transfers:</strong> Send money to other FinMo users instantly with zero fees</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <span><strong>Phone-Based Contacts:</strong> Find friends using their phone numbers</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <span><strong>P2P Trading:</strong> Buy and sell crypto directly with other users</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <span><strong>Virtual Cards:</strong> Create prepaid cards for online shopping</span>
+              </li>
+              <li className="flex items-start gap-2">
+                <CheckCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                <span><strong>Secure Wallet:</strong> Your funds are protected with industry-standard encryption</span>
+              </li>
+            </ul>
+          </div>
+
+          <div className="space-y-3">
+            <h3 className="text-xl font-semibold">Getting Started:</h3>
+            <ol className="space-y-2 opacity-90 list-decimal list-inside">
+              <li>Sign up with your phone number</li>
+              <li>Get your secure wallet address automatically</li>
+              <li>Add funds via P2P or blockchain deposit</li>
+              <li>Start sending money to contacts instantly</li>
+            </ol>
+          </div>
+        </div>
+
+        {/* Auth Form */}
+        <Card className="w-full shadow-finmo-lg animate-scale-in">
         <CardHeader className="text-center space-y-4">
           <div className="mx-auto w-16 h-16 bg-gradient-primary rounded-2xl flex items-center justify-center shadow-finmo-md">
             <Shield className="w-8 h-8 text-primary-foreground" />
@@ -229,8 +285,19 @@ const Auth = () => {
               </p>
             </div>
           )}
+
+          {/* Mobile Info Section */}
+          <div className="md:hidden mt-6 space-y-4 text-center">
+            <div className="p-4 bg-white/10 rounded-lg text-primary-foreground">
+              <h3 className="font-semibold mb-2">What is FinMo?</h3>
+              <p className="text-sm opacity-90">
+                Send crypto instantly using phone numbers. Zero fees, instant delivery, secure wallets.
+              </p>
+            </div>
+          </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };
