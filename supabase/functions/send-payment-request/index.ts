@@ -110,6 +110,13 @@ const handler = async (req: Request): Promise<Response> => {
 
     if (!emailResponse.ok) {
       const errorData = await emailResponse.json();
+      console.error("Resend API error:", errorData);
+      
+      // Check for domain verification error
+      if (errorData.statusCode === 403) {
+        throw new Error("Email domain not verified. Please verify a domain at resend.com/domains and update the 'from' address to use that domain.");
+      }
+      
       throw new Error(`Resend API error: ${JSON.stringify(errorData)}`);
     }
 
