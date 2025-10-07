@@ -109,6 +109,44 @@ const PaymentHistory = () => {
     toast.success("Payment link copied to clipboard!");
   };
 
+  const resendRequest = async (request: PaymentRequest) => {
+    try {
+      // Call both email and SMS edge functions
+      const { error: emailError } = await supabase.functions.invoke('send-payment-request', {
+        body: {
+          payment_request_id: request.id,
+          recipient_email: request.recipient_email,
+          requester_name: request.recipient_name || "Someone",
+          amount: request.amount,
+          token: request.token,
+        }
+      });
+
+      const { error: smsError } = await supabase.functions.invoke('send-payment-request-sms', {
+        body: {
+          payment_request_id: request.id,
+          recipient_phone: request.recipient_email, // Assuming phone was stored in email field
+          requester_name: request.recipient_name || "Someone",
+          amount: request.amount,
+          token: request.token,
+        }
+      });
+
+      if (emailError && smsError) {
+        toast.error("Failed to resend payment request");
+      } else if (emailError) {
+        toast.success("SMS sent successfully (email failed)");
+      } else if (smsError) {
+        toast.success("Email sent successfully (SMS failed)");
+      } else {
+        toast.success("Payment request resent successfully!");
+      }
+    } catch (error) {
+      console.error("Error resending request:", error);
+      toast.error("Failed to resend payment request");
+    }
+  };
+
   const renderRequestCard = (request: PaymentRequest, isSent: boolean) => (
     <Card key={request.id} className="mb-3">
       <CardContent className="p-4">
@@ -138,14 +176,24 @@ const PaymentHistory = () => {
         </div>
 
         {isSent && request.status === "pending" && (
-          <Button
-            variant="outline"
-            size="sm"
-            className="w-full mt-3"
-            onClick={() => copyPaymentLink(request.id)}
-          >
-            Copy Payment Link
-          </Button>
+          <div className="flex gap-2 mt-3">
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => copyPaymentLink(request.id)}
+            >
+              Copy Link
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex-1"
+              onClick={() => resendRequest(request)}
+            >
+              Resend
+            </Button>
+          </div>
         )}
       </CardContent>
     </Card>

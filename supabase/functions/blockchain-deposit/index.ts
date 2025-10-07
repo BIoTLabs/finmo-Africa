@@ -80,17 +80,17 @@ serve(async (req) => {
 
     if (updateError) throw updateError;
 
-    // Create transaction record
+    // Create transaction record (deposit shows as received from external address)
     const { data: transaction, error: txError } = await supabaseClient
       .from('transactions')
       .insert({
-        sender_id: user.id,
-        recipient_id: user.id,
+        sender_id: null, // External sender
+        recipient_id: user.id, // User receiving the deposit
         sender_wallet: '0x0000000000000000000000000000000000000000',
         recipient_wallet: profile.wallet_address,
         amount: amount,
         token: depositToken,
-        transaction_type: 'external',
+        transaction_type: 'deposit',
         status: 'completed',
         transaction_hash: transaction_hash,
         withdrawal_fee: 0
@@ -105,7 +105,7 @@ serve(async (req) => {
         success: true,
         transaction_id: transaction.id,
         new_balance: newBalance,
-        explorer_url: `https://mumbai.polygonscan.com/tx/${transaction_hash}`
+        explorer_url: `https://amoy.polygonscan.com/tx/${transaction_hash}`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },

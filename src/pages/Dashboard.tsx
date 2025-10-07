@@ -253,9 +253,10 @@ const Dashboard = () => {
             </CardContent>
           </Card>
         ) : (
-          transactions.map((tx) => {
-            const isReceived = tx.sender_id !== profile.id;
+          transactions.slice(0, 5).map((tx) => {
+            const isReceived = tx.recipient_id === profile?.id;
             const isInternal = tx.transaction_type === 'internal';
+            const isDeposit = tx.transaction_type === 'deposit';
             
             return (
               <Card 
@@ -277,16 +278,25 @@ const Dashboard = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-semibold">
-                          {isReceived ? "Received" : "Sent"}
+                          {isDeposit ? "Deposited" : isReceived ? "Received" : "Sent"}
                         </p>
                         {isInternal && (
                           <Badge variant="secondary" className="text-xs bg-success/10 text-success">
                             Instant
                           </Badge>
                         )}
+                        {isDeposit && (
+                          <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
+                            Blockchain
+                          </Badge>
+                        )}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {isReceived ? `From ${tx.sender_wallet.slice(0, 12)}...` : `To ${tx.recipient_wallet.slice(0, 12)}...`}
+                        {isDeposit 
+                          ? `From external wallet` 
+                          : isReceived 
+                            ? `From ${tx.sender_wallet.slice(0, 12)}...` 
+                            : `To ${tx.recipient_wallet.slice(0, 12)}...`}
                       </p>
                       <p className="text-xs text-muted-foreground">{formatTimestamp(tx.created_at)}</p>
                     </div>
