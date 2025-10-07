@@ -6,8 +6,8 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
-const POLYGON_MUMBAI_RPC = "https://rpc-mumbai.maticvigil.com";
-const USDC_CONTRACT = "0x0FA8781a83E46826621b3BC094Ea2A0212e71B23";
+const POLYGON_AMOY_RPC = "https://rpc-amoy.polygon.technology";
+const USDC_CONTRACT = "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582";
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -44,7 +44,7 @@ serve(async (req) => {
     const walletAddress = profile.wallet_address;
 
     // Fetch MATIC balance
-    const maticResponse = await fetch(POLYGON_MUMBAI_RPC, {
+    const maticResponse = await fetch(POLYGON_AMOY_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -62,7 +62,7 @@ serve(async (req) => {
     // Fetch USDC balance using balanceOf
     const balanceOfData = `0x70a08231000000000000000000000000${walletAddress.slice(2)}`;
     
-    const usdcResponse = await fetch(POLYGON_MUMBAI_RPC, {
+    const usdcResponse = await fetch(POLYGON_AMOY_RPC, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

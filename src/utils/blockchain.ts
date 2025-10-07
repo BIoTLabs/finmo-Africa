@@ -1,11 +1,11 @@
 import { ethers } from "ethers";
 
-// Polygon Mumbai Testnet configuration
-export const POLYGON_MUMBAI = {
-  chainId: 80001,
-  name: "Polygon Mumbai Testnet",
-  rpcUrl: "https://rpc-mumbai.maticvigil.com",
-  blockExplorer: "https://mumbai.polygonscan.com",
+// Polygon Amoy Testnet configuration
+export const POLYGON_AMOY = {
+  chainId: 80002,
+  name: "Polygon Amoy Testnet",
+  rpcUrl: "https://rpc-amoy.polygon.technology",
+  blockExplorer: "https://amoy.polygonscan.com",
   nativeCurrency: {
     name: "MATIC",
     symbol: "MATIC",
@@ -13,8 +13,8 @@ export const POLYGON_MUMBAI = {
   },
 };
 
-// USDC contract on Polygon Mumbai (example address - replace with actual)
-export const USDC_CONTRACT = "0x0FA8781a83E46826621b3BC094Ea2A0212e71B23";
+// USDC contract on Polygon Amoy
+export const USDC_CONTRACT = "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582";
 
 // Minimal ERC20 ABI for token transfers
 export const ERC20_ABI = [
@@ -27,7 +27,7 @@ export class BlockchainService {
   private provider: ethers.JsonRpcProvider;
 
   constructor() {
-    this.provider = new ethers.JsonRpcProvider(POLYGON_MUMBAI.rpcUrl);
+    this.provider = new ethers.JsonRpcProvider(POLYGON_AMOY.rpcUrl);
   }
 
   async getMaticBalance(address: string): Promise<string> {
@@ -77,7 +77,7 @@ export class BlockchainService {
   }
 
   getExplorerUrl(txHash: string): string {
-    return `${POLYGON_MUMBAI.blockExplorer}/tx/${txHash}`;
+    return `${POLYGON_AMOY.blockExplorer}/tx/${txHash}`;
   }
 }
 
