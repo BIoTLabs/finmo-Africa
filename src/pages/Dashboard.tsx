@@ -245,11 +245,19 @@ const Dashboard = () => {
 
       {/* Recent Transactions */}
       <div className="px-6 pb-6 space-y-4">
-        <h3 className="text-lg font-semibold">Recent Activity</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold">Recent Activity</h3>
+          {transactions.length > 0 && (
+            <Button variant="ghost" size="sm" onClick={() => navigate("/payment-history")}>
+              View All
+            </Button>
+          )}
+        </div>
         {transactions.length === 0 ? (
           <Card className="shadow-finmo-sm">
             <CardContent className="p-8 text-center text-muted-foreground">
-              No transactions yet
+              <p>No transactions yet</p>
+              <p className="text-xs mt-2">Send or receive crypto to see your activity here</p>
             </CardContent>
           </Card>
         ) : (

@@ -111,35 +111,49 @@ const PaymentHistory = () => {
 
   const resendRequest = async (request: PaymentRequest) => {
     try {
-      // Call both email and SMS edge functions
-      const { error: emailError } = await supabase.functions.invoke('send-payment-request', {
-        body: {
-          payment_request_id: request.id,
-          recipient_email: request.recipient_email,
-          requester_name: request.recipient_name || "Someone",
-          amount: request.amount,
-          token: request.token,
-        }
-      });
+      if (!request.recipient_email) {
+        toast.error("No recipient email found");
+        return;
+      }
 
-      const { error: smsError } = await supabase.functions.invoke('send-payment-request-sms', {
-        body: {
-          payment_request_id: request.id,
-          recipient_phone: request.recipient_email, // Assuming phone was stored in email field
-          requester_name: request.recipient_name || "Someone",
-          amount: request.amount,
-          token: request.token,
-        }
-      });
+      // Only send email if recipient_email is a valid email
+      const isEmail = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(request.recipient_email);
+      
+      if (isEmail) {
+        const { error: emailError } = await supabase.functions.invoke('send-payment-request', {
+          body: {
+            payment_request_id: request.id,
+            recipient_email: request.recipient_email,
+            requester_name: request.recipient_name || "Someone",
+            amount: request.amount,
+            token: request.token,
+          }
+        });
 
-      if (emailError && smsError) {
-        toast.error("Failed to resend payment request");
-      } else if (emailError) {
-        toast.success("SMS sent successfully (email failed)");
-      } else if (smsError) {
-        toast.success("Email sent successfully (SMS failed)");
+        if (emailError) {
+          console.error("Email error:", emailError);
+          toast.error("Failed to send email: " + emailError.message);
+        } else {
+          toast.success("Email sent successfully!");
+        }
       } else {
-        toast.success("Payment request resent successfully!");
+        // It's a phone number, send SMS
+        const { error: smsError } = await supabase.functions.invoke('send-payment-request-sms', {
+          body: {
+            payment_request_id: request.id,
+            recipient_phone: request.recipient_email,
+            requester_name: request.recipient_name || "Someone",
+            amount: request.amount,
+            token: request.token,
+          }
+        });
+
+        if (smsError) {
+          console.error("SMS error:", smsError);
+          toast.error("Failed to send SMS: " + smsError.message);
+        } else {
+          toast.success("SMS sent successfully!");
+        }
       }
     } catch (error) {
       console.error("Error resending request:", error);
