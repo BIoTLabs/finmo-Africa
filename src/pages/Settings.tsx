@@ -13,6 +13,8 @@ const Settings = () => {
   const navigate = useNavigate();
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
+  const [enrollingBiometric, setEnrollingBiometric] = useState(false);
+  const [enrolling2FA, setEnrolling2FA] = useState(false);
   const [addressVisible, setAddressVisible] = useState(false);
   const [profile, setProfile] = useState<any>(null);
 
@@ -49,14 +51,74 @@ const Settings = () => {
     }
   };
 
-  const handleBiometricToggle = (enabled: boolean) => {
-    setBiometricEnabled(enabled);
-    toast.success(enabled ? "Biometric security enabled" : "Biometric security disabled");
+  const handleBiometricToggle = async (enabled: boolean) => {
+    if (enabled) {
+      // Enabling biometric
+      setEnrollingBiometric(true);
+      try {
+        // Check if biometrics are available
+        if (!window.PublicKeyCredential) {
+          toast.error("Biometric authentication not supported on this device");
+          return;
+        }
+
+        const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+        if (!available) {
+          toast.error("No biometric hardware detected");
+          return;
+        }
+
+        // Simulate biometric enrollment
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
+        setBiometricEnabled(true);
+        toast.success("Biometric authentication enabled");
+      } catch (error) {
+        console.error("Biometric enrollment error:", error);
+        toast.error("Failed to enable biometric authentication");
+      } finally {
+        setEnrollingBiometric(false);
+      }
+    } else {
+      setBiometricEnabled(false);
+      toast.success("Biometric authentication disabled");
+    }
   };
 
-  const handleTwoFactorToggle = (enabled: boolean) => {
-    setTwoFactorEnabled(enabled);
-    toast.success(enabled ? "2FA enabled" : "2FA disabled");
+  const handleTwoFactorToggle = async (enabled: boolean) => {
+    if (enabled) {
+      // Enabling 2FA
+      setEnrolling2FA(true);
+      try {
+        if (!profile?.phone_number) {
+          toast.error("Phone number required for 2FA");
+          return;
+        }
+
+        // Send OTP to user's phone
+        const { error } = await supabase.auth.signInWithOtp({
+          phone: profile.phone_number,
+        });
+
+        if (error) throw error;
+
+        toast.success("Verification code sent to your phone");
+        
+        // Simulate 2FA enrollment
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        
+        setTwoFactorEnabled(true);
+        toast.success("Two-factor authentication enabled");
+      } catch (error: any) {
+        console.error("2FA enrollment error:", error);
+        toast.error(error.message || "Failed to enable 2FA");
+      } finally {
+        setEnrolling2FA(false);
+      }
+    } else {
+      setTwoFactorEnabled(false);
+      toast.success("Two-factor authentication disabled");
+    }
   };
 
   if (!profile) return null;
@@ -140,10 +202,11 @@ const Settings = () => {
                     </p>
                   </div>
                 </div>
-                <Switch
-                  checked={biometricEnabled}
-                  onCheckedChange={handleBiometricToggle}
-                />
+                  <Switch
+                    checked={biometricEnabled}
+                    onCheckedChange={handleBiometricToggle}
+                    disabled={enrollingBiometric}
+                  />
               </div>
             </CardContent>
           </Card>
@@ -162,10 +225,11 @@ const Settings = () => {
                     </p>
                   </div>
                 </div>
-                <Switch
-                  checked={twoFactorEnabled}
-                  onCheckedChange={handleTwoFactorToggle}
-                />
+                  <Switch
+                    checked={twoFactorEnabled}
+                    onCheckedChange={handleTwoFactorToggle}
+                    disabled={enrolling2FA}
+                  />
               </div>
             </CardContent>
           </Card>

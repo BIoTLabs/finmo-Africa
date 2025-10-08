@@ -27,6 +27,8 @@ import RequestPayment from "./pages/RequestPayment";
 import PaymentRequest from "./pages/PaymentRequest";
 import PaymentHistory from "./pages/PaymentHistory";
 import ProtectedRoute from "./components/ProtectedRoute";
+import PhoneVerification from "./pages/PhoneVerification";
+import AllTransactions from "./pages/AllTransactions";
 
 const queryClient = new QueryClient();
 
@@ -38,6 +40,8 @@ const App = () => (
       <Routes>
         <Route path="/" element={<Index />} />
         <Route path="/auth" element={<Auth />} />
+        <Route path="/verify-phone" element={<PhoneVerification />} />
+        <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
         <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
         <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
         <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />

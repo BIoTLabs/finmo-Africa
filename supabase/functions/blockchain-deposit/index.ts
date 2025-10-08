@@ -60,18 +60,21 @@ serve(async (req) => {
       throw new Error('Transaction already processed');
     }
 
-    // Get current balance
+    // Get current balance - ensure we handle missing balances gracefully
     const { data: currentBalance, error: balanceError } = await supabaseClient
       .from('wallet_balances')
       .select('balance')
       .eq('user_id', user.id)
       .eq('token', depositToken)
-      .single();
+      .maybeSingle();
 
-    if (balanceError) throw balanceError;
+    if (balanceError) {
+      console.error('Error fetching balance:', balanceError);
+      throw balanceError;
+    }
 
-    // Update balance
-    const newBalance = Number(currentBalance.balance) + amount;
+    // Update balance - ensure proper number conversion
+    const newBalance = Number(currentBalance?.balance || 0) + Number(amount);
     const { error: updateError } = await supabaseClient
       .from('wallet_balances')
       .update({ balance: newBalance })
@@ -84,9 +87,9 @@ serve(async (req) => {
     const { data: transaction, error: txError } = await supabaseClient
       .from('transactions')
       .insert({
-        sender_id: null, // External sender
-        recipient_id: user.id, // User receiving the deposit
-        sender_wallet: '0x0000000000000000000000000000000000000000',
+        sender_id: user.id, // User is both sender and recipient for deposits
+        recipient_id: user.id,
+        sender_wallet: 'External Wallet', // External source
         recipient_wallet: profile.wallet_address,
         amount: amount,
         token: depositToken,

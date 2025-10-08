@@ -75,7 +75,17 @@ Deno.serve(async (req) => {
         .rpc('lookup_user_by_phone', { phone: recipient_phone });
 
       if (registryError || !registryData || registryData.length === 0) {
-        throw new Error('Recipient not found on FinMo');
+        return new Response(
+          JSON.stringify({ 
+            error: 'Recipient not registered on FinMo',
+            message: `The phone number ${recipient_phone} is not registered on FinMo. Please invite them to join and try again later.`,
+            shouldInvite: true
+          }),
+          { 
+            status: 404,
+            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
+          }
+        );
       }
 
       const recipientInfo = registryData[0];

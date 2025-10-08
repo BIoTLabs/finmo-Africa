@@ -248,7 +248,7 @@ const Dashboard = () => {
         <div className="flex items-center justify-between">
           <h3 className="text-lg font-semibold">Recent Activity</h3>
           {transactions.length > 0 && (
-            <Button variant="ghost" size="sm" onClick={() => navigate("/payment-history")}>
+            <Button variant="ghost" size="sm" onClick={() => navigate("/all-transactions")}>
               View All
             </Button>
           )}

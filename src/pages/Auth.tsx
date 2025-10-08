@@ -102,15 +102,14 @@ const Auth = () => {
           navigate("/dashboard");
         }
       } else {
-        // Sign up
+        // Sign up with phone verification
         const { data, error } = await supabase.auth.signUp({
-          email: `${fullPhone}@finmo.app`,
+          phone: fullPhone,
           password,
           options: {
             data: {
               phone_number: fullPhone,
             },
-            emailRedirectTo: `${window.location.origin}/dashboard`,
           },
         });
 
@@ -119,12 +118,9 @@ const Auth = () => {
           throw error;
         }
         
-        if (data.session) {
-          toast.success("Account created successfully!");
-          navigate("/dashboard");
-        } else if (data.user) {
-          toast.success("Account created! Please check your email to confirm.");
-        }
+        // Redirect to phone verification page
+        toast.success("Verification code sent to your phone!");
+        navigate("/verify-phone", { state: { phoneNumber: fullPhone } });
       }
     } catch (error: any) {
       console.error("Auth error:", error);
