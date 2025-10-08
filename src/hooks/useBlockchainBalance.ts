@@ -45,12 +45,15 @@ export const useBlockchainBalance = (walletAddress: string | null) => {
   };
 
   const syncToDatabase = async (userId: string) => {
-    if (!walletAddress || syncing) return;
+    if (!walletAddress || syncing) return false;
 
     setSyncing(true);
     try {
-      // Update MATIC balance
-      await supabase
+      // First fetch fresh balances from blockchain
+      await fetchBalances();
+      
+      // Then update database with fresh balances
+      const { error: maticError } = await supabase
         .from("wallet_balances")
         .upsert({
           user_id: userId,
@@ -60,8 +63,9 @@ export const useBlockchainBalance = (walletAddress: string | null) => {
           onConflict: "user_id,token"
         });
 
-      // Update USDC balance
-      await supabase
+      if (maticError) throw maticError;
+
+      const { error: usdcError } = await supabase
         .from("wallet_balances")
         .upsert({
           user_id: userId,
@@ -70,6 +74,8 @@ export const useBlockchainBalance = (walletAddress: string | null) => {
         }, {
           onConflict: "user_id,token"
         });
+
+      if (usdcError) throw usdcError;
 
       return true;
     } catch (error) {

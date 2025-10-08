@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
 import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import { useRealtimeBalance } from "@/hooks/useRealtimeBalance";
+import { useAutoBalanceSync } from "@/hooks/useAutoBalanceSync";
 import RealtimeStatus from "@/components/RealtimeStatus";
 
 interface WalletBalance {
@@ -37,6 +38,9 @@ const Dashboard = () => {
   // Use real-time hooks
   const { transactions, connected } = useRealtimeTransactions(userId);
   const { balances } = useRealtimeBalance(userId);
+  
+  // Auto-sync blockchain balances
+  useAutoBalanceSync(userId, profile?.wallet_address);
 
   useEffect(() => {
     loadUserData();
@@ -83,10 +87,13 @@ const Dashboard = () => {
       
       if (error) throw error;
       
-      if (data.error) {
+      if (data?.error) {
         throw new Error(data.error);
       }
 
+      // Reload balances after sync
+      await loadUserData();
+      
       toast.success("Blockchain balances synced!");
     } catch (error: any) {
       console.error('Sync error:', error);
