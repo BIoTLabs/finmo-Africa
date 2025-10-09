@@ -1,0 +1,252 @@
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Switch } from "@/components/ui/switch";
+import MobileNav from "@/components/MobileNav";
+import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
+
+interface Category {
+  id: string;
+  name: string;
+}
+
+const MarketplaceCreate = () => {
+  const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
+  const [categories, setCategories] = useState<Category[]>([]);
+  const [formData, setFormData] = useState({
+    title: "",
+    description: "",
+    price: "",
+    currency: "USDC",
+    category_id: "",
+    condition: "new",
+    location: "",
+    is_service: false,
+    images: [] as string[],
+  });
+
+  useEffect(() => {
+    fetchCategories();
+  }, []);
+
+  const fetchCategories = async () => {
+    const { data, error } = await supabase
+      .from("marketplace_categories")
+      .select("id, name")
+      .eq("is_active", true)
+      .order("name");
+
+    if (error) {
+      toast.error("Failed to load categories");
+      console.error(error);
+    } else {
+      setCategories(data || []);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast.error("You must be logged in");
+        return;
+      }
+
+      const { error } = await supabase.from("marketplace_listings").insert({
+        seller_id: user.id,
+        title: formData.title,
+        description: formData.description,
+        price: parseFloat(formData.price),
+        currency: formData.currency,
+        category_id: formData.category_id || null,
+        condition: formData.is_service ? null : formData.condition,
+        location: formData.location,
+        is_service: formData.is_service,
+        images: formData.images,
+        is_active: true,
+      });
+
+      if (error) throw error;
+
+      toast.success("Listing created successfully!");
+      navigate("/marketplace");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to create listing");
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-background pb-20">
+      <div className="sticky top-0 z-10 bg-primary text-primary-foreground p-4 shadow-md">
+        <div className="flex items-center gap-3">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate("/marketplace")}
+            className="text-primary-foreground hover:bg-primary-foreground/10"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+          <h1 className="text-xl font-bold">Create Listing</h1>
+        </div>
+      </div>
+
+      <div className="p-4">
+        <Card>
+          <CardHeader>
+            <CardTitle>Listing Details</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="is_service">Is this a service?</Label>
+                <Switch
+                  id="is_service"
+                  checked={formData.is_service}
+                  onCheckedChange={(checked) =>
+                    setFormData({ ...formData, is_service: checked })
+                  }
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="title">Title *</Label>
+                <Input
+                  id="title"
+                  value={formData.title}
+                  onChange={(e) =>
+                    setFormData({ ...formData, title: e.target.value })
+                  }
+                  required
+                  placeholder="Enter listing title"
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="description">Description *</Label>
+                <Textarea
+                  id="description"
+                  value={formData.description}
+                  onChange={(e) =>
+                    setFormData({ ...formData, description: e.target.value })
+                  }
+                  required
+                  placeholder="Describe your item or service"
+                  rows={4}
+                />
+              </div>
+
+              <div>
+                <Label htmlFor="price">Price *</Label>
+                <div className="flex gap-2">
+                  <Input
+                    id="price"
+                    type="number"
+                    step="0.01"
+                    value={formData.price}
+                    onChange={(e) =>
+                      setFormData({ ...formData, price: e.target.value })
+                    }
+                    required
+                    placeholder="0.00"
+                    className="flex-1"
+                  />
+                  <Select
+                    value={formData.currency}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, currency: value })
+                    }
+                  >
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USDC">USDC</SelectItem>
+                      <SelectItem value="MATIC">MATIC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div>
+                <Label htmlFor="category">Category</Label>
+                <Select
+                  value={formData.category_id}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, category_id: value })
+                  }
+                >
+                  <SelectTrigger id="category">
+                    <SelectValue placeholder="Select a category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categories.map((category) => (
+                      <SelectItem key={category.id} value={category.id}>
+                        {category.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {!formData.is_service && (
+                <div>
+                  <Label htmlFor="condition">Condition</Label>
+                  <Select
+                    value={formData.condition}
+                    onValueChange={(value) =>
+                      setFormData({ ...formData, condition: value })
+                    }
+                  >
+                    <SelectTrigger id="condition">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="new">New</SelectItem>
+                      <SelectItem value="used">Used</SelectItem>
+                      <SelectItem value="refurbished">Refurbished</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+
+              <div>
+                <Label htmlFor="location">Location</Label>
+                <Input
+                  id="location"
+                  value={formData.location}
+                  onChange={(e) =>
+                    setFormData({ ...formData, location: e.target.value })
+                  }
+                  placeholder="Enter location"
+                />
+              </div>
+
+              <Button type="submit" className="w-full" disabled={loading}>
+                {loading ? "Creating..." : "Create Listing"}
+              </Button>
+            </form>
+          </CardContent>
+        </Card>
+      </div>
+
+      <MobileNav />
+    </div>
+  );
+};
+
+export default MarketplaceCreate;

@@ -139,6 +139,261 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_categories: {
+        Row: {
+          created_at: string | null
+          description: string | null
+          icon: string | null
+          id: string
+          is_active: boolean | null
+          name: string
+        }
+        Insert: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name: string
+        }
+        Update: {
+          created_at?: string | null
+          description?: string | null
+          icon?: string | null
+          id?: string
+          is_active?: boolean | null
+          name?: string
+        }
+        Relationships: []
+      }
+      marketplace_delivery_bids: {
+        Row: {
+          accepted_at: string | null
+          bid_amount: number
+          completed_at: string | null
+          created_at: string | null
+          currency: string | null
+          estimated_delivery_time: number | null
+          id: string
+          message: string | null
+          order_id: string
+          rider_id: string
+          status: string | null
+        }
+        Insert: {
+          accepted_at?: string | null
+          bid_amount: number
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          estimated_delivery_time?: number | null
+          id?: string
+          message?: string | null
+          order_id: string
+          rider_id: string
+          status?: string | null
+        }
+        Update: {
+          accepted_at?: string | null
+          bid_amount?: number
+          completed_at?: string | null
+          created_at?: string | null
+          currency?: string | null
+          estimated_delivery_time?: number | null
+          id?: string
+          message?: string | null
+          order_id?: string
+          rider_id?: string
+          status?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_delivery_bids_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_listings: {
+        Row: {
+          category_id: string | null
+          condition: string | null
+          created_at: string | null
+          currency: string | null
+          description: string
+          id: string
+          images: string[] | null
+          is_active: boolean | null
+          is_service: boolean | null
+          location: string | null
+          price: number
+          seller_id: string
+          title: string
+          updated_at: string | null
+        }
+        Insert: {
+          category_id?: string | null
+          condition?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description: string
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          is_service?: boolean | null
+          location?: string | null
+          price: number
+          seller_id: string
+          title: string
+          updated_at?: string | null
+        }
+        Update: {
+          category_id?: string | null
+          condition?: string | null
+          created_at?: string | null
+          currency?: string | null
+          description?: string
+          id?: string
+          images?: string[] | null
+          is_active?: boolean | null
+          is_service?: boolean | null
+          location?: string | null
+          price?: number
+          seller_id?: string
+          title?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_listings_category_id_fkey"
+            columns: ["category_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_categories"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_notifications: {
+        Row: {
+          created_at: string | null
+          id: string
+          is_read: boolean | null
+          listing_id: string | null
+          message: string
+          order_id: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          listing_id?: string | null
+          message: string
+          order_id?: string | null
+          title: string
+          type: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          is_read?: boolean | null
+          listing_id?: string | null
+          message?: string
+          order_id?: string | null
+          title?: string
+          type?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_notifications_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "marketplace_notifications_order_id_fkey"
+            columns: ["order_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_orders"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_orders: {
+        Row: {
+          amount: number
+          buyer_id: string
+          confirmed_at: string | null
+          created_at: string | null
+          currency: string
+          delivered_at: string | null
+          delivery_address: string | null
+          delivery_name: string | null
+          delivery_phone: string | null
+          gifted_to_user_id: string | null
+          id: string
+          listing_id: string
+          paid_at: string | null
+          payment_tx_hash: string | null
+          seller_id: string
+          status: string | null
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          buyer_id: string
+          confirmed_at?: string | null
+          created_at?: string | null
+          currency: string
+          delivered_at?: string | null
+          delivery_address?: string | null
+          delivery_name?: string | null
+          delivery_phone?: string | null
+          gifted_to_user_id?: string | null
+          id?: string
+          listing_id: string
+          paid_at?: string | null
+          payment_tx_hash?: string | null
+          seller_id: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          buyer_id?: string
+          confirmed_at?: string | null
+          created_at?: string | null
+          currency?: string
+          delivered_at?: string | null
+          delivery_address?: string | null
+          delivery_name?: string | null
+          delivery_phone?: string | null
+          gifted_to_user_id?: string | null
+          id?: string
+          listing_id?: string
+          paid_at?: string | null
+          payment_tx_hash?: string | null
+          seller_id?: string
+          status?: string | null
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_orders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       p2p_disputes: {
         Row: {
           admin_only_evidence: boolean | null
