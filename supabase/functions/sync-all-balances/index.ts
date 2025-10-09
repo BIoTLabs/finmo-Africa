@@ -111,10 +111,11 @@ serve(async (req) => {
           }
         });
 
+        // Final balance = blockchain balance + internal transfers
         const finalMaticBalance = maticBalance + (internalAmounts['MATIC'] || 0);
         const finalUsdcBalance = usdcBalance + (internalAmounts['USDC'] || 0);
 
-        console.log(`User ${profile.id}: MATIC=${finalMaticBalance} (blockchain: ${maticBalance}), USDC=${finalUsdcBalance} (blockchain: ${usdcBalance})`);
+        console.log(`User ${profile.id}: MATIC=${finalMaticBalance} (blockchain: ${maticBalance}, internal: ${internalAmounts['MATIC'] || 0}), USDC=${finalUsdcBalance} (blockchain: ${usdcBalance}, internal: ${internalAmounts['USDC'] || 0})`);
 
         // Update MATIC balance
         const { error: maticError } = await supabaseClient

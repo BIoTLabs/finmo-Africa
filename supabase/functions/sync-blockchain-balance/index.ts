@@ -82,13 +82,6 @@ serve(async (req) => {
 
     console.log('Blockchain balances:', { MATIC: maticBalance, USDC: usdcBalance });
 
-    // Get current database balances to check for internal transfers
-    const { data: currentBalances } = await supabaseClient
-      .from('wallet_balances')
-      .select('token, balance')
-      .eq('user_id', user.id)
-      .in('token', ['MATIC', 'USDC']);
-
     // Calculate internal transfer amounts by checking transaction history
     const { data: internalTransactions } = await supabaseClient
       .from('transactions')
@@ -108,8 +101,10 @@ serve(async (req) => {
       }
     });
 
-    // Update MATIC balance (blockchain + internal transfers)
+    // Final balance = blockchain balance + internal transfers
     const finalMaticBalance = maticBalance + (internalAmounts['MATIC'] || 0);
+    const finalUsdcBalance = usdcBalance + (internalAmounts['USDC'] || 0);
+
     await supabaseClient
       .from('wallet_balances')
       .upsert({
@@ -120,8 +115,6 @@ serve(async (req) => {
         onConflict: 'user_id,token'
       });
 
-    // Update USDC balance (blockchain + internal transfers)
-    const finalUsdcBalance = usdcBalance + (internalAmounts['USDC'] || 0);
     await supabaseClient
       .from('wallet_balances')
       .upsert({
