@@ -82,24 +82,52 @@ serve(async (req) => {
 
     console.log('Blockchain balances:', { MATIC: maticBalance, USDC: usdcBalance });
 
-    // Update MATIC balance in database
+    // Get current database balances to check for internal transfers
+    const { data: currentBalances } = await supabaseClient
+      .from('wallet_balances')
+      .select('token, balance')
+      .eq('user_id', user.id)
+      .in('token', ['MATIC', 'USDC']);
+
+    // Calculate internal transfer amounts by checking transaction history
+    const { data: internalTransactions } = await supabaseClient
+      .from('transactions')
+      .select('token, amount, sender_id, recipient_id')
+      .eq('transaction_type', 'internal')
+      .or(`sender_id.eq.${user.id},recipient_id.eq.${user.id}`);
+
+    // Calculate net internal transfer amounts for each token
+    const internalAmounts: Record<string, number> = {};
+    internalTransactions?.forEach(tx => {
+      if (!internalAmounts[tx.token]) internalAmounts[tx.token] = 0;
+      if (tx.recipient_id === user.id) {
+        internalAmounts[tx.token] += Number(tx.amount);
+      }
+      if (tx.sender_id === user.id) {
+        internalAmounts[tx.token] -= Number(tx.amount);
+      }
+    });
+
+    // Update MATIC balance (blockchain + internal transfers)
+    const finalMaticBalance = maticBalance + (internalAmounts['MATIC'] || 0);
     await supabaseClient
       .from('wallet_balances')
       .upsert({
         user_id: user.id,
         token: 'MATIC',
-        balance: maticBalance,
+        balance: finalMaticBalance,
       }, {
         onConflict: 'user_id,token'
       });
 
-    // Update USDC balance in database
+    // Update USDC balance (blockchain + internal transfers)
+    const finalUsdcBalance = usdcBalance + (internalAmounts['USDC'] || 0);
     await supabaseClient
       .from('wallet_balances')
       .upsert({
         user_id: user.id,
         token: 'USDC',
-        balance: usdcBalance,
+        balance: finalUsdcBalance,
       }, {
         onConflict: 'user_id,token'
       });
@@ -108,9 +136,14 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         balances: {
+          MATIC: finalMaticBalance,
+          USDC: finalUsdcBalance,
+        },
+        blockchain_balances: {
           MATIC: maticBalance,
           USDC: usdcBalance,
         },
+        internal_adjustments: internalAmounts,
         wallet_address: walletAddress,
         message: 'Balances synced successfully'
       }),

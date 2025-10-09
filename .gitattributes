@@ -1,0 +1,2 @@
+# Android gradlew should always use LF line endings
+android/gradlew text eol=lf

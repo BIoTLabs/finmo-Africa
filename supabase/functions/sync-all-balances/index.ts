@@ -93,7 +93,28 @@ serve(async (req) => {
         const usdcBalanceRaw = BigInt(usdcData.result || '0x0');
         const usdcBalance = Number(usdcBalanceRaw) / 1e6; // USDC has 6 decimals
 
-        console.log(`User ${profile.id}: MATIC=${maticBalance}, USDC=${usdcBalance}`);
+        // Calculate internal transfer amounts
+        const { data: internalTransactions } = await supabaseClient
+          .from('transactions')
+          .select('token, amount, sender_id, recipient_id')
+          .eq('transaction_type', 'internal')
+          .or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`);
+
+        const internalAmounts: Record<string, number> = {};
+        internalTransactions?.forEach(tx => {
+          if (!internalAmounts[tx.token]) internalAmounts[tx.token] = 0;
+          if (tx.recipient_id === profile.id) {
+            internalAmounts[tx.token] += Number(tx.amount);
+          }
+          if (tx.sender_id === profile.id) {
+            internalAmounts[tx.token] -= Number(tx.amount);
+          }
+        });
+
+        const finalMaticBalance = maticBalance + (internalAmounts['MATIC'] || 0);
+        const finalUsdcBalance = usdcBalance + (internalAmounts['USDC'] || 0);
+
+        console.log(`User ${profile.id}: MATIC=${finalMaticBalance} (blockchain: ${maticBalance}), USDC=${finalUsdcBalance} (blockchain: ${usdcBalance})`);
 
         // Update MATIC balance
         const { error: maticError } = await supabaseClient
@@ -101,7 +122,7 @@ serve(async (req) => {
           .upsert({
             user_id: profile.id,
             token: 'MATIC',
-            balance: maticBalance,
+            balance: finalMaticBalance,
           }, {
             onConflict: 'user_id,token'
           });
@@ -118,7 +139,7 @@ serve(async (req) => {
           .upsert({
             user_id: profile.id,
             token: 'USDC',
-            balance: usdcBalance,
+            balance: finalUsdcBalance,
           }, {
             onConflict: 'user_id,token'
           });

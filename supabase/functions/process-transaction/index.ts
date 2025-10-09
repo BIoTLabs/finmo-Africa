@@ -114,29 +114,46 @@ Deno.serve(async (req) => {
         throw new Error('Failed to create transaction');
       }
 
-      // Update sender balance
+      // Update sender balance (deduct)
       const newSenderBalance = Number(senderBalance.balance) - amount;
-      await supabase
+      const { error: senderUpdateError } = await supabase
         .from('wallet_balances')
         .update({ balance: newSenderBalance })
         .eq('user_id', user.id)
         .eq('token', token);
 
-      // Update recipient balance
-      const { data: recipientBalance } = await supabase
+      if (senderUpdateError) {
+        console.error('Failed to update sender balance:', senderUpdateError);
+        throw new Error('Failed to update sender balance');
+      }
+
+      // Update recipient balance (add)
+      const { data: recipientBalance, error: recipientBalanceError } = await supabase
         .from('wallet_balances')
         .select('balance')
         .eq('user_id', recipientId)
         .eq('token', token)
-        .single();
+        .maybeSingle();
 
-      if (recipientBalance) {
-        const newRecipientBalance = Number(recipientBalance.balance) + amount;
-        await supabase
-          .from('wallet_balances')
-          .update({ balance: newRecipientBalance })
-          .eq('user_id', recipientId)
-          .eq('token', token);
+      if (recipientBalanceError) {
+        console.error('Failed to fetch recipient balance:', recipientBalanceError);
+        throw new Error('Failed to fetch recipient balance');
+      }
+
+      const newRecipientBalance = Number(recipientBalance?.balance || 0) + amount;
+      const { error: recipientUpdateError } = await supabase
+        .from('wallet_balances')
+        .upsert({
+          user_id: recipientId,
+          token: token,
+          balance: newRecipientBalance
+        }, {
+          onConflict: 'user_id,token'
+        });
+
+      if (recipientUpdateError) {
+        console.error('Failed to update recipient balance:', recipientUpdateError);
+        throw new Error('Failed to update recipient balance');
       }
 
       console.log('Internal transfer completed:', transaction.id);
