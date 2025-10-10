@@ -139,6 +139,66 @@ export type Database = {
         }
         Relationships: []
       }
+      kyc_verifications: {
+        Row: {
+          address: string
+          country_code: string
+          created_at: string | null
+          date_of_birth: string
+          full_name: string
+          id: string
+          id_document_url: string | null
+          id_number: string
+          id_type: string
+          rejection_reason: string | null
+          selfie_url: string | null
+          status: string | null
+          submitted_at: string | null
+          updated_at: string | null
+          user_id: string
+          verified_at: string | null
+          verified_by: string | null
+        }
+        Insert: {
+          address: string
+          country_code: string
+          created_at?: string | null
+          date_of_birth: string
+          full_name: string
+          id?: string
+          id_document_url?: string | null
+          id_number: string
+          id_type: string
+          rejection_reason?: string | null
+          selfie_url?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Update: {
+          address?: string
+          country_code?: string
+          created_at?: string | null
+          date_of_birth?: string
+          full_name?: string
+          id?: string
+          id_document_url?: string | null
+          id_number?: string
+          id_type?: string
+          rejection_reason?: string | null
+          selfie_url?: string | null
+          status?: string | null
+          submitted_at?: string | null
+          updated_at?: string | null
+          user_id?: string
+          verified_at?: string | null
+          verified_by?: string | null
+        }
+        Relationships: []
+      }
       marketplace_categories: {
         Row: {
           created_at: string | null
@@ -329,6 +389,8 @@ export type Database = {
       marketplace_orders: {
         Row: {
           amount: number
+          buyer_confirmation_date: string | null
+          buyer_confirmed_delivery: boolean | null
           buyer_id: string
           confirmed_at: string | null
           created_at: string | null
@@ -337,17 +399,23 @@ export type Database = {
           delivery_address: string | null
           delivery_name: string | null
           delivery_phone: string | null
+          escrow_amount: number | null
+          escrow_released: boolean | null
           gifted_to_user_id: string | null
           id: string
           listing_id: string
           paid_at: string | null
           payment_tx_hash: string | null
+          rider_amount: number | null
+          seller_amount: number | null
           seller_id: string
           status: string | null
           updated_at: string | null
         }
         Insert: {
           amount: number
+          buyer_confirmation_date?: string | null
+          buyer_confirmed_delivery?: boolean | null
           buyer_id: string
           confirmed_at?: string | null
           created_at?: string | null
@@ -356,17 +424,23 @@ export type Database = {
           delivery_address?: string | null
           delivery_name?: string | null
           delivery_phone?: string | null
+          escrow_amount?: number | null
+          escrow_released?: boolean | null
           gifted_to_user_id?: string | null
           id?: string
           listing_id: string
           paid_at?: string | null
           payment_tx_hash?: string | null
+          rider_amount?: number | null
+          seller_amount?: number | null
           seller_id: string
           status?: string | null
           updated_at?: string | null
         }
         Update: {
           amount?: number
+          buyer_confirmation_date?: string | null
+          buyer_confirmed_delivery?: boolean | null
           buyer_id?: string
           confirmed_at?: string | null
           created_at?: string | null
@@ -375,11 +449,15 @@ export type Database = {
           delivery_address?: string | null
           delivery_name?: string | null
           delivery_phone?: string | null
+          escrow_amount?: number | null
+          escrow_released?: boolean | null
           gifted_to_user_id?: string | null
           id?: string
           listing_id?: string
           paid_at?: string | null
           payment_tx_hash?: string | null
+          rider_amount?: number | null
+          seller_amount?: number | null
           seller_id?: string
           status?: string | null
           updated_at?: string | null
