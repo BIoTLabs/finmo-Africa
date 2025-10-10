@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff, CreditCard, ChevronRight } from "lucide-react";
+import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff, CreditCard, ChevronRight, FileText, ShieldCheck, Store } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
@@ -235,9 +235,68 @@ const Settings = () => {
           </Card>
         </div>
 
+        {/* Account & Compliance */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Account & Compliance</h2>
+
+          <Card className="shadow-finmo-md cursor-pointer" onClick={() => navigate("/kyc-verification")}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <ShieldCheck className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">KYC Verification</p>
+                    <p className="text-sm text-muted-foreground">
+                      Verify your identity
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="shadow-finmo-md cursor-pointer" onClick={() => navigate("/account-statement")}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Account Statement</p>
+                    <p className="text-sm text-muted-foreground">
+                      Download transaction history
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
         {/* Payment Methods */}
         <div className="space-y-4">
           <h2 className="text-lg font-semibold">Payment & Trading</h2>
+
+          <Card className="shadow-finmo-md cursor-pointer" onClick={() => navigate("/my-ads")}>
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Store className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">My Ads</p>
+                    <p className="text-sm text-muted-foreground">
+                      Manage your listings
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
           
           <Card className="shadow-finmo-md cursor-pointer" onClick={() => navigate("/payment-methods")}>
             <CardContent className="p-4">

@@ -57,6 +57,22 @@ const Send = () => {
         throw new Error('Not authenticated');
       }
 
+      // Check KYC status for external transfers (withdrawals)
+      if (transferType === 'external') {
+        const { data: kycData } = await supabase
+          .from('kyc_verifications')
+          .select('status')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+
+        if (!kycData || kycData.status !== 'approved') {
+          toast.error('Please complete KYC verification before making withdrawals');
+          navigate('/kyc-verification');
+          setLoading(false);
+          return;
+        }
+      }
+
       // Route to appropriate endpoint based on transfer type
       const endpoint = transferType === 'internal' ? 'process-transaction' : 'blockchain-withdraw';
       

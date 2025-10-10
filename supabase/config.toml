@@ -1,1 +1,4 @@
 project_id = "khqsseqrmanpcbeyvkdp"
+
+[functions.marketplace-release-escrow]
+verify_jwt = true

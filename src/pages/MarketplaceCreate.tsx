@@ -9,7 +9,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import MobileNav from "@/components/MobileNav";
-import { ArrowLeft } from "lucide-react";
+import { ArrowLeft, Upload, X } from "lucide-react";
 import { toast } from "sonner";
 
 interface Category {
@@ -21,6 +21,7 @@ const MarketplaceCreate = () => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [categories, setCategories] = useState<Category[]>([]);
+  const [imageFiles, setImageFiles] = useState<File[]>([]);
   const [formData, setFormData] = useState({
     title: "",
     description: "",
@@ -52,6 +53,32 @@ const MarketplaceCreate = () => {
     }
   };
 
+  const uploadImages = async () => {
+    const { data: { user } } = await supabase.auth.getUser();
+    if (!user) throw new Error("Not authenticated");
+
+    const uploadedUrls: string[] = [];
+
+    for (const file of imageFiles) {
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${user.id}/${Date.now()}-${Math.random()}.${fileExt}`;
+      
+      const { error: uploadError } = await supabase.storage
+        .from('marketplace-images')
+        .upload(fileName, file);
+
+      if (uploadError) throw uploadError;
+
+      const { data: { publicUrl } } = supabase.storage
+        .from('marketplace-images')
+        .getPublicUrl(fileName);
+
+      uploadedUrls.push(publicUrl);
+    }
+
+    return uploadedUrls;
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -63,6 +90,9 @@ const MarketplaceCreate = () => {
         return;
       }
 
+      // Upload images first
+      const imageUrls = imageFiles.length > 0 ? await uploadImages() : [];
+
       const { error } = await supabase.from("marketplace_listings").insert({
         seller_id: user.id,
         title: formData.title,
@@ -73,7 +103,7 @@ const MarketplaceCreate = () => {
         condition: formData.is_service ? null : formData.condition,
         location: formData.location,
         is_service: formData.is_service,
-        images: formData.images,
+        images: imageUrls,
         is_active: true,
       });
 
@@ -87,6 +117,19 @@ const MarketplaceCreate = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files || []);
+    if (imageFiles.length + files.length > 5) {
+      toast.error("Maximum 5 images allowed");
+      return;
+    }
+    setImageFiles([...imageFiles, ...files]);
+  };
+
+  const removeImage = (index: number) => {
+    setImageFiles(imageFiles.filter((_, i) => i !== index));
   };
 
   return (
@@ -234,6 +277,44 @@ const MarketplaceCreate = () => {
                   }
                   placeholder="Enter location"
                 />
+              </div>
+
+              <div>
+                <Label htmlFor="images">Images (Max 5)</Label>
+                <div className="mt-2">
+                  <label className="flex items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-4 hover:bg-accent">
+                    <Upload className="h-5 w-5" />
+                    <span className="text-sm">Upload Images</span>
+                    <input
+                      id="images"
+                      type="file"
+                      className="hidden"
+                      accept="image/*"
+                      multiple
+                      onChange={handleImageSelect}
+                    />
+                  </label>
+                  <div className="mt-2 grid grid-cols-3 gap-2">
+                    {imageFiles.map((file, index) => (
+                      <div key={index} className="relative">
+                        <img
+                          src={URL.createObjectURL(file)}
+                          alt={`Preview ${index + 1}`}
+                          className="w-full h-24 object-cover rounded-lg"
+                        />
+                        <Button
+                          type="button"
+                          variant="destructive"
+                          size="icon"
+                          className="absolute top-1 right-1 h-6 w-6"
+                          onClick={() => removeImage(index)}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
 
               <Button type="submit" className="w-full" disabled={loading}>

@@ -34,6 +34,9 @@ import MarketplaceCreate from "./pages/MarketplaceCreate";
 import MarketplaceListing from "./pages/MarketplaceListing";
 import MarketplaceOrders from "./pages/MarketplaceOrders";
 import MarketplaceOrderDetail from "./pages/MarketplaceOrderDetail";
+import KYCVerification from "./pages/KYCVerification";
+import AccountStatement from "./pages/AccountStatement";
+import MyAds from "./pages/MyAds";
 
 const queryClient = new QueryClient();
 
@@ -73,6 +76,9 @@ const App = () => (
           <Route path="/marketplace/listing/:id" element={<ProtectedRoute><MarketplaceListing /></ProtectedRoute>} />
           <Route path="/marketplace/orders" element={<ProtectedRoute><MarketplaceOrders /></ProtectedRoute>} />
           <Route path="/marketplace/order/:id" element={<ProtectedRoute><MarketplaceOrderDetail /></ProtectedRoute>} />
+          <Route path="/kyc-verification" element={<ProtectedRoute><KYCVerification /></ProtectedRoute>} />
+          <Route path="/account-statement" element={<ProtectedRoute><AccountStatement /></ProtectedRoute>} />
+          <Route path="/my-ads" element={<ProtectedRoute><MyAds /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

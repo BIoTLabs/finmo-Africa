@@ -102,7 +102,7 @@ const MarketplaceListing = () => {
         }
       }
 
-      // Create order
+      // Create order with escrow
       const { data: order, error: orderError } = await supabase
         .from("marketplace_orders")
         .insert({
@@ -116,35 +116,21 @@ const MarketplaceListing = () => {
           delivery_address: deliveryAddress,
           delivery_phone: deliveryPhone,
           delivery_name: deliveryName,
+          escrow_amount: listing.price,
+          escrow_released: false,
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
 
-      // Deduct from buyer
+      // Deduct from buyer balance and put into escrow
       const newBuyerBalance = Number(balance.balance) - listing.price;
       await supabase
         .from("wallet_balances")
         .update({ balance: newBuyerBalance })
         .eq("user_id", user.id)
         .eq("token", listing.currency);
-
-      // Add to seller
-      const { data: sellerBalance } = await supabase
-        .from("wallet_balances")
-        .select("balance")
-        .eq("user_id", listing.seller_id)
-        .eq("token", listing.currency)
-        .single();
-
-      if (sellerBalance) {
-        await supabase
-          .from("wallet_balances")
-          .update({ balance: Number(sellerBalance.balance) + listing.price })
-          .eq("user_id", listing.seller_id)
-          .eq("token", listing.currency);
-      }
 
       // Create transaction record
       await supabase.from("transactions").insert({

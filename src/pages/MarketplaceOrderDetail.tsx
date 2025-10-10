@@ -24,6 +24,12 @@ interface Order {
   delivery_phone: string;
   delivery_name: string;
   created_at: string;
+  escrow_amount?: number;
+  escrow_released?: boolean;
+  rider_amount?: number;
+  seller_amount?: number;
+  buyer_confirmed_delivery?: boolean;
+  buyer_confirmation_date?: string;
   marketplace_listings: {
     title: string;
     description: string;
@@ -169,6 +175,25 @@ const MarketplaceOrderDetail = () => {
     }
   };
 
+  const handleConfirmDelivery = async () => {
+    setLoading(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('marketplace-release-escrow', {
+        body: { order_id: order?.id },
+      });
+
+      if (error) throw error;
+
+      toast.success(data.message || 'Delivery confirmed! Payment released.');
+      fetchOrderDetails();
+    } catch (error: any) {
+      console.error('Error confirming delivery:', error);
+      toast.error(error.message || 'Failed to confirm delivery');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -226,6 +251,25 @@ const MarketplaceOrderDetail = () => {
               <p className="text-sm"><strong>Phone:</strong> {order.delivery_phone}</p>
               <p className="text-sm"><strong>Address:</strong> {order.delivery_address}</p>
             </div>
+
+            {/* Confirm Delivery Button for Buyer */}
+            {isBuyer && order.status === "shipped" && !order.buyer_confirmed_delivery && (
+              <Button
+                onClick={handleConfirmDelivery}
+                disabled={loading}
+                className="w-full"
+              >
+                {loading ? "Confirming..." : "Confirm Delivery"}
+              </Button>
+            )}
+
+            {order.buyer_confirmed_delivery && (
+              <div className="bg-green-50 dark:bg-green-900/20 p-3 rounded-lg">
+                <p className="text-sm text-green-800 dark:text-green-200">
+                  ✓ Delivery confirmed. Payment released to seller{order.rider_amount && order.rider_amount > 0 ? " and rider" : ""}.
+                </p>
+              </div>
+            )}
           </CardContent>
         </Card>
 

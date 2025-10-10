@@ -47,6 +47,17 @@ Deno.serve(async (req) => {
       throw new Error('Unauthorized');
     }
 
+    // Check KYC verification status
+    const { data: kycData, error: kycError } = await supabase
+      .from('kyc_verifications')
+      .select('status')
+      .eq('user_id', user.id)
+      .maybeSingle();
+
+    if (!kycData || kycData.status !== 'approved') {
+      throw new Error('KYC verification required. Please complete your identity verification before making withdrawals.');
+    }
+
     const requestData: WithdrawRequest = await req.json();
     const { recipient_wallet, amount, token } = requestData;
 
