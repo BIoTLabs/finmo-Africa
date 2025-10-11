@@ -74,7 +74,7 @@ const MarketplaceListingBids = () => {
       .single();
 
     if (error) {
-      toast.error("Failed to load listing");
+      toast.error("We couldn't load this listing. Please try again.");
       console.error(error);
       navigate("/marketplace");
     } else {
@@ -102,17 +102,17 @@ const MarketplaceListingBids = () => {
 
     const amount = parseFloat(formData.bid_amount);
     if (isNaN(amount) || amount <= 0) {
-      toast.error("Please enter a valid bid amount");
+      toast.error("Please enter a bid amount greater than zero.");
       return;
     }
 
     if (amount <= listing.price) {
-      toast.error(`Bid must be higher than starting price of ${listing.price}`);
+      toast.error(`Your bid must be higher than ${listing.price} ${listing.currency}.`);
       return;
     }
 
     if (!formData.phone_number) {
-      toast.error("Please provide your phone number");
+      toast.error("Please enter your phone number so the seller can contact you.");
       return;
     }
 
@@ -120,7 +120,7 @@ const MarketplaceListingBids = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("You must be logged in to place a bid");
+        toast.error("Please sign in to place a bid.");
         return;
       }
 
@@ -133,7 +133,7 @@ const MarketplaceListingBids = () => {
         .single();
 
       if (!balance || Number(balance.balance) < amount) {
-        toast.error("Insufficient balance for this bid");
+        toast.error("You don't have enough funds for this bid. Please add money to your wallet.");
         return;
       }
 
@@ -164,7 +164,7 @@ const MarketplaceListingBids = () => {
       fetchBids();
     } catch (error: any) {
       console.error("Error submitting bid:", error);
-      toast.error(error.message || "Failed to submit bid");
+      toast.error("We couldn't place your bid. Please try again.");
     } finally {
       setSubmitting(false);
     }
@@ -218,7 +218,7 @@ const MarketplaceListingBids = () => {
       fetchBids();
     } catch (error: any) {
       console.error("Error accepting bid:", error);
-      toast.error(error.message || "Failed to accept bid");
+      toast.error("We couldn't accept this bid. Please try again.");
     }
   };
 
@@ -250,7 +250,7 @@ const MarketplaceListingBids = () => {
       fetchBids();
     } catch (error: any) {
       console.error("Error cancelling bid:", error);
-      toast.error(error.message || "Failed to cancel bid");
+      toast.error("We couldn't cancel your bid. Please try again.");
     }
   };
 

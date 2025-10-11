@@ -35,7 +35,7 @@ const P2POrderDetail = () => {
       if (error) throw error;
       
       if (!data) {
-        toast.error("Listing not found");
+        toast.error("We couldn't find this listing. It may have been removed.");
         navigate("/p2p");
         return;
       }
@@ -43,7 +43,7 @@ const P2POrderDetail = () => {
       setListing(data);
     } catch (error) {
       console.error("Error fetching listing:", error);
-      toast.error("Failed to load listing");
+      toast.error("We couldn't load this listing. Please try again.");
     }
   };
 
@@ -66,18 +66,18 @@ const P2POrderDetail = () => {
 
   const handleCreateOrder = async () => {
     if (!amount || parseFloat(amount) < listing.min_amount || parseFloat(amount) > listing.max_amount) {
-      toast.error(`Amount must be between ${listing.min_amount} and ${listing.max_amount}`);
+      toast.error(`Please enter an amount between ${listing.min_amount} and ${listing.max_amount}.`);
       return;
     }
 
     if (paymentMethods.length === 0) {
-      toast.error("Please add a payment method first");
+      toast.error("Please add a payment method before creating an order.");
       navigate("/payment-methods");
       return;
     }
 
     if (!paymentMethod) {
-      toast.error("Please select a payment method");
+      toast.error("Please choose how you'll pay.");
       return;
     }
 
@@ -101,7 +101,7 @@ const P2POrderDetail = () => {
       navigate(`/p2p/order-status/${data.order_id}`);
     } catch (error: any) {
       console.error("Error creating order:", error);
-      toast.error(error.message || "Failed to create order");
+      toast.error("We couldn't create your order. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -56,7 +56,7 @@ const P2PCreateListing = () => {
 
   const handleCreateListing = async () => {
     if (!rate || !minAmount || !maxAmount || !availableAmount) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill in all required fields to create your listing.");
       return;
     }
 
@@ -91,7 +91,7 @@ const P2PCreateListing = () => {
       navigate("/p2p");
     } catch (error: any) {
       console.error("Error creating listing:", error);
-      toast.error(error.message || "Failed to create listing");
+      toast.error("We couldn't create your P2P listing. Please try again.");
     } finally {
       setLoading(false);
     }

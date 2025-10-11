@@ -109,7 +109,7 @@ const Send = () => {
       navigate("/dashboard");
     } catch (error: any) {
       console.error('Transaction error:', error);
-      toast.error(error.message || "Transaction failed");
+      toast.error("We couldn't send your money. Please check your balance and try again.");
     } finally {
       setLoading(false);
     }

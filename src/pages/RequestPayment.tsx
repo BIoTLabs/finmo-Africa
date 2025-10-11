@@ -140,7 +140,7 @@ const RequestPayment = () => {
 
     } catch (error: any) {
       console.error("Error creating payment request:", error);
-      toast.error(error.message || "Failed to send payment request");
+      toast.error("We couldn't send your payment request. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -59,7 +59,7 @@ const Dashboard = () => {
       .maybeSingle();
 
     if (error) {
-      toast.error(error.message);
+      toast.error("We couldn't load your wallet. Please refresh the page.");
     } else {
       setProfile(profileData);
     }
@@ -97,7 +97,7 @@ const Dashboard = () => {
       toast.success("Blockchain balances synced!");
     } catch (error: any) {
       console.error('Sync error:', error);
-      toast.error(error.message || "Failed to sync balances");
+      toast.error("We couldn't sync your balance. Please try again later.");
     } finally {
       setSyncing(false);
     }

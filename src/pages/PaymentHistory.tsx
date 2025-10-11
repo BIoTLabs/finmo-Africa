@@ -70,7 +70,7 @@ const PaymentHistory = () => {
 
     } catch (error) {
       console.error("Error fetching payment requests:", error);
-      toast.error("Failed to load payment history");
+      toast.error("We couldn't load your payment history. Please refresh the page.");
     } finally {
       setLoading(false);
     }
@@ -112,7 +112,7 @@ const PaymentHistory = () => {
   const resendRequest = async (request: PaymentRequest) => {
     try {
       if (!request.recipient_email) {
-        toast.error("No recipient email found");
+        toast.error("We couldn't find an email address for this payment request.");
         return;
       }
 
@@ -132,7 +132,7 @@ const PaymentHistory = () => {
 
         if (emailError) {
           console.error("Email error:", emailError);
-          toast.error("Failed to send email: " + emailError.message);
+          toast.error("We couldn't send the email. Please try again later.");
         } else {
           toast.success("Email sent successfully!");
         }
@@ -150,14 +150,14 @@ const PaymentHistory = () => {
 
         if (smsError) {
           console.error("SMS error:", smsError);
-          toast.error("Failed to send SMS: " + smsError.message);
+          toast.error("We couldn't send the SMS. Please try again later.");
         } else {
           toast.success("SMS sent successfully!");
         }
       }
     } catch (error) {
       console.error("Error resending request:", error);
-      toast.error("Failed to resend payment request");
+      toast.error("We couldn't resend the payment request. Please try again.");
     }
   };
 

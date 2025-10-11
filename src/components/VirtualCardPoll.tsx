@@ -61,9 +61,9 @@ const VirtualCardPoll = () => {
     } catch (error: any) {
       console.error("Error submitting vote:", error);
       if (error.code === '23505') {
-        toast.error("You have already voted");
+        toast.error("You've already submitted your vote. Thank you!");
       } else {
-        toast.error("Failed to submit vote");
+        toast.error("We couldn't save your vote. Please try again.");
       }
     } finally {
       setLoading(false);

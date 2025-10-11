@@ -65,7 +65,7 @@ const PaymentRequest = () => {
       });
     } catch (error) {
       console.error("Error fetching payment request:", error);
-      toast.error("Payment request not found");
+      toast.error("We couldn't find this payment request. The link may be invalid or expired.");
     } finally {
       setLoading(false);
     }
@@ -73,7 +73,7 @@ const PaymentRequest = () => {
 
   const handlePay = async () => {
     if (!user) {
-      toast.error("Please sign in to make a payment");
+      toast.error("Please sign in to complete this payment.");
       navigate("/auth", { state: { returnTo: `/pay/${id}` } });
       return;
     }
@@ -92,7 +92,7 @@ const PaymentRequest = () => {
         .single();
 
       if (!balance || Number(balance.balance) < paymentRequest.amount) {
-        toast.error("Insufficient balance. Please add funds first.");
+        toast.error("You don't have enough funds. Please add money to your wallet.");
         navigate("/add-funds");
         return;
       }
@@ -125,7 +125,7 @@ const PaymentRequest = () => {
 
     } catch (error: any) {
       console.error("Payment error:", error);
-      toast.error(error.message || "Payment failed");
+      toast.error("Something went wrong with your payment. Please try again.");
     } finally {
       setProcessing(false);
     }

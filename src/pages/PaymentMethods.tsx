@@ -52,7 +52,7 @@ const PaymentMethods = () => {
       setMethods(data || []);
     } catch (error) {
       console.error("Error fetching payment methods:", error);
-      toast.error("Failed to load payment methods");
+      toast.error("We couldn't load your payment methods. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -60,7 +60,7 @@ const PaymentMethods = () => {
 
   const handleAddMethod = async () => {
     if (!formData.account_name || !formData.account_number) {
-      toast.error("Please fill in all required fields");
+      toast.error("Please fill in all fields to add a payment method.");
       return;
     }
 
@@ -105,7 +105,7 @@ const PaymentMethods = () => {
       fetchPaymentMethods();
     } catch (error: any) {
       console.error("Error adding payment method:", error);
-      toast.error(error.message || "Failed to add payment method");
+      toast.error("We couldn't add your payment method. Please try again.");
     }
   };
 
@@ -121,7 +121,7 @@ const PaymentMethods = () => {
       fetchPaymentMethods();
     } catch (error) {
       console.error("Error deleting payment method:", error);
-      toast.error("Failed to delete payment method");
+      toast.error("We couldn't remove this payment method. Please try again.");
     }
   };
 

@@ -67,7 +67,7 @@ const VirtualCardCreate = () => {
       navigate("/virtual-card");
     } catch (error: any) {
       console.error("Error creating card:", error);
-      toast.error(error.message || "Failed to create card");
+      toast.error("We couldn't create your virtual card. Please try again.");
     } finally {
       setLoading(false);
     }

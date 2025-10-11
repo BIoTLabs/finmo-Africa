@@ -113,7 +113,7 @@ const VirtualCardFund = () => {
       navigate("/virtual-card");
     } catch (error: any) {
       console.error("Error funding card:", error);
-      toast.error(error.message || "Failed to fund card");
+      toast.error("We couldn't add funds to your card. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -58,7 +58,7 @@ const MarketplaceOrders = () => {
       .order("created_at", { ascending: false });
 
     if (error) {
-      toast.error("Failed to load orders");
+      toast.error("We couldn't load your orders. Please refresh the page.");
       console.error(error);
     } else {
       setOrders(data || []);
@@ -89,7 +89,7 @@ const MarketplaceOrders = () => {
       .eq("id", orderId);
 
     if (error) {
-      toast.error("Failed to confirm delivery");
+      toast.error("We couldn't confirm delivery. Please try again.");
       console.error(error);
     } else {
       toast.success("Delivery confirmed!");

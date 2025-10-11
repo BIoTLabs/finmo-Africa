@@ -124,7 +124,7 @@ const Auth = () => {
       }
     } catch (error: any) {
       console.error("Auth error:", error);
-      toast.error(error.message || "Authentication failed");
+      toast.error("We couldn't sign you in. Please check your credentials and try again.");
     } finally {
       setLoading(false);
     }

@@ -94,7 +94,7 @@ const Contacts = () => {
 
   const handlePermissionDeny = () => {
     setShowPermissionDialog(false);
-    toast.error("Contact sync permission denied");
+    toast.error("To sync your contacts, please allow access when prompted.");
   };
 
   const filteredContacts = contacts.filter(

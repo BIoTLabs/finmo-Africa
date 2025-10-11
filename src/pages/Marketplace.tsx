@@ -53,7 +53,7 @@ const Marketplace = () => {
       .order("name");
 
     if (error) {
-      toast.error("Failed to load categories");
+      toast.error("We couldn't load marketplace categories. Please refresh the page.");
       console.error(error);
     } else {
       setCategories(data || []);
@@ -75,7 +75,7 @@ const Marketplace = () => {
     const { data, error } = await query;
 
     if (error) {
-      toast.error("Failed to load listings");
+      toast.error("We couldn't load marketplace listings. Please try again.");
       console.error(error);
     } else {
       setListings(data || []);

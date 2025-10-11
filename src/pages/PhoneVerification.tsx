@@ -47,7 +47,7 @@ const PhoneVerification = () => {
       }
     } catch (error: any) {
       console.error("Verification error:", error);
-      toast.error(error.message || "Invalid verification code");
+      toast.error("That code isn't correct. Please check and try again.");
     } finally {
       setLoading(false);
     }
@@ -64,7 +64,7 @@ const PhoneVerification = () => {
       toast.success("Verification code resent!");
     } catch (error: any) {
       console.error("Resend error:", error);
-      toast.error(error.message || "Failed to resend code");
+      toast.error("We couldn't send a new code. Please wait a moment and try again.");
     } finally {
       setResending(false);
     }

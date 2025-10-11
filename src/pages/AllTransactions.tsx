@@ -111,7 +111,7 @@ const AllTransactions = () => {
       setActivities(combined);
     } catch (error) {
       console.error("Error loading activities:", error);
-      toast.error("Failed to load activity");
+      toast.error("We couldn't load your activity. Please refresh the page.");
     } finally {
       setLoading(false);
     }
@@ -150,7 +150,7 @@ const AllTransactions = () => {
       }
     } catch (error) {
       console.error("Error resending:", error);
-      toast.error("Failed to resend");
+      toast.error("We couldn't resend this transaction. Please try again.");
     }
   };
 

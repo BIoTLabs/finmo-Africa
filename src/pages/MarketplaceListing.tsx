@@ -56,7 +56,7 @@ const MarketplaceListing = () => {
       .single();
 
     if (error) {
-      toast.error("Failed to load listing");
+      toast.error("We couldn't find this listing. It may have been removed.");
       console.error(error);
       navigate("/marketplace");
     } else {
@@ -72,7 +72,7 @@ const MarketplaceListing = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("You must be logged in");
+        toast.error("Please sign in to make a purchase.");
         return;
       }
 
@@ -85,7 +85,7 @@ const MarketplaceListing = () => {
         .single();
 
       if (!balance || Number(balance.balance) < listing.price) {
-        toast.error("Insufficient balance");
+        toast.error("You don't have enough funds. Please add money to your wallet.");
         return;
       }
 
@@ -98,7 +98,7 @@ const MarketplaceListing = () => {
         if (recipientData && recipientData.length > 0) {
           giftedToUserId = recipientData[0].user_id;
         } else {
-          toast.error("Recipient not found");
+          toast.error("We couldn't find a user with that phone number.");
           return;
         }
       }
@@ -174,7 +174,7 @@ const MarketplaceListing = () => {
       toast.success("Purchase successful!");
       navigate("/marketplace/orders");
     } catch (error: any) {
-      toast.error(error.message || "Purchase failed");
+      toast.error("Something went wrong with your purchase. Please try again.");
       console.error(error);
     } finally {
       setPurchasing(false);

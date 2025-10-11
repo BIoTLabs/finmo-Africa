@@ -37,12 +37,12 @@ const AddFunds = () => {
 
   const handleAddFunds = async () => {
     if (!profile || !amount || parseFloat(amount) <= 0) {
-      toast.error("Please enter a valid amount");
+      toast.error("Please enter an amount greater than zero.");
       return;
     }
 
     if (paymentMethod !== 'crypto') {
-      toast.error("Only crypto deposits are supported. Please deposit to your wallet address and enter the transaction hash.");
+      toast.error("Please deposit crypto to your wallet address first, then enter your transaction hash here.");
       return;
     }
 
@@ -53,7 +53,7 @@ const AddFunds = () => {
       const txHash = prompt("Please enter the transaction hash of your deposit:");
       
       if (!txHash || !txHash.startsWith('0x')) {
-        toast.error("Valid transaction hash required");
+        toast.error("Please enter a valid transaction hash (0x followed by letters and numbers).");
         setLoading(false);
         return;
       }
@@ -99,7 +99,7 @@ const AddFunds = () => {
       navigate("/dashboard");
     } catch (error: any) {
       console.error('Deposit error:', error);
-      toast.error(error.message || "Failed to process deposit");
+      toast.error("We couldn't process your deposit. Please check your transaction hash and try again.");
     } finally {
       setLoading(false);
     }

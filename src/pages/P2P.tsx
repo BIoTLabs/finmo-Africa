@@ -49,7 +49,7 @@ const P2P = () => {
       setListings(data || []);
     } catch (error) {
       console.error("Error fetching listings:", error);
-      toast.error("Failed to load P2P listings");
+      toast.error("We couldn't load P2P listings. Please refresh the page.");
     } finally {
       setLoading(false);
     }

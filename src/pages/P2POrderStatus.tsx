@@ -75,7 +75,7 @@ const P2POrderStatus = () => {
         .maybeSingle();
       
       if (!data) {
-        toast.error("Order not found");
+        toast.error("We couldn't find this order. It may have been cancelled.");
         navigate("/p2p");
         return;
       }
@@ -84,7 +84,7 @@ const P2POrderStatus = () => {
       setOrder(data);
     } catch (error) {
       console.error("Error fetching order:", error);
-      toast.error("Failed to load order");
+      toast.error("We couldn't load your order. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -105,7 +105,7 @@ const P2POrderStatus = () => {
       fetchOrder();
     } catch (error) {
       console.error("Error marking as paid:", error);
-      toast.error("Failed to update order");
+      toast.error("We couldn't update your order status. Please try again.");
     }
   };
 
@@ -122,7 +122,7 @@ const P2POrderStatus = () => {
       fetchOrder();
     } catch (error: any) {
       console.error("Error completing order:", error);
-      toast.error(error.message || "Failed to complete order");
+      toast.error("We couldn't complete this order. Please try again.");
     }
   };
 

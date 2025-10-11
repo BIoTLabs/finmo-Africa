@@ -36,7 +36,7 @@ export const AdminFeeSettings = () => {
       }
     } catch (error: any) {
       console.error('Error fetching fees:', error);
-      toast.error('Failed to load withdrawal fees');
+      toast.error("We couldn't load the withdrawal fee settings. Please try again.");
     } finally {
       setFetchLoading(false);
     }
@@ -62,7 +62,7 @@ export const AdminFeeSettings = () => {
       toast.success('Withdrawal fees updated successfully');
     } catch (error: any) {
       console.error('Error updating fees:', error);
-      toast.error(error.message || 'Failed to update fees');
+      toast.error("We couldn't update the withdrawal fees. Please try again.");
     } finally {
       setLoading(false);
     }

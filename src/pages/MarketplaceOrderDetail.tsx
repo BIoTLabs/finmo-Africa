@@ -82,7 +82,7 @@ const MarketplaceOrderDetail = () => {
       .single();
 
     if (error) {
-      toast.error("Failed to load order");
+      toast.error("We couldn't load this order. Please try again.");
       console.error(error);
       navigate("/marketplace/orders");
     } else {
@@ -112,7 +112,7 @@ const MarketplaceOrderDetail = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("You must be logged in");
+        toast.error("Please sign in to submit a delivery bid.");
         return;
       }
 
@@ -143,7 +143,7 @@ const MarketplaceOrderDetail = () => {
       setBidMessage("");
       fetchDeliveryBids();
     } catch (error: any) {
-      toast.error(error.message || "Failed to submit bid");
+      toast.error("We couldn't submit your delivery bid. Please try again.");
       console.error(error);
     } finally {
       setSubmittingBid(false);
@@ -160,7 +160,7 @@ const MarketplaceOrderDetail = () => {
       .eq("id", bidId);
 
     if (error) {
-      toast.error("Failed to accept bid");
+      toast.error("We couldn't accept this delivery bid. Please try again.");
       console.error(error);
     } else {
       // Update order status
@@ -188,7 +188,7 @@ const MarketplaceOrderDetail = () => {
       fetchOrderDetails();
     } catch (error: any) {
       console.error('Error confirming delivery:', error);
-      toast.error(error.message || 'Failed to confirm delivery');
+      toast.error("We couldn't confirm delivery. Please try again.");
     } finally {
       setLoading(false);
     }

@@ -47,7 +47,7 @@ const MarketplaceCreate = () => {
       .order("name");
 
     if (error) {
-      toast.error("Failed to load categories");
+      toast.error("We couldn't load the categories. Please try again.");
       console.error(error);
     } else {
       setCategories(data || []);
@@ -87,7 +87,7 @@ const MarketplaceCreate = () => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) {
-        toast.error("You must be logged in");
+        toast.error("Please sign in to create a listing.");
         return;
       }
 
@@ -114,7 +114,7 @@ const MarketplaceCreate = () => {
       toast.success("Listing created successfully!");
       navigate("/marketplace");
     } catch (error: any) {
-      toast.error(error.message || "Failed to create listing");
+      toast.error("We couldn't create your listing. Please try again.");
       console.error(error);
     } finally {
       setLoading(false);
@@ -124,7 +124,7 @@ const MarketplaceCreate = () => {
   const handleImageSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (imageFiles.length + files.length > 5) {
-      toast.error("Maximum 5 images allowed");
+      toast.error("You can only upload up to 5 images.");
       return;
     }
     setImageFiles([...imageFiles, ...files]);
