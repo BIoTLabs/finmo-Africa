@@ -196,7 +196,7 @@ const Dashboard = () => {
                 Request
               </Button>
               <Button
-                onClick={() => navigate("/payment-history")}
+                onClick={() => navigate("/all-transactions")}
                 variant="outline"
               >
                 <Clock className="w-4 h-4 mr-2" />
@@ -272,6 +272,8 @@ const Dashboard = () => {
             const isReceived = tx.recipient_id === profile?.id;
             const isInternal = tx.transaction_type === 'internal';
             const isDeposit = tx.transaction_type === 'deposit';
+            const isWithdrawal = tx.transaction_type === 'external' || tx.transaction_type === 'withdrawal';
+            const isBlockchain = isDeposit || isWithdrawal;
             
             return (
               <Card 
@@ -293,25 +295,27 @@ const Dashboard = () => {
                     <div className="flex-1">
                       <div className="flex items-center gap-2 mb-1">
                         <p className="font-semibold">
-                          {isDeposit ? "Deposited" : isReceived ? "Received" : "Sent"}
+                          {isDeposit ? "Blockchain Deposit" : isWithdrawal ? "Blockchain Withdrawal" : isReceived ? "Received" : "Sent"}
                         </p>
                         {isInternal && (
                           <Badge variant="secondary" className="text-xs bg-success/10 text-success">
                             Instant
                           </Badge>
                         )}
-                        {isDeposit && (
+                        {isBlockchain && (
                           <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
-                            Blockchain
+                            On-chain
                           </Badge>
                         )}
                       </div>
                       <p className="text-sm text-muted-foreground">
                         {isDeposit 
-                          ? `From external wallet` 
-                          : isReceived 
-                            ? `From ${tx.sender_wallet.slice(0, 12)}...` 
-                            : `To ${tx.recipient_wallet.slice(0, 12)}...`}
+                          ? `From ${tx.sender_wallet.slice(0, 12)}...` 
+                          : isWithdrawal
+                            ? `To ${tx.recipient_wallet.slice(0, 12)}...`
+                            : isReceived 
+                              ? `From ${tx.sender_wallet.slice(0, 12)}...` 
+                              : `To ${tx.recipient_wallet.slice(0, 12)}...`}
                       </p>
                       <p className="text-xs text-muted-foreground">{formatTimestamp(tx.created_at)}</p>
                     </div>
@@ -321,7 +325,7 @@ const Dashboard = () => {
                       }`}>
                         {isReceived ? "+" : "-"}{Number(tx.amount).toFixed(2)} {tx.token}
                       </p>
-                      {!isInternal && (
+                      {isBlockchain && tx.transaction_hash && (
                         <p className="text-xs text-muted-foreground">On-chain</p>
                       )}
                     </div>
