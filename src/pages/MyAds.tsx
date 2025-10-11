@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
-import { Trash2, Edit, Store, ArrowLeftRight } from "lucide-react";
+import { Trash2, Edit, Store, ArrowLeftRight, ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 
 export default function MyAds() {
@@ -118,6 +118,16 @@ export default function MyAds() {
 
   return (
     <div className="container max-w-4xl mx-auto p-4">
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/settings")}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Settings
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>My Ads</CardTitle>

@@ -1,14 +1,16 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
-import { Download, FileText } from "lucide-react";
+import { Download, FileText, ArrowLeft } from "lucide-react";
 import { format } from "date-fns";
 
 export default function AccountStatement() {
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [endDate, setEndDate] = useState("");
@@ -119,6 +121,16 @@ export default function AccountStatement() {
 
   return (
     <div className="container max-w-2xl mx-auto p-4">
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/settings")}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Settings
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">

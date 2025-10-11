@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
-import { CheckCircle, XCircle, Clock, User, Mail } from "lucide-react";
+import { CheckCircle, XCircle, Clock, User, Mail, ArrowLeft, Home } from "lucide-react";
 
 interface PaymentRequestData {
   id: string;
@@ -143,12 +143,19 @@ const PaymentRequest = () => {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <Card className="max-w-md w-full">
-          <CardContent className="p-8 text-center">
+          <CardContent className="p-8 text-center space-y-4">
             <XCircle className="w-16 h-16 text-destructive mx-auto mb-4" />
             <h2 className="text-2xl font-bold mb-2">Payment Request Not Found</h2>
             <p className="text-muted-foreground">
               This payment request may have expired or been cancelled.
             </p>
+            <Button 
+              onClick={() => navigate("/dashboard")}
+              className="w-full"
+            >
+              <Home className="w-4 h-4 mr-2" />
+              Go to Dashboard
+            </Button>
           </CardContent>
         </Card>
       </div>
@@ -159,19 +166,30 @@ const PaymentRequest = () => {
   const isPaid = paymentRequest.status === "paid";
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 p-4 flex items-center justify-center">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4">
-            <Avatar className="w-20 h-20">
-              <AvatarFallback className="bg-gradient-primary text-primary-foreground text-2xl">
-                {paymentRequest.requester_name?.[0] || "F"}
-              </AvatarFallback>
-            </Avatar>
-          </div>
-          <CardTitle className="text-2xl">Payment Request</CardTitle>
-          <CardDescription>from {paymentRequest.requester_name}</CardDescription>
-        </CardHeader>
+    <div className="min-h-screen bg-gradient-to-br from-primary/5 to-accent/5 p-4">
+      <div className="max-w-md mx-auto">
+        <div className="mb-4">
+          <Button
+            variant="ghost"
+            onClick={() => navigate("/dashboard")}
+            className="gap-2"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Back to Dashboard
+          </Button>
+        </div>
+        <Card className="w-full">
+          <CardHeader className="text-center">
+            <div className="mx-auto mb-4">
+              <Avatar className="w-20 h-20">
+                <AvatarFallback className="bg-gradient-primary text-primary-foreground text-2xl">
+                  {paymentRequest.requester_name?.[0] || "F"}
+                </AvatarFallback>
+              </Avatar>
+            </div>
+            <CardTitle className="text-2xl">Payment Request</CardTitle>
+            <CardDescription>from {paymentRequest.requester_name}</CardDescription>
+          </CardHeader>
 
         <CardContent className="space-y-6">
           {/* Amount */}
@@ -249,6 +267,7 @@ const PaymentRequest = () => {
           </div>
         </CardContent>
       </Card>
+      </div>
     </div>
   );
 };

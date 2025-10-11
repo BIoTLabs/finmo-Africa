@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
-import { Upload, CheckCircle2, XCircle, Clock } from "lucide-react";
+import { Upload, CheckCircle2, XCircle, Clock, ArrowLeft } from "lucide-react";
 
 export default function KYCVerification() {
   const [loading, setLoading] = useState(false);
@@ -169,6 +169,16 @@ export default function KYCVerification() {
 
   return (
     <div className="container max-w-2xl mx-auto p-4">
+      <div className="mb-4">
+        <Button
+          variant="ghost"
+          onClick={() => navigate("/settings")}
+          className="gap-2"
+        >
+          <ArrowLeft className="w-4 h-4" />
+          Back to Settings
+        </Button>
+      </div>
       <Card>
         <CardHeader>
           <CardTitle>KYC Verification</CardTitle>
