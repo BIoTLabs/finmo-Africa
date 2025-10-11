@@ -346,78 +346,112 @@ const Profile = () => {
 
           {/* Contacts Tab */}
           <TabsContent value="contacts" className="space-y-4">
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <Users className="w-5 h-5" />
-                      Your Contacts ({contacts.length})
+            {/* Sync Action Card */}
+            <Card className="bg-gradient-primary text-primary-foreground overflow-hidden relative">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -mr-16 -mt-16" />
+              <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full -ml-12 -mb-12" />
+              <CardHeader className="relative">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1">
+                    <CardTitle className="text-xl mb-2 flex items-center gap-2">
+                      <Smartphone className="w-5 h-5" />
+                      Sync Your Contacts
                     </CardTitle>
-                    <CardDescription>
-                      See which of your contacts are using FinMo
+                    <CardDescription className="text-primary-foreground/80">
+                      Connect with friends on FinMo and make instant transfers
                     </CardDescription>
                   </div>
                   <Button
                     onClick={handleSyncContacts}
                     disabled={syncing}
-                    className="bg-gradient-primary"
+                    size="lg"
+                    className="bg-white text-primary hover:bg-white/90 shadow-finmo-sm"
                   >
                     <Smartphone className="w-4 h-4 mr-2" />
-                    {syncing ? "Syncing..." : "Sync Phone"}
+                    {syncing ? "Syncing..." : "Sync Now"}
                   </Button>
+                </div>
+              </CardHeader>
+            </Card>
+
+            {/* Contacts List */}
+            <Card>
+              <CardHeader>
+                <div className="flex items-center justify-between">
+                  <CardTitle className="flex items-center gap-2">
+                    <Users className="w-5 h-5" />
+                    Your Contacts ({contacts.length})
+                  </CardTitle>
                 </div>
               </CardHeader>
               <CardContent>
                 {contacts.length === 0 ? (
-                  <div className="text-center py-8">
-                    <Smartphone className="w-12 h-12 mx-auto mb-4 text-muted-foreground" />
-                    <p className="text-muted-foreground mb-4">
-                      No contacts yet. Sync your phone contacts to get started.
+                  <div className="text-center py-12 animate-fade-in">
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-primary/10 flex items-center justify-center">
+                      <Users className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">No Contacts Yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                      Sync your phone contacts to see which of your friends are using FinMo
                     </p>
                     <Button
                       onClick={handleSyncContacts}
                       disabled={syncing}
-                      variant="outline"
+                      size="lg"
+                      className="bg-gradient-primary"
                     >
                       <Smartphone className="w-4 h-4 mr-2" />
                       {syncing ? "Syncing..." : "Sync Phone Contacts"}
                     </Button>
                   </div>
                 ) : (
-                  <div className="space-y-3">
-                    {contacts.map((contact) => (
+                  <div className="space-y-2">
+                    {contacts.map((contact, index) => (
                       <div
                         key={contact.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                        className="flex items-center justify-between p-4 rounded-xl border bg-card hover:shadow-finmo-sm transition-all duration-200 animate-fade-in group"
+                        style={{ animationDelay: `${index * 50}ms` }}
                       >
-                        <div className="flex items-center gap-3">
-                          <Avatar>
-                            <AvatarFallback className="bg-gradient-primary text-primary-foreground">
-                              {contact.contact_name[0].toUpperCase()}
-                            </AvatarFallback>
-                          </Avatar>
-                          <div>
-                            <p className="font-medium">{contact.contact_name}</p>
-                            <p className="text-sm text-muted-foreground">
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className="relative">
+                            <Avatar className="w-12 h-12 border-2 border-border">
+                              <AvatarFallback className="bg-gradient-primary text-primary-foreground font-semibold">
+                                {contact.contact_name[0].toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            {contact.is_on_finmo && (
+                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-success rounded-full flex items-center justify-center border-2 border-background">
+                                <CheckCircle2 className="w-3 h-3 text-success-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-foreground truncate">
+                              {contact.contact_name}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">
                               {contact.contact_phone}
                             </p>
                           </div>
                         </div>
-                        {contact.is_on_finmo ? (
-                          <Badge variant="default" className="bg-green-500">
-                            <CheckCircle2 className="w-3 h-3 mr-1" />
-                            On FinMo
-                          </Badge>
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            onClick={() => handleInviteContact(contact)}
-                          >
-                            Invite
-                          </Button>
-                        )}
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          {contact.is_on_finmo ? (
+                            <Badge className="bg-success/10 text-success border-success/20 hover:bg-success/20">
+                              <CheckCircle2 className="w-3 h-3 mr-1" />
+                              On FinMo
+                            </Badge>
+                          ) : (
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => handleInviteContact(contact)}
+                              className="group-hover:border-primary group-hover:text-primary"
+                            >
+                              <Mail className="w-3 h-3 mr-1" />
+                              Invite
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     ))}
                   </div>
