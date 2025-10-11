@@ -38,6 +38,7 @@ import MarketplaceOrderDetail from "./pages/MarketplaceOrderDetail";
 import KYCVerification from "./pages/KYCVerification";
 import AccountStatement from "./pages/AccountStatement";
 import MyAds from "./pages/MyAds";
+import Staking from "./pages/Staking";
 
 const queryClient = new QueryClient();
 
@@ -82,6 +83,7 @@ const App = () => (
           <Route path="/kyc-verification" element={<ProtectedRoute><KYCVerification /></ProtectedRoute>} />
           <Route path="/account-statement" element={<ProtectedRoute><AccountStatement /></ProtectedRoute>} />
           <Route path="/my-ads" element={<ProtectedRoute><MyAds /></ProtectedRoute>} />
+          <Route path="/staking" element={<ProtectedRoute><Staking /></ProtectedRoute>} />
         {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
         <Route path="*" element={<NotFound />} />
       </Routes>

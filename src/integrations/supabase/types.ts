@@ -925,6 +925,54 @@ export type Database = {
         }
         Relationships: []
       }
+      staking_positions: {
+        Row: {
+          apy_rate: number
+          created_at: string
+          duration_days: number
+          end_date: string
+          id: string
+          rewards_earned: number
+          staked_amount: number
+          start_date: string
+          status: string
+          token: string
+          updated_at: string
+          user_id: string
+          withdrawn_at: string | null
+        }
+        Insert: {
+          apy_rate?: number
+          created_at?: string
+          duration_days: number
+          end_date: string
+          id?: string
+          rewards_earned?: number
+          staked_amount: number
+          start_date?: string
+          status?: string
+          token: string
+          updated_at?: string
+          user_id: string
+          withdrawn_at?: string | null
+        }
+        Update: {
+          apy_rate?: number
+          created_at?: string
+          duration_days?: number
+          end_date?: string
+          id?: string
+          rewards_earned?: number
+          staked_amount?: number
+          start_date?: string
+          status?: string
+          token?: string
+          updated_at?: string
+          user_id?: string
+          withdrawn_at?: string | null
+        }
+        Relationships: []
+      }
       supported_chains: {
         Row: {
           block_explorer: string
@@ -1250,6 +1298,10 @@ export type Database = {
       }
     }
     Functions: {
+      calculate_staking_rewards: {
+        Args: { _amount: number; _apy_rate: number; _duration_days: number }
+        Returns: number
+      }
       can_access_dispute_evidence: {
         Args: { _dispute_id: string; _user_id: string }
         Returns: boolean
