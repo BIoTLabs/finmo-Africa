@@ -22,5 +22,8 @@ cd "`dirname \"$PRG\"`/" >/dev/null
 APP_HOME="`pwd -P`"
 cd "$SAVED" >/dev/null
 
+# Ensure android/gradlew has execute permissions
+chmod +x "$APP_HOME/android/gradlew" 2>/dev/null || true
+
 # Forward to android/gradlew with all arguments
 exec "$APP_HOME/android/gradlew" "$@"
