@@ -106,15 +106,26 @@ Make sure these are set before building.
 
 ## For CI/CD
 
-In your CI/CD pipeline (e.g., GitLab CI, GitHub Actions), ensure:
+### Using the Build Script (Recommended)
 ```yaml
-# CRITICAL: Set execute permissions first
-- run: chmod +x gradlew
-- run: chmod +x android/gradlew
-- run: npm install
-- run: npm run build
-- run: npx cap sync android
-- run: ./gradlew assembleRelease
+build-android:
+  stage: build
+  image: mingc/android-build-box:latest
+  before_script:
+    - chmod +x build-android.sh
+  script:
+    - ./build-android.sh
+  artifacts:
+    paths:
+      - android/app/build/outputs/apk/release/
 ```
 
-**Important**: The `chmod +x` commands must run before any gradlew execution to avoid "Permission denied" errors.
+### Manual Steps
+If not using the build script:
+```bash
+chmod +x android/gradlew
+npm install
+npm run build
+npx cap sync android
+cd android && ./gradlew assembleRelease
+```
