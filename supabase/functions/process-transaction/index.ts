@@ -41,128 +41,121 @@ Deno.serve(async (req) => {
     const requestData: TransactionRequest = await req.json();
     const { recipient_phone, recipient_wallet, amount, token, transaction_type } = requestData;
 
-    console.log('Processing transaction:', { user: user.id, amount, token, transaction_type });
-
-    // Get sender profile
-    const { data: senderProfile, error: senderError } = await supabase
-      .from('profiles')
-      .select('*')
-      .eq('id', user.id)
-      .single();
-
-    if (senderError || !senderProfile) {
-      throw new Error('Sender profile not found');
+    // Validate amount
+    if (typeof amount !== 'number' || !isFinite(amount)) {
+      throw new Error('Invalid transaction amount');
+    }
+    if (amount <= 0) {
+      throw new Error('Amount must be greater than zero');
+    }
+    if (amount < 0.01) {
+      throw new Error('Amount must be at least 0.01');
+    }
+    if (amount > 1000000) {
+      throw new Error('Amount exceeds maximum transaction limit');
+    }
+    // Validate decimal places (USDC: max 6 decimals, MATIC: max 18)
+    const maxDecimals = token === 'USDC' ? 6 : 18;
+    if (!Number.isInteger(amount * Math.pow(10, maxDecimals))) {
+      throw new Error(`Amount has too many decimal places (max ${maxDecimals})`);
     }
 
-    // Check sender balance
-    const { data: senderBalance, error: balanceError } = await supabase
-      .from('wallet_balances')
-      .select('balance')
-      .eq('user_id', user.id)
-      .eq('token', token)
-      .single();
-
-    if (balanceError || !senderBalance || Number(senderBalance.balance) < amount) {
-      throw new Error('Insufficient balance');
-    }
-
-    let recipientId: string | null = null;
-    let finalRecipientWallet = recipient_wallet;
-
-    // Handle internal transfers (FinMo to FinMo)
-    if (transaction_type === 'internal' && recipient_phone) {
-      const { data: registryData, error: registryError } = await supabase
-        .rpc('lookup_user_by_phone', { phone: recipient_phone });
-
-      if (registryError || !registryData || registryData.length === 0) {
-        return new Response(
-          JSON.stringify({ 
-            error: 'Recipient not registered on FinMo',
-            message: `The phone number ${recipient_phone} is not registered on FinMo. Please invite them to join and try again later.`,
-            shouldInvite: true
-          }),
-          { 
-            status: 404,
-            headers: { ...corsHeaders, 'Content-Type': 'application/json' }
-          }
-        );
+    // Validate phone number if provided (E.164 format)
+    if (recipient_phone) {
+      const phoneRegex = /^\+[1-9]\d{1,14}$/;
+      if (!phoneRegex.test(recipient_phone)) {
+        throw new Error('Invalid phone number format. Use international format: +1234567890');
       }
+    }
 
-      const recipientInfo = registryData[0];
-      finalRecipientWallet = recipientInfo.wallet_address;
-      recipientId = recipientInfo.user_id;
+    console.log('Processing transaction:', { 
+      sender: user.id, 
+      type: transaction_type,
+      token
+    });
 
-      // Create internal transaction record (database only, no blockchain)
-      const { data: transaction, error: txError } = await supabase
-        .from('transactions')
-        .insert({
-          sender_id: user.id,
-          recipient_id: recipientId,
-          sender_wallet: senderProfile.wallet_address,
-          recipient_wallet: finalRecipientWallet,
-          amount: amount,
-          token: token,
-          transaction_type: 'internal',
-          status: 'completed',
-          transaction_hash: null,
-          withdrawal_fee: 0,
-        })
-        .select()
+    // Handle internal transfer using atomic function
+    if (transaction_type === 'internal') {
+      // Get sender profile
+      const { data: senderProfile, error: senderError } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', user.id)
         .single();
 
-      if (txError) {
-        throw new Error('Failed to create transaction');
+      if (senderError || !senderProfile) {
+        console.error('Sender profile fetch failed:', senderError);
+        throw new Error('Unable to process transaction. Please try again.');
       }
 
-      // Update sender balance (deduct)
-      const newSenderBalance = Number(senderBalance.balance) - amount;
-      const { error: senderUpdateError } = await supabase
-        .from('wallet_balances')
-        .update({ balance: newSenderBalance })
-        .eq('user_id', user.id)
-        .eq('token', token);
+      // Lookup recipient
+      let recipientId: string;
+      let recipientWallet: string;
 
-      if (senderUpdateError) {
-        console.error('Failed to update sender balance:', senderUpdateError);
-        throw new Error('Failed to update sender balance');
+      if (recipient_phone) {
+        const { data: lookupData, error: lookupError } = await supabase
+          .rpc('lookup_user_by_phone', { phone: recipient_phone });
+
+        if (lookupError || !lookupData?.[0]) {
+          console.error('Recipient lookup failed:', lookupError);
+          throw new Error('Recipient not found');
+        }
+
+        recipientId = lookupData[0].user_id;
+        recipientWallet = lookupData[0].wallet_address;
+      } else if (recipient_wallet) {
+        const { data: recipientProfile, error: recipientError } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('wallet_address', recipient_wallet)
+          .single();
+
+        if (recipientError || !recipientProfile) {
+          console.error('Recipient profile fetch failed:', recipientError);
+          throw new Error('Recipient not found');
+        }
+
+        recipientId = recipientProfile.id;
+        recipientWallet = recipientProfile.wallet_address;
+      } else {
+        throw new Error('Recipient information required');
       }
 
-      // Update recipient balance (add)
-      const { data: recipientBalance, error: recipientBalanceError } = await supabase
-        .from('wallet_balances')
-        .select('balance')
-        .eq('user_id', recipientId)
-        .eq('token', token)
-        .maybeSingle();
-
-      if (recipientBalanceError) {
-        console.error('Failed to fetch recipient balance:', recipientBalanceError);
-        throw new Error('Failed to fetch recipient balance');
+      // Prevent self-transfer
+      if (recipientId === user.id) {
+        throw new Error('Cannot transfer to yourself');
       }
 
-      const newRecipientBalance = Number(recipientBalance?.balance || 0) + amount;
-      const { error: recipientUpdateError } = await supabase
-        .from('wallet_balances')
-        .upsert({
-          user_id: recipientId,
-          token: token,
-          balance: newRecipientBalance
-        }, {
-          onConflict: 'user_id,token'
+      // Use atomic transfer function to prevent race conditions
+      const { data: transactionId, error: transferError } = await supabase
+        .rpc('process_internal_transfer', {
+          _sender_id: user.id,
+          _recipient_id: recipientId,
+          _amount: amount,
+          _token: token,
+          _sender_wallet: senderProfile.wallet_address,
+          _recipient_wallet: recipientWallet,
+          _transaction_type: 'internal'
         });
 
-      if (recipientUpdateError) {
-        console.error('Failed to update recipient balance:', recipientUpdateError);
-        throw new Error('Failed to update recipient balance');
+      if (transferError) {
+        console.error('Transfer failed:', transferError);
+        // Return user-friendly error messages
+        if (transferError.message.includes('Insufficient balance')) {
+          throw new Error('Insufficient balance');
+        } else if (transferError.message.includes('Sender wallet not found')) {
+          throw new Error('Wallet not found');
+        }
+        throw new Error('Unable to process transaction. Please try again.');
       }
 
-      console.log('Internal transfer completed:', transaction.id);
-
+      console.log('Transfer completed:', transactionId);
+      
       return new Response(
-        JSON.stringify({ 
-          success: true, 
-          transaction,
-          message: 'Transfer completed instantly!'
+        JSON.stringify({
+          success: true,
+          transaction_id: transactionId,
+          message: 'Transfer completed successfully!'
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -171,19 +164,28 @@ Deno.serve(async (req) => {
     // Handle external withdrawals (to blockchain)
     if (transaction_type === 'external' && recipient_wallet) {
       // External withdrawals are handled by the blockchain-withdraw function
-      // This endpoint just validates and routes to the blockchain function
       throw new Error('External withdrawals must use /blockchain-withdraw endpoint');
     }
 
     throw new Error('Invalid transaction type or missing parameters');
 
-
   } catch (error) {
-    console.error('Transaction error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'An unknown error occurred';
+    console.error('Transaction error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Return generic error message to user
+    const userMessage = error instanceof Error && 
+      ['Insufficient balance', 'Recipient not found', 'Cannot transfer to yourself', 
+       'Invalid transaction amount', 'Amount must be greater than zero',
+       'Amount exceeds maximum transaction limit', 'Invalid phone number format'].some(msg => error.message.includes(msg))
+      ? error.message
+      : 'Unable to process transaction. Please try again later.';
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
-      { 
+      JSON.stringify({ error: userMessage }),
+      {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }
       }

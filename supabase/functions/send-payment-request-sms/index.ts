@@ -29,15 +29,22 @@ const handler = async (req: Request): Promise<Response> => {
       token,
     }: PaymentRequestSMS = await req.json();
 
+    // Validate phone number (E.164 format)
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(recipient_phone)) {
+      throw new Error('Invalid phone number format');
+    }
+
     const twilioAccountSid = Deno.env.get("TWILIO_ACCOUNT_SID");
     const twilioAuthToken = Deno.env.get("TWILIO_AUTH_TOKEN");
     const twilioPhoneNumber = Deno.env.get("TWILIO_PHONE_NUMBER");
 
     if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
-      throw new Error("Twilio credentials not configured");
+      console.error('Twilio credentials not configured');
+      throw new Error('SMS service unavailable');
     }
 
-    console.log("Sending payment request SMS to:", recipient_phone);
+    console.log("Sending payment request SMS");
 
     const paymentUrl = `https://39f749dd-e983-4411-b0e9-48f73cf4294c.lovableproject.com/payment-request/${payment_request_id}`;
 
@@ -75,9 +82,17 @@ const handler = async (req: Request): Promise<Response> => {
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
-    console.error("Error sending payment request SMS:", error);
+    console.error("Error sending payment request SMS:", {
+      message: error?.message,
+      stack: error?.stack
+    });
+    
+    const userMessage = error?.message?.includes('Invalid phone number')
+      ? 'Invalid phone number format'
+      : 'Unable to send payment request. Please try again later.';
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ error: userMessage }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

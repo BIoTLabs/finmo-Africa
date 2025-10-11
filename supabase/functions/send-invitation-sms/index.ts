@@ -24,8 +24,20 @@ const handler = async (req: Request): Promise<Response> => {
   try {
     const { contactName, contactPhone, inviterName }: InvitationRequest = await req.json();
 
+    // Validate phone number (E.164 format)
+    const phoneRegex = /^\+[1-9]\d{1,14}$/;
+    if (!phoneRegex.test(contactPhone)) {
+      throw new Error('Invalid phone number format. Use international format: +1234567890');
+    }
+
+    // Prevent repeated digits (possible test/invalid numbers)
+    if (/(\d)\1{9,}/.test(contactPhone)) {
+      throw new Error('Invalid phone number');
+    }
+
     if (!TWILIO_ACCOUNT_SID || !TWILIO_AUTH_TOKEN || !TWILIO_PHONE_NUMBER) {
-      throw new Error("Twilio credentials not configured");
+      console.error('Twilio credentials not configured');
+      throw new Error('SMS service unavailable. Please try again later.');
     }
 
     // Create the invitation message
@@ -51,7 +63,7 @@ const handler = async (req: Request): Promise<Response> => {
     if (!twilioResponse.ok) {
       const errorData = await twilioResponse.text();
       console.error("Twilio error:", errorData);
-      throw new Error(`Failed to send SMS: ${errorData}`);
+      throw new Error('Failed to send invitation SMS');
     }
 
     const twilioData = await twilioResponse.json();
@@ -68,12 +80,18 @@ const handler = async (req: Request): Promise<Response> => {
       }
     );
   } catch (error: any) {
-    console.error("Error in send-invitation-sms function:", error);
+    console.error("Error in send-invitation-sms function:", {
+      message: error?.message,
+      stack: error?.stack
+    });
+    
+    // Return generic error message
+    const userMessage = error?.message?.includes('Invalid phone number') 
+      ? error.message 
+      : 'Unable to send invitation. Please try again later.';
+    
     return new Response(
-      JSON.stringify({ 
-        error: error.message,
-        details: "Failed to send invitation SMS"
-      }),
+      JSON.stringify({ error: userMessage }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

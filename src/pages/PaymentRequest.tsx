@@ -42,30 +42,33 @@ const PaymentRequest = () => {
 
   const fetchPaymentRequest = async () => {
     try {
+      // Use secure function that doesn't expose sensitive data
       const { data, error } = await supabase
-        .from("payment_requests")
-        .select("*")
-        .eq("id", id)
-        .single();
+        .rpc('get_payment_request_public_info', { _request_id: id });
 
       if (error) throw error;
 
-      // Fetch requester profile separately
-      const { data: requesterProfile } = await supabase
-        .from("profiles")
-        .select("display_name, phone_number")
-        .eq("id", data.requester_id)
-        .single();
-
-      const requesterName = requesterProfile?.display_name || requesterProfile?.phone_number || "FinMo User";
-
-      setPaymentRequest({
-        ...data,
-        requester_name: requesterName,
-      });
+      if (!data || data.length === 0) {
+        setPaymentRequest(null);
+      } else {
+        setPaymentRequest({
+          id: data[0].id,
+          amount: data[0].amount,
+          token: data[0].token,
+          message: data[0].message,
+          status: data[0].status,
+          expires_at: data[0].expires_at,
+          requester_name: data[0].requester_name,
+          // These fields are not returned by the secure function for security
+          recipient_email: '',
+          requester_id: '',
+          created_at: ''
+        });
+      }
     } catch (error) {
       console.error("Error fetching payment request:", error);
       toast.error("We couldn't find this payment request. The link may be invalid or expired.");
+      setPaymentRequest(null);
     } finally {
       setLoading(false);
     }
@@ -97,10 +100,32 @@ const PaymentRequest = () => {
         return;
       }
 
+      // Get payment request full details (authenticated)
+      const { data: fullRequest, error: requestError } = await supabase
+        .from("payment_requests")
+        .select("requester_id")
+        .eq("id", id)
+        .single();
+
+      if (requestError || !fullRequest) {
+        throw new Error("Payment request not found");
+      }
+
+      // Get requester wallet for internal transfer
+      const { data: requesterProfile } = await supabase
+        .from("profiles")
+        .select("wallet_address")
+        .eq("id", fullRequest.requester_id)
+        .single();
+
+      if (!requesterProfile) {
+        throw new Error("Requester profile not found");
+      }
+
       // Process internal transfer
       const { error: txError } = await supabase.functions.invoke("process-transaction", {
         body: {
-          recipient_wallet: null,
+          recipient_wallet: requesterProfile.wallet_address,
           recipient_phone: null,
           amount: paymentRequest.amount,
           token: paymentRequest.token,

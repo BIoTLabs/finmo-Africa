@@ -61,12 +61,38 @@ Deno.serve(async (req) => {
     const requestData: WithdrawRequest = await req.json();
     const { recipient_wallet, amount, token } = requestData;
 
-    console.log('Processing blockchain withdrawal:', { user: user.id, amount, token, recipient_wallet });
-
-    // Validate wallet address
-    if (!ethers.isAddress(recipient_wallet)) {
-      throw new Error('Invalid recipient wallet address');
+    // Validate amount
+    if (typeof amount !== 'number' || !isFinite(amount)) {
+      throw new Error('Invalid withdrawal amount');
     }
+    if (amount <= 0) {
+      throw new Error('Amount must be greater than zero');
+    }
+    if (amount < 0.01) {
+      throw new Error('Amount must be at least 0.01');
+    }
+    if (amount > 1000000) {
+      throw new Error('Amount exceeds maximum withdrawal limit');
+    }
+
+    // Validate Ethereum wallet address with checksum
+    if (!ethers.isAddress(recipient_wallet)) {
+      throw new Error('Invalid Ethereum wallet address format');
+    }
+    
+    // Check checksum if address is not all lowercase
+    const checksumAddress = ethers.getAddress(recipient_wallet);
+    if (recipient_wallet !== recipient_wallet.toLowerCase() && recipient_wallet !== checksumAddress) {
+      throw new Error('Invalid Ethereum wallet address checksum');
+    }
+    
+    // Prevent sending to burn address
+    const BURN_ADDRESSES = ['0x0000000000000000000000000000000000000000'];
+    if (BURN_ADDRESSES.includes(recipient_wallet.toLowerCase())) {
+      throw new Error('Cannot send to burn address');
+    }
+
+    console.log('Processing blockchain withdrawal:', { user: user.id, token });
 
     // Get user profile and balance
     const { data: senderProfile, error: profileError } = await supabase
@@ -189,10 +215,22 @@ Deno.serve(async (req) => {
     );
 
   } catch (error) {
-    console.error('Withdrawal error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Withdrawal failed';
+    console.error('Withdrawal error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Return generic error message to user except for known user errors
+    const userMessage = error instanceof Error && 
+      ['Invalid Ethereum wallet address', 'Cannot send to burn address', 
+       'Insufficient balance', 'KYC verification required',
+       'Invalid withdrawal amount', 'Amount must be greater than zero',
+       'Amount exceeds maximum withdrawal limit'].some(msg => error.message.includes(msg))
+      ? error.message
+      : 'Unable to process withdrawal. Please try again later.';
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: userMessage }),
       {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

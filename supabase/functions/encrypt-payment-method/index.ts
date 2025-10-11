@@ -8,7 +8,12 @@ const corsHeaders = {
 
 // Simple encryption/decryption using AES-GCM
 async function getEncryptionKey(): Promise<CryptoKey> {
-  const keyMaterial = Deno.env.get('ENCRYPTION_KEY') || 'default-key-please-change-in-production';
+  // SECURITY: Enforce encryption key is properly configured
+  const keyMaterial = Deno.env.get('ENCRYPTION_KEY');
+  if (!keyMaterial || keyMaterial.length < 32) {
+    console.error('ENCRYPTION_KEY not properly configured');
+    throw new Error('System configuration error');
+  }
   const encoder = new TextEncoder();
   const keyData = encoder.encode(keyMaterial.padEnd(32, '0').substring(0, 32));
   
@@ -143,10 +148,19 @@ Deno.serve(async (req) => {
     }
 
   } catch (error) {
-    console.error('Encryption error:', error);
-    const errorMessage = error instanceof Error ? error.message : 'Encryption operation failed';
+    console.error('Encryption error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined
+    });
+    
+    // Return generic error message except for known user errors
+    const userMessage = error instanceof Error && 
+      ['System configuration error', 'Unauthorized', 'Payment method not found'].some(msg => error.message.includes(msg))
+      ? error.message
+      : 'Unable to complete operation. Please try again later.';
+    
     return new Response(
-      JSON.stringify({ error: errorMessage }),
+      JSON.stringify({ error: userMessage }),
       {
         status: 400,
         headers: { ...corsHeaders, 'Content-Type': 'application/json' }

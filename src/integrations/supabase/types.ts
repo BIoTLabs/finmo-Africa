@@ -1271,6 +1271,18 @@ export type Database = {
         Args: Record<PropertyKey, never>
         Returns: string
       }
+      get_payment_request_public_info: {
+        Args: { _request_id: string }
+        Returns: {
+          amount: number
+          expires_at: string
+          id: string
+          message: string
+          requester_name: string
+          status: string
+          token: string
+        }[]
+      }
       get_public_profile: {
         Args: { user_uuid: string }
         Returns: {
@@ -1301,6 +1313,18 @@ export type Database = {
           user_id: string
           wallet_address: string
         }[]
+      }
+      process_internal_transfer: {
+        Args: {
+          _amount: number
+          _recipient_id: string
+          _recipient_wallet: string
+          _sender_id: string
+          _sender_wallet: string
+          _token: string
+          _transaction_type?: string
+        }
+        Returns: string
       }
     }
     Enums: {
