@@ -26,13 +26,25 @@ export const requestContactsPermission = async (): Promise<boolean> => {
 
 export const syncPhoneContacts = async (): Promise<PhoneContact[]> => {
   try {
-    const hasPermission = await requestContactsPermission();
-    
-    if (!hasPermission) {
-      toast.error('Contacts permission denied');
+    // Check if running on native platform
+    if (!Capacitor.isNativePlatform()) {
+      toast.error('Contact syncing only works on iOS or Android devices', {
+        description: 'Please test this feature by building and running the app on a physical device or emulator'
+      });
       return [];
     }
 
+    console.log('Requesting contacts permission...');
+    const hasPermission = await requestContactsPermission();
+    
+    if (!hasPermission) {
+      toast.error('Contacts permission was denied', {
+        description: 'Please enable contacts access in your device settings to use this feature'
+      });
+      return [];
+    }
+
+    console.log('Permission granted, fetching contacts...');
     const result = await Contacts.getContacts({
       projection: {
         name: true,
@@ -55,10 +67,13 @@ export const syncPhoneContacts = async (): Promise<PhoneContact[]> => {
       });
     });
 
+    console.log(`Synced ${phoneContacts.length} contacts`);
     return phoneContacts;
   } catch (error) {
     console.error('Error syncing contacts:', error);
-    toast.error('Failed to sync contacts');
+    toast.error('Failed to sync contacts', {
+      description: error instanceof Error ? error.message : 'An unknown error occurred'
+    });
     return [];
   }
 };
