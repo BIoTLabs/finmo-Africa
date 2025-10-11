@@ -213,6 +213,51 @@ const Staking = () => {
         </p>
       </div>
 
+      {/* About Staking */}
+      <div className="p-6">
+        <Card className="shadow-finmo-md bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+          <CardContent className="p-6 space-y-4">
+            <div className="flex items-center gap-2 mb-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold">About Staking</h2>
+            </div>
+            <p className="text-sm text-muted-foreground">
+              Lock your tokens for a fixed period and earn passive rewards through our staking program.
+            </p>
+            <div className="space-y-3">
+              <div className="flex items-start gap-3">
+                <Lock className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Secure & Transparent</p>
+                  <p className="text-xs text-muted-foreground">Your tokens are locked in smart contracts with guaranteed returns</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Percent className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Flexible APY Rates</p>
+                  <p className="text-xs text-muted-foreground">Earn 5-12% APY based on your chosen staking duration</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Calendar className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Multiple Duration Options</p>
+                  <p className="text-xs text-muted-foreground">Choose from 30 to 365 days - longer durations earn higher rewards</p>
+                </div>
+              </div>
+              <div className="flex items-start gap-3">
+                <Unlock className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                <div>
+                  <p className="font-medium text-sm">Early Withdrawal Available</p>
+                  <p className="text-xs text-muted-foreground">Withdraw anytime with a 50% penalty, or wait for maturity to get full rewards</p>
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
       {/* Create Stake Form */}
       <div className="p-6 space-y-6">
         <Card className="shadow-finmo-md">
