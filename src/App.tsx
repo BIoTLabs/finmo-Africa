@@ -76,6 +76,7 @@ const App = () => (
           <Route path="/marketplace/create" element={<ProtectedRoute><MarketplaceCreate /></ProtectedRoute>} />
           <Route path="/marketplace/listing/:id" element={<ProtectedRoute><MarketplaceListing /></ProtectedRoute>} />
           <Route path="/marketplace/listing/:id/bids" element={<ProtectedRoute><MarketplaceListingBids /></ProtectedRoute>} />
+          <Route path="/marketplace/listing/:id/edit" element={<ProtectedRoute><MarketplaceCreate /></ProtectedRoute>} />
           <Route path="/marketplace/orders" element={<ProtectedRoute><MarketplaceOrders /></ProtectedRoute>} />
           <Route path="/marketplace/order/:id" element={<ProtectedRoute><MarketplaceOrderDetail /></ProtectedRoute>} />
           <Route path="/kyc-verification" element={<ProtectedRoute><KYCVerification /></ProtectedRoute>} />

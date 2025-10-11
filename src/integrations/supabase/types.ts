@@ -85,6 +85,44 @@ export type Database = {
           },
         ]
       }
+      chain_tokens: {
+        Row: {
+          chain_id: number
+          contract_address: string
+          created_at: string | null
+          decimals: number
+          id: string
+          is_active: boolean | null
+          token_symbol: string
+        }
+        Insert: {
+          chain_id: number
+          contract_address: string
+          created_at?: string | null
+          decimals?: number
+          id?: string
+          is_active?: boolean | null
+          token_symbol: string
+        }
+        Update: {
+          chain_id?: number
+          contract_address?: string
+          created_at?: string | null
+          decimals?: number
+          id?: string
+          is_active?: boolean | null
+          token_symbol?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "chain_tokens_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "supported_chains"
+            referencedColumns: ["chain_id"]
+          },
+        ]
+      }
       contact_invitations: {
         Row: {
           contact_name: string
@@ -881,6 +919,45 @@ export type Database = {
         }
         Relationships: []
       }
+      supported_chains: {
+        Row: {
+          block_explorer: string
+          chain_id: number
+          chain_name: string
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          is_testnet: boolean | null
+          native_currency_decimals: number
+          native_currency_symbol: string
+          rpc_url: string
+        }
+        Insert: {
+          block_explorer: string
+          chain_id: number
+          chain_name: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_testnet?: boolean | null
+          native_currency_decimals?: number
+          native_currency_symbol: string
+          rpc_url: string
+        }
+        Update: {
+          block_explorer?: string
+          chain_id?: number
+          chain_name?: string
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          is_testnet?: boolean | null
+          native_currency_decimals?: number
+          native_currency_symbol?: string
+          rpc_url?: string
+        }
+        Relationships: []
+      }
       supported_countries: {
         Row: {
           country_code: string
@@ -914,6 +991,8 @@ export type Database = {
       transactions: {
         Row: {
           amount: number
+          chain_id: number | null
+          chain_name: string | null
           created_at: string
           id: string
           recipient_id: string | null
@@ -928,6 +1007,8 @@ export type Database = {
         }
         Insert: {
           amount: number
+          chain_id?: number | null
+          chain_name?: string | null
           created_at?: string
           id?: string
           recipient_id?: string | null
@@ -942,6 +1023,8 @@ export type Database = {
         }
         Update: {
           amount?: number
+          chain_id?: number | null
+          chain_name?: string | null
           created_at?: string
           id?: string
           recipient_id?: string | null
