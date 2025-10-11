@@ -31,6 +31,7 @@ const MarketplaceCreate = () => {
     condition: "new",
     location: "",
     is_service: false,
+    listing_type: "fixed_price",
     images: [] as string[],
   });
 
@@ -103,6 +104,7 @@ const MarketplaceCreate = () => {
         condition: formData.is_service ? null : formData.condition,
         location: formData.location,
         is_service: formData.is_service,
+        listing_type: formData.listing_type,
         images: imageUrls,
         is_active: true,
       });
@@ -167,6 +169,24 @@ const MarketplaceCreate = () => {
               </div>
 
               <div>
+                <Label htmlFor="listing_type">Listing Type</Label>
+                <Select
+                  value={formData.listing_type}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, listing_type: value })
+                  }
+                >
+                  <SelectTrigger id="listing_type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fixed_price">Fixed Price</SelectItem>
+                    <SelectItem value="bidding">Open to Bidding</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div>
                 <Label htmlFor="title">Title *</Label>
                 <Input
                   id="title"
@@ -194,7 +214,9 @@ const MarketplaceCreate = () => {
               </div>
 
               <div>
-                <Label htmlFor="price">Price *</Label>
+                <Label htmlFor="price">
+                  {formData.listing_type === "fixed_price" ? "Price *" : "Starting Price *"}
+                </Label>
                 <div className="flex gap-2">
                   <Input
                     id="price"
@@ -223,6 +245,11 @@ const MarketplaceCreate = () => {
                     </SelectContent>
                   </Select>
                 </div>
+                {formData.listing_type === "bidding" && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    This is the starting price. Users can bid above this amount.
+                  </p>
+                )}
               </div>
 
               <div>

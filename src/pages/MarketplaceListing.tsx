@@ -25,6 +25,7 @@ interface Listing {
   location: string;
   is_service: boolean;
   seller_id: string;
+  listing_type: string;
   created_at: string;
 }
 
@@ -263,14 +264,15 @@ const MarketplaceListing = () => {
           </CardContent>
         </Card>
 
-        {/* Purchase Button */}
-        <Dialog>
-          <DialogTrigger asChild>
-            <Button className="w-full" size="lg">
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Buy Now
-            </Button>
-          </DialogTrigger>
+        {/* Purchase/Bid Button */}
+        {listing.listing_type === "fixed_price" ? (
+          <Dialog>
+            <DialogTrigger asChild>
+              <Button className="w-full" size="lg">
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                Buy Now
+              </Button>
+            </DialogTrigger>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Purchase Details</DialogTitle>
@@ -340,6 +342,15 @@ const MarketplaceListing = () => {
             </div>
           </DialogContent>
         </Dialog>
+        ) : (
+          <Button 
+            className="w-full" 
+            size="lg"
+            onClick={() => navigate(`/marketplace/listing/${listing.id}/bids`)}
+          >
+            View Bids & Place Offer
+          </Button>
+        )}
       </div>
 
       <MobileNav />

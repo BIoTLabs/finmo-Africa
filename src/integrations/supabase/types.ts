@@ -243,6 +243,7 @@ export type Database = {
           bidder_id: string
           created_at: string
           currency: string
+          escrow_amount: number | null
           id: string
           listing_id: string
           message: string | null
@@ -256,6 +257,7 @@ export type Database = {
           bidder_id: string
           created_at?: string
           currency?: string
+          escrow_amount?: number | null
           id?: string
           listing_id: string
           message?: string | null
@@ -269,6 +271,7 @@ export type Database = {
           bidder_id?: string
           created_at?: string
           currency?: string
+          escrow_amount?: number | null
           id?: string
           listing_id?: string
           message?: string | null
@@ -375,6 +378,7 @@ export type Database = {
           images: string[] | null
           is_active: boolean | null
           is_service: boolean | null
+          listing_type: string
           location: string | null
           price: number
           seller_id: string
@@ -391,6 +395,7 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean | null
           is_service?: boolean | null
+          listing_type?: string
           location?: string | null
           price: number
           seller_id: string
@@ -407,6 +412,7 @@ export type Database = {
           images?: string[] | null
           is_active?: boolean | null
           is_service?: boolean | null
+          listing_type?: string
           location?: string | null
           price?: number
           seller_id?: string

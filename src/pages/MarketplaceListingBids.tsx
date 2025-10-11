@@ -20,16 +20,20 @@ interface Listing {
   currency: string;
   images: string[];
   seller_id: string;
+  listing_type: string;
 }
 
 interface Bid {
   id: string;
   bidder_id: string;
+  seller_id: string;
+  listing_id: string;
   bid_amount: number;
   currency: string;
   message: string;
   phone_number: string;
   status: string;
+  escrow_amount: number;
   created_at: string;
 }
 
@@ -41,6 +45,7 @@ const MarketplaceListingBids = () => {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const [currentUser, setCurrentUser] = useState<any>(null);
   const [formData, setFormData] = useState({
     bid_amount: "",
     message: "",
@@ -48,6 +53,12 @@ const MarketplaceListingBids = () => {
   });
 
   useEffect(() => {
+    const getCurrentUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setCurrentUser(user);
+    };
+    getCurrentUser();
+    
     if (id) {
       fetchListing();
       fetchBids();
@@ -95,6 +106,11 @@ const MarketplaceListingBids = () => {
       return;
     }
 
+    if (amount <= listing.price) {
+      toast.error(`Bid must be higher than starting price of ${listing.price}`);
+      return;
+    }
+
     if (!formData.phone_number) {
       toast.error("Please provide your phone number");
       return;
@@ -108,6 +124,28 @@ const MarketplaceListingBids = () => {
         return;
       }
 
+      // Check user balance
+      const { data: balance } = await supabase
+        .from("wallet_balances")
+        .select("balance")
+        .eq("user_id", user.id)
+        .eq("token", listing.currency)
+        .single();
+
+      if (!balance || Number(balance.balance) < amount) {
+        toast.error("Insufficient balance for this bid");
+        return;
+      }
+
+      // Deduct from balance and place in escrow
+      const newBalance = Number(balance.balance) - amount;
+      await supabase
+        .from("wallet_balances")
+        .update({ balance: newBalance })
+        .eq("user_id", user.id)
+        .eq("token", listing.currency);
+
+      // Create bid with escrow
       const { error } = await supabase.from("marketplace_bids").insert({
         listing_id: listing.id,
         bidder_id: user.id,
@@ -116,11 +154,12 @@ const MarketplaceListingBids = () => {
         currency: listing.currency,
         message: formData.message,
         phone_number: formData.phone_number,
+        escrow_amount: amount,
       });
 
       if (error) throw error;
 
-      toast.success("Bid submitted successfully!");
+      toast.success("Bid placed! Amount held in escrow.");
       setFormData({ bid_amount: "", message: "", phone_number: "" });
       fetchBids();
     } catch (error: any) {
@@ -131,16 +170,51 @@ const MarketplaceListingBids = () => {
     }
   };
 
-  const handleAcceptBid = async (bidId: string) => {
+  const handleAcceptBid = async (bid: Bid) => {
+    if (!listing) return;
+
     try {
-      const { error } = await supabase
+      // Update listing price to accepted bid amount
+      await supabase
+        .from("marketplace_listings")
+        .update({ price: bid.bid_amount })
+        .eq("id", listing.id);
+
+      // Accept this bid
+      await supabase
         .from("marketplace_bids")
         .update({ status: "accepted" })
-        .eq("id", bidId);
+        .eq("id", bid.id);
 
-      if (error) throw error;
+      // Reject all other pending bids and return escrow
+      const otherBids = bids.filter(b => b.id !== bid.id && b.status === "pending");
+      
+      for (const otherBid of otherBids) {
+        // Return escrow to bidder
+        const { data: bidderBalance } = await supabase
+          .from("wallet_balances")
+          .select("balance")
+          .eq("user_id", otherBid.bidder_id)
+          .eq("token", otherBid.currency)
+          .single();
 
-      toast.success("Bid accepted!");
+        if (bidderBalance) {
+          await supabase
+            .from("wallet_balances")
+            .update({ balance: Number(bidderBalance.balance) + otherBid.escrow_amount })
+            .eq("user_id", otherBid.bidder_id)
+            .eq("token", otherBid.currency);
+        }
+
+        // Reject the bid
+        await supabase
+          .from("marketplace_bids")
+          .update({ status: "rejected" })
+          .eq("id", otherBid.id);
+      }
+
+      toast.success("Bid accepted! Price updated and other bids returned.");
+      fetchListing();
       fetchBids();
     } catch (error: any) {
       console.error("Error accepting bid:", error);
@@ -148,20 +222,35 @@ const MarketplaceListingBids = () => {
     }
   };
 
-  const handleRejectBid = async (bidId: string) => {
+  const handleCancelBid = async (bid: Bid) => {
     try {
-      const { error } = await supabase
+      // Return escrow to bidder
+      const { data: balance } = await supabase
+        .from("wallet_balances")
+        .select("balance")
+        .eq("user_id", bid.bidder_id)
+        .eq("token", bid.currency)
+        .single();
+
+      if (balance) {
+        await supabase
+          .from("wallet_balances")
+          .update({ balance: Number(balance.balance) + bid.escrow_amount })
+          .eq("user_id", bid.bidder_id)
+          .eq("token", bid.currency);
+      }
+
+      // Delete the bid
+      await supabase
         .from("marketplace_bids")
-        .update({ status: "rejected" })
-        .eq("id", bidId);
+        .delete()
+        .eq("id", bid.id);
 
-      if (error) throw error;
-
-      toast.success("Bid rejected");
+      toast.success("Bid cancelled and amount returned");
       fetchBids();
     } catch (error: any) {
-      console.error("Error rejecting bid:", error);
-      toast.error(error.message || "Failed to reject bid");
+      console.error("Error cancelling bid:", error);
+      toast.error(error.message || "Failed to cancel bid");
     }
   };
 
@@ -294,39 +383,70 @@ const MarketplaceListingBids = () => {
             {bids.length === 0 ? (
               <p className="text-muted-foreground text-center py-4">No bids yet</p>
             ) : (
-              bids.map((bid) => (
-                <Card key={bid.id}>
-                  <CardContent className="p-4 space-y-2">
-                    <div className="flex justify-between items-start">
-                      <div>
-                        <p className="text-2xl font-bold text-primary">
-                          {bid.bid_amount} {bid.currency}
-                        </p>
-                        <p className="text-xs text-muted-foreground">
-                          {new Date(bid.created_at).toLocaleDateString()}
-                        </p>
+              bids.map((bid) => {
+                const isSeller = currentUser && listing && currentUser.id === listing.seller_id;
+                const isBidder = currentUser && currentUser.id === bid.bidder_id;
+                
+                return (
+                  <Card key={bid.id}>
+                    <CardContent className="p-4 space-y-2">
+                      <div className="flex justify-between items-start">
+                        <div>
+                          <p className="text-2xl font-bold text-primary">
+                            {bid.bid_amount} {bid.currency}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {new Date(bid.created_at).toLocaleDateString()}
+                          </p>
+                          {bid.escrow_amount > 0 && (
+                            <p className="text-xs text-primary mt-1">
+                              Escrow: {bid.escrow_amount} {bid.currency}
+                            </p>
+                          )}
+                        </div>
+                        <Badge variant={bid.status === "accepted" ? "default" : bid.status === "rejected" ? "destructive" : "secondary"}>
+                          {bid.status}
+                        </Badge>
                       </div>
-                      <Badge variant={bid.status === "accepted" ? "default" : bid.status === "rejected" ? "destructive" : "secondary"}>
-                        {bid.status}
-                      </Badge>
-                    </div>
 
-                    {bid.message && (
-                      <div className="flex gap-2 items-start">
-                        <MessageCircle className="w-4 h-4 text-muted-foreground mt-0.5" />
-                        <p className="text-sm">{bid.message}</p>
-                      </div>
-                    )}
+                      {bid.message && (
+                        <div className="flex gap-2 items-start">
+                          <MessageCircle className="w-4 h-4 text-muted-foreground mt-0.5" />
+                          <p className="text-sm">{bid.message}</p>
+                        </div>
+                      )}
 
-                    {bid.phone_number && (
-                      <div className="flex gap-2 items-center">
-                        <Phone className="w-4 h-4 text-muted-foreground" />
-                        <p className="text-sm">{bid.phone_number}</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              ))
+                      {bid.phone_number && (
+                        <div className="flex gap-2 items-center">
+                          <Phone className="w-4 h-4 text-muted-foreground" />
+                          <p className="text-sm">{bid.phone_number}</p>
+                        </div>
+                      )}
+
+                      {isSeller && bid.status === "pending" && (
+                        <Button
+                          size="sm"
+                          onClick={() => handleAcceptBid(bid)}
+                          className="w-full mt-2"
+                        >
+                          Accept Bid
+                        </Button>
+                      )}
+
+                      {isBidder && bid.status === "pending" && (
+                        <Button
+                          size="sm"
+                          variant="destructive"
+                          onClick={() => handleCancelBid(bid)}
+                          className="w-full mt-2"
+                        >
+                          Cancel Bid & Return Funds
+                        </Button>
+                      )}
+                    </CardContent>
+                  </Card>
+                );
+              })
             )}
           </CardContent>
         </Card>
