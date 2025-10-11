@@ -178,7 +178,7 @@ const Marketplace = () => {
                 <Card
                   key={listing.id}
                   className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => navigate(`/marketplace/listing/${listing.id}`)}
+                  onClick={() => navigate(`/marketplace/listing/${listing.id}/bids`)}
                 >
                   <CardContent className="p-0">
                     <div className="aspect-square bg-muted rounded-t-lg flex items-center justify-center">
@@ -227,7 +227,7 @@ const Marketplace = () => {
                 <Card
                   key={listing.id}
                   className="cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => navigate(`/marketplace/listing/${listing.id}`)}
+                  onClick={() => navigate(`/marketplace/listing/${listing.id}/bids`)}
                 >
                   <CardContent className="p-4">
                     <div className="flex gap-4">

@@ -32,6 +32,7 @@ import AllTransactions from "./pages/AllTransactions";
 import Marketplace from "./pages/Marketplace";
 import MarketplaceCreate from "./pages/MarketplaceCreate";
 import MarketplaceListing from "./pages/MarketplaceListing";
+import MarketplaceListingBids from "./pages/MarketplaceListingBids";
 import MarketplaceOrders from "./pages/MarketplaceOrders";
 import MarketplaceOrderDetail from "./pages/MarketplaceOrderDetail";
 import KYCVerification from "./pages/KYCVerification";
@@ -74,6 +75,7 @@ const App = () => (
           <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
           <Route path="/marketplace/create" element={<ProtectedRoute><MarketplaceCreate /></ProtectedRoute>} />
           <Route path="/marketplace/listing/:id" element={<ProtectedRoute><MarketplaceListing /></ProtectedRoute>} />
+          <Route path="/marketplace/listing/:id/bids" element={<ProtectedRoute><MarketplaceListingBids /></ProtectedRoute>} />
           <Route path="/marketplace/orders" element={<ProtectedRoute><MarketplaceOrders /></ProtectedRoute>} />
           <Route path="/marketplace/order/:id" element={<ProtectedRoute><MarketplaceOrderDetail /></ProtectedRoute>} />
           <Route path="/kyc-verification" element={<ProtectedRoute><KYCVerification /></ProtectedRoute>} />

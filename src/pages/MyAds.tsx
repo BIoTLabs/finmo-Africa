@@ -71,11 +71,13 @@ export default function MyAds() {
 
       if (error) throw error;
 
+      // Update local state
+      setMarketplaceListings(prev => prev.filter(l => l.id !== id));
+      
       toast({
         title: "Success",
         description: "Listing deleted successfully",
       });
-      fetchListings();
     } catch (error: any) {
       toast({
         title: "Error",
@@ -94,11 +96,13 @@ export default function MyAds() {
 
       if (error) throw error;
 
+      // Update local state
+      setP2pListings(prev => prev.filter(l => l.id !== id));
+      
       toast({
         title: "Success",
         description: "Listing deleted successfully",
       });
-      fetchListings();
     } catch (error: any) {
       toast({
         title: "Error",

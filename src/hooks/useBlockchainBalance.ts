@@ -49,34 +49,14 @@ export const useBlockchainBalance = (walletAddress: string | null) => {
 
     setSyncing(true);
     try {
-      // First fetch fresh balances from blockchain
+      // Call the edge function to sync balances from blockchain
+      const { data, error } = await supabase.functions.invoke('sync-blockchain-balance');
+      
+      if (error) throw error;
+      
+      // Refresh local state after sync
       await fetchBalances();
       
-      // Then update database with fresh balances
-      const { error: maticError } = await supabase
-        .from("wallet_balances")
-        .upsert({
-          user_id: userId,
-          token: "MATIC",
-          balance: parseFloat(balances.MATIC),
-        }, {
-          onConflict: "user_id,token"
-        });
-
-      if (maticError) throw maticError;
-
-      const { error: usdcError } = await supabase
-        .from("wallet_balances")
-        .upsert({
-          user_id: userId,
-          token: "USDC",
-          balance: parseFloat(balances.USDC),
-        }, {
-          onConflict: "user_id,token"
-        });
-
-      if (usdcError) throw usdcError;
-
       return true;
     } catch (error) {
       console.error("Error syncing balances:", error);

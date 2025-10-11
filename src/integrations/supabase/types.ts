@@ -199,6 +199,56 @@ export type Database = {
         }
         Relationships: []
       }
+      marketplace_bids: {
+        Row: {
+          bid_amount: number
+          bidder_id: string
+          created_at: string
+          currency: string
+          id: string
+          listing_id: string
+          message: string | null
+          phone_number: string | null
+          seller_id: string
+          status: string
+          updated_at: string
+        }
+        Insert: {
+          bid_amount: number
+          bidder_id: string
+          created_at?: string
+          currency?: string
+          id?: string
+          listing_id: string
+          message?: string | null
+          phone_number?: string | null
+          seller_id: string
+          status?: string
+          updated_at?: string
+        }
+        Update: {
+          bid_amount?: number
+          bidder_id?: string
+          created_at?: string
+          currency?: string
+          id?: string
+          listing_id?: string
+          message?: string | null
+          phone_number?: string | null
+          seller_id?: string
+          status?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_bids_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       marketplace_categories: {
         Row: {
           created_at: string | null
