@@ -207,10 +207,15 @@ const Staking = () => {
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
-          <h1 className="text-2xl font-bold">Staking</h1>
+          <div className="flex-1 flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Staking</h1>
+            <Badge variant="secondary" className="bg-white/20 text-primary-foreground border-0">
+              Coming Soon
+            </Badge>
+          </div>
         </div>
         <p className="text-primary-foreground/80 text-sm">
-          Lock your tokens and earn rewards
+          Lock your tokens and earn rewards - Feature launching soon!
         </p>
       </div>
 
@@ -344,14 +349,18 @@ const Staking = () => {
                 </div>
               )}
 
-              <Button
-                onClick={handleStake}
-                disabled={processing || !selectedToken || !amount || !duration}
-                className="w-full"
-              >
-                <Lock className="w-4 h-4 mr-2" />
-                {processing ? "Processing..." : "Stake Now"}
-              </Button>
+              <div className="space-y-2">
+                <p className="text-sm text-muted-foreground text-center">
+                  Staking will be available soon. Explore the features above to see what you can earn!
+                </p>
+                <Button
+                  disabled={true}
+                  className="w-full"
+                >
+                  <Lock className="w-4 h-4 mr-2" />
+                  Coming Soon
+                </Button>
+              </div>
             </div>
           </CardContent>
         </Card>
@@ -438,13 +447,12 @@ const Staking = () => {
 
                       {isActive && (
                         <Button
-                          onClick={() => handleWithdraw(stake.id)}
-                          disabled={processing}
+                          disabled={true}
                           variant={matured ? "default" : "outline"}
                           className="w-full"
                         >
                           <Unlock className="w-4 h-4 mr-2" />
-                          {matured ? "Withdraw with Full Rewards" : "Early Withdraw (50% Penalty)"}
+                          Coming Soon
                         </Button>
                       )}
                     </div>
