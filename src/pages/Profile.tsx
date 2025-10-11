@@ -170,7 +170,8 @@ const Profile = () => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) return;
 
-      const { error } = await supabase
+      // Insert invitation record
+      const { error: dbError } = await supabase
         .from("contact_invitations")
         .insert({
           inviter_id: user.id,
@@ -178,19 +179,41 @@ const Profile = () => {
           contact_name: contact.contact_name,
         });
 
-      if (error) {
-        if (error.code === "23505") {
+      if (dbError) {
+        if (dbError.code === "23505") {
           toast.info("You've already invited this contact");
         } else {
-          throw error;
+          throw dbError;
         }
-      } else {
-        toast.success(`Invitation sent to ${contact.contact_name}!`);
-        await loadProfileData();
+        return;
       }
+
+      // Send SMS invitation
+      const inviterName = displayName || profile?.phone_number || "A friend";
+      
+      const { error: smsError } = await supabase.functions.invoke("send-invitation-sms", {
+        body: {
+          contactName: contact.contact_name,
+          contactPhone: contact.contact_phone,
+          inviterName: inviterName,
+        },
+      });
+
+      if (smsError) {
+        console.error("Error sending SMS:", smsError);
+        toast.success(`Invitation saved for ${contact.contact_name}`, {
+          description: "SMS delivery failed, but they'll see the invitation when they sign up"
+        });
+      } else {
+        toast.success(`Invitation sent to ${contact.contact_name}!`, {
+          description: "They'll receive an SMS with a link to join FinMo"
+        });
+      }
+
+      await loadProfileData();
     } catch (error: any) {
       console.error("Error inviting contact:", error);
-      toast.error("Failed to send invitation");
+      toast.error("We couldn't send the invitation. Please try again.");
     }
   };
 
@@ -462,44 +485,109 @@ const Profile = () => {
 
           {/* Invitations Tab */}
           <TabsContent value="invitations" className="space-y-4">
+            {/* Invitation Stats Card */}
+            <div className="grid grid-cols-2 gap-4">
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                      <Mail className="w-5 h-5 text-primary" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">{invitations.length}</p>
+                      <p className="text-xs text-muted-foreground">Total Sent</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-success/10 flex items-center justify-center">
+                      <CheckCircle2 className="w-5 h-5 text-success" />
+                    </div>
+                    <div>
+                      <p className="text-2xl font-bold">
+                        {invitations.filter(i => i.status === 'accepted').length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Accepted</p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            {/* Invitations List */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Mail className="w-5 h-5" />
-                  Sent Invitations ({invitations.length})
+                  Invitation History
                 </CardTitle>
                 <CardDescription>
-                  Track your contact invitations
+                  Track who you've invited to join FinMo
                 </CardDescription>
               </CardHeader>
               <CardContent>
                 {invitations.length === 0 ? (
-                  <p className="text-center text-muted-foreground py-8">
-                    You haven't sent any invitations yet
-                  </p>
+                  <div className="text-center py-12 animate-fade-in">
+                    <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-primary/10 flex items-center justify-center">
+                      <Mail className="w-10 h-10 text-primary" />
+                    </div>
+                    <h3 className="text-lg font-semibold mb-2">No Invitations Yet</h3>
+                    <p className="text-muted-foreground mb-6 max-w-sm mx-auto">
+                      Invite your contacts from the Contacts tab to help them discover FinMo
+                    </p>
+                  </div>
                 ) : (
-                  <div className="space-y-3">
-                    {invitations.map((invitation) => (
+                  <div className="space-y-2">
+                    {invitations.map((invitation, index) => (
                       <div
                         key={invitation.id}
-                        className="flex items-center justify-between p-3 rounded-lg border bg-card"
+                        className="flex items-center justify-between p-4 rounded-xl border bg-card hover:shadow-finmo-sm transition-all duration-200 animate-fade-in"
+                        style={{ animationDelay: `${index * 50}ms` }}
                       >
-                        <div>
-                          <p className="font-medium">{invitation.contact_name}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {invitation.contact_phone}
-                          </p>
-                          <p className="text-xs text-muted-foreground mt-1">
-                            {new Date(invitation.created_at).toLocaleDateString()}
-                          </p>
+                        <div className="flex items-center gap-4 flex-1 min-w-0">
+                          <div className="relative">
+                            <Avatar className="w-12 h-12 border-2 border-border">
+                              <AvatarFallback className="bg-gradient-primary text-primary-foreground font-semibold">
+                                {invitation.contact_name[0].toUpperCase()}
+                              </AvatarFallback>
+                            </Avatar>
+                            {invitation.status === "accepted" && (
+                              <div className="absolute -bottom-1 -right-1 w-5 h-5 bg-success rounded-full flex items-center justify-center border-2 border-background">
+                                <CheckCircle2 className="w-3 h-3 text-success-foreground" />
+                              </div>
+                            )}
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="font-semibold text-foreground truncate">
+                              {invitation.contact_name}
+                            </p>
+                            <p className="text-sm text-muted-foreground truncate">
+                              {invitation.contact_phone}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Sent {new Date(invitation.created_at).toLocaleDateString('en-US', { 
+                                month: 'short', 
+                                day: 'numeric',
+                                year: 'numeric'
+                              })}
+                            </p>
+                          </div>
                         </div>
                         <Badge
                           variant={invitation.status === "accepted" ? "default" : "secondary"}
-                          className={invitation.status === "accepted" ? "bg-green-500" : ""}
+                          className={
+                            invitation.status === "accepted" 
+                              ? "bg-success/10 text-success border-success/20" 
+                              : "bg-muted"
+                          }
                         >
                           {invitation.status === "pending" && <Clock className="w-3 h-3 mr-1" />}
                           {invitation.status === "accepted" && <CheckCircle2 className="w-3 h-3 mr-1" />}
-                          {invitation.status}
+                          {invitation.status === "cancelled" && <X className="w-3 h-3 mr-1" />}
+                          <span className="capitalize">{invitation.status}</span>
                         </Badge>
                       </div>
                     ))}
