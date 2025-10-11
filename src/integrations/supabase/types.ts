@@ -1291,6 +1291,10 @@ export type Database = {
         Args: { _phone: string }
         Returns: string
       }
+      is_listing_seller: {
+        Args: { _listing_id: string; _user_id: string }
+        Returns: boolean
+      }
       lookup_user_by_phone: {
         Args: { phone: string }
         Returns: {
