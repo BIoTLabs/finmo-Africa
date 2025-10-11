@@ -106,10 +106,15 @@ Make sure these are set before building.
 
 ## For CI/CD
 
-In your CI/CD pipeline, ensure:
+In your CI/CD pipeline (e.g., GitLab CI, GitHub Actions), ensure:
 ```yaml
+# CRITICAL: Set execute permissions first
+- run: chmod +x gradlew
 - run: chmod +x android/gradlew
+- run: npm install
 - run: npm run build
 - run: npx cap sync android
-- run: cd android && ./gradlew assembleRelease
+- run: ./gradlew assembleRelease
 ```
+
+**Important**: The `chmod +x` commands must run before any gradlew execution to avoid "Permission denied" errors.
