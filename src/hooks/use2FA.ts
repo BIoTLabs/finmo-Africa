@@ -19,6 +19,7 @@ export const use2FA = (): Use2FAReturn => {
   const [isVerifying, setIsVerifying] = useState(false);
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [secret, setSecret] = useState<string | null>(null);
+  const [factorId, setFactorId] = useState<string | null>(null);
 
   const enrollMFA = async () => {
     setIsEnrolling(true);
@@ -55,6 +56,8 @@ export const use2FA = (): Use2FAReturn => {
       if (data) {
         setQrCode(data.totp.qr_code);
         setSecret(data.totp.secret);
+        setFactorId(data.id);
+        console.log("2FA Factor enrolled with ID:", data.id);
       }
     } catch (error: any) {
       console.error("2FA enrollment error:", error);
@@ -71,28 +74,50 @@ export const use2FA = (): Use2FAReturn => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
-      // Get all factors
-      const { data: factors } = await supabase.auth.mfa.listFactors();
-      
-      if (!factors || factors.totp.length === 0) {
-        throw new Error("No 2FA factor found");
+      // Use the stored factor ID from enrollment
+      if (!factorId) {
+        // Fallback: try to find unverified factor
+        const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+        
+        if (listError) {
+          console.error("Error listing factors:", listError);
+          throw new Error("Failed to retrieve 2FA factor");
+        }
+        
+        if (!factors?.totp || factors.totp.length === 0) {
+          throw new Error("No 2FA factor found. Please restart the setup process.");
+        }
+
+        const factor = factors.totp.find(f => f.status === "unverified");
+        if (!factor) {
+          throw new Error("No unverified factor found. Please restart the setup process.");
+        }
+        
+        console.log("Using fallback factor ID:", factor.id);
+        
+        // Verify using fallback factor
+        const { error } = await supabase.auth.mfa.challengeAndVerify({
+          factorId: factor.id,
+          code,
+        });
+
+        if (error) throw error;
+      } else {
+        // Use the stored factor ID
+        console.log("Verifying with stored factor ID:", factorId);
+        
+        const { error } = await supabase.auth.mfa.challengeAndVerify({
+          factorId: factorId,
+          code,
+        });
+
+        if (error) throw error;
       }
-
-      // Get the factor ID of the most recent unenrolled factor
-      const factor = factors.totp.find(f => f.status === "unverified");
-      if (!factor) throw new Error("No unverified factor found");
-
-      // Verify the TOTP code
-      const { error } = await supabase.auth.mfa.challengeAndVerify({
-        factorId: factor.id,
-        code,
-      });
-
-      if (error) throw error;
 
       toast.success("2FA enabled successfully!");
       setQrCode(null);
       setSecret(null);
+      setFactorId(null);
       return true;
     } catch (error: any) {
       console.error("2FA verification error:", error);
