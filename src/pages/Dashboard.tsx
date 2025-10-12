@@ -11,6 +11,7 @@ import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import { useRealtimeBalance } from "@/hooks/useRealtimeBalance";
 import { useAutoBalanceSync } from "@/hooks/useAutoBalanceSync";
 import RealtimeStatus from "@/components/RealtimeStatus";
+import finmoLogo from "@/assets/finmo-logo.png";
 
 interface WalletBalance {
   token: string;
@@ -112,11 +113,16 @@ const Dashboard = () => {
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-4 sm:p-6 rounded-b-3xl shadow-finmo-lg">
         <div className="flex justify-between items-center mb-4 sm:mb-6">
-          <div className="min-w-0 flex-1">
-            <p className="text-xs sm:text-sm opacity-90">Welcome back</p>
-            <h1 className="text-base sm:text-xl font-semibold truncate">
-              {profile.display_name || profile.phone_number}
-            </h1>
+          <div className="min-w-0 flex-1 flex items-center gap-3">
+            <div className="w-10 h-10 bg-white/10 backdrop-blur-sm rounded-xl flex items-center justify-center flex-shrink-0">
+              <img src={finmoLogo} alt="FinMo" className="w-6 h-6" />
+            </div>
+            <div className="min-w-0">
+              <p className="text-xs sm:text-sm opacity-90">Welcome back</p>
+              <h1 className="text-base sm:text-xl font-semibold truncate">
+                {profile.display_name || profile.phone_number}
+              </h1>
+            </div>
           </div>
           <div className="flex gap-2 flex-shrink-0">
             <Button

@@ -1,7 +1,8 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Shield, Zap, Users, Wallet, ArrowRight, CheckCircle } from "lucide-react";
+import { Zap, Users, Wallet, ArrowRight, CheckCircle } from "lucide-react";
+import finmoLogo from "@/assets/finmo-logo.png";
 
 const Index = () => {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ const Index = () => {
       description: "Send money to FinMo users instantly with zero fees using phone numbers",
     },
     {
-      icon: Shield,
+      icon: Wallet,
       title: "Secure Wallet",
       description: "Your crypto wallet protected with industry-standard security",
     },
@@ -44,9 +45,11 @@ const Index = () => {
         <div className="absolute inset-0 bg-gradient-primary opacity-10"></div>
         <div className="relative container mx-auto px-6 py-20 text-center">
           <div className="mx-auto max-w-3xl">
-            <div className="mb-8 inline-flex items-center gap-2 rounded-full bg-success/10 px-4 py-2 text-success">
-              <Shield className="w-4 h-4" />
-              <span className="text-sm font-semibold">Secure & Fast Mobile Wallet</span>
+            <div className="mb-8 inline-flex items-center gap-3 rounded-full bg-success/10 px-5 py-2.5">
+              <div className="w-8 h-8 bg-success/20 rounded-lg flex items-center justify-center">
+                <img src={finmoLogo} alt="FinMo" className="w-5 h-5" />
+              </div>
+              <span className="text-sm font-semibold text-success">Secure & Fast Mobile Wallet</span>
             </div>
             
             <h1 className="mb-6 text-5xl font-bold leading-tight bg-gradient-primary bg-clip-text text-transparent md:text-6xl">

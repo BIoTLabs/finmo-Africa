@@ -1,5 +1,6 @@
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, ArrowLeftRight, CreditCard, User, Store } from "lucide-react";
+import finmoLogo from "@/assets/finmo-logo.png";
 
 const MobileNav = () => {
   const navigate = useNavigate();
