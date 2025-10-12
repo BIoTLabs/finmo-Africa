@@ -44,9 +44,10 @@ npx cap run android
 
 ### Troubleshooting
 
-#### "gradlew not found" Error
+#### "gradlew not found" or "GradleWrapperMain not found" Error
 This happens when:
 - The android folder wasn't committed to git
+- The gradle wrapper JAR file is missing
 - Line endings were changed (Windows)
 - File permissions were lost
 
@@ -58,10 +59,19 @@ npx cap add android
 # Make gradlew executable
 chmod +x android/gradlew
 
-# Commit to git
+# IMPORTANT: Commit the gradle wrapper JAR file
+git add android/gradle/wrapper/gradle-wrapper.jar
 git add android/gradlew
-git commit -m "fix: ensure gradlew is executable"
+git add .gitattributes
+git commit -m "fix: add gradle wrapper files"
 ```
+
+#### Missing gradle-wrapper.jar
+If you see `ClassNotFoundException: org.gradle.wrapper.GradleWrapperMain`:
+- The `android/gradle/wrapper/gradle-wrapper.jar` file is missing
+- This file must be committed to git (it's a binary file)
+- Re-run `npx cap add android` to regenerate it
+- Make sure `.gitattributes` includes the line: `android/gradle/wrapper/gradle-wrapper.jar binary`
 
 #### Line Ending Issues (Windows)
 The `.gitattributes` file ensures `gradlew` always uses LF line endings.

@@ -1,3 +1,6 @@
 # Android gradlew should always use LF line endings
 android/gradlew text eol=lf
 gradlew text eol=lf
+
+# Ensure gradle wrapper JAR is committed (binary file, essential for builds)
+android/gradle/wrapper/gradle-wrapper.jar binary
