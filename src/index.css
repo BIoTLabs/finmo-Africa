@@ -18,19 +18,19 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    /* Primary: Vibrant African Green - Growth & Prosperity */
-    --primary: 142 76% 36%;
+    /* Primary: Vibrant African Green - Growth & Prosperity (Lighter) */
+    --primary: 142 76% 52%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 142 76% 50%;
-    --primary-dark: 142 76% 28%;
+    --primary-glow: 142 76% 65%;
+    --primary-dark: 142 76% 42%;
 
     /* Secondary: Royal Gold - African Heritage & Crypto Wealth */
     --secondary: 45 95% 50%;
     --secondary-foreground: 215 25% 15%;
     --secondary-dark: 38 90% 45%;
     
-    /* Success: Pan-African Green */
-    --success: 142 71% 45%;
+    /* Success: Pan-African Green (Lighter) */
+    --success: 142 71% 55%;
     --success-foreground: 0 0% 100%;
 
     /* Crypto Accent: Deep Purple - Blockchain Technology */
@@ -52,31 +52,31 @@ All colors MUST be HSL.
 
     /* Accent: Light Gold Shimmer */
     --accent: 45 95% 95%;
-    --accent-foreground: 142 76% 36%;
+    --accent-foreground: 142 76% 52%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 20% 90%;
     --input: 214 20% 90%;
-    --ring: 142 76% 36%;
+    --ring: 142 76% 52%;
 
     --radius: 0.75rem;
 
-    /* Pan-African & Crypto Gradients */
-    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 50%));
-    --gradient-africa: linear-gradient(135deg, hsl(142 76% 36%), hsl(45 95% 50%), hsl(0 75% 55%));
+    /* Pan-African & Crypto Gradients (Lighter) */
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 52%), hsl(142 76% 65%));
+    --gradient-africa: linear-gradient(135deg, hsl(142 76% 52%), hsl(45 95% 50%), hsl(0 75% 55%));
     --gradient-crypto: linear-gradient(135deg, hsl(260 60% 55%), hsl(210 100% 60%), hsl(186 89% 45%));
-    --gradient-hero: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 55%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 76% 52%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 55%), hsl(142 71% 65%));
     --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(142 76% 98%));
     --gradient-gold: linear-gradient(135deg, hsl(45 95% 50%), hsl(38 90% 45%));
-    --gradient-overlay: linear-gradient(180deg, hsl(142 76% 36% / 0.05), hsl(45 95% 50% / 0.05));
+    --gradient-overlay: linear-gradient(180deg, hsl(142 76% 52% / 0.05), hsl(45 95% 50% / 0.05));
     
-    /* Shadows with colored tints */
-    --shadow-sm: 0 2px 8px hsl(142 76% 36% / 0.08);
-    --shadow-md: 0 4px 16px hsl(142 76% 36% / 0.12);
-    --shadow-lg: 0 8px 32px hsl(142 76% 36% / 0.18);
+    /* Shadows with colored tints (Lighter) */
+    --shadow-sm: 0 2px 8px hsl(142 76% 52% / 0.08);
+    --shadow-md: 0 4px 16px hsl(142 76% 52% / 0.12);
+    --shadow-lg: 0 8px 32px hsl(142 76% 52% / 0.18);
     --shadow-gold: 0 8px 32px hsl(45 95% 50% / 0.25);
     --shadow-crypto: 0 8px 32px hsl(260 60% 55% / 0.20);
     
@@ -95,16 +95,16 @@ All colors MUST be HSL.
     --popover: 215 25% 10%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 142 76% 45%;
+    --primary: 142 76% 55%;
     --primary-foreground: 215 25% 10%;
-    --primary-glow: 142 76% 55%;
-    --primary-dark: 142 76% 35%;
+    --primary-glow: 142 76% 68%;
+    --primary-dark: 142 76% 45%;
 
     --secondary: 45 95% 55%;
     --secondary-foreground: 215 25% 10%;
     --secondary-dark: 38 90% 50%;
 
-    --success: 142 71% 45%;
+    --success: 142 71% 55%;
     --success-foreground: 215 25% 10%;
 
     --crypto-purple: 260 60% 60%;
@@ -128,16 +128,16 @@ All colors MUST be HSL.
 
     --border: 215 25% 18%;
     --input: 215 25% 18%;
-    --ring: 142 76% 45%;
+    --ring: 142 76% 55%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(142 76% 35%), hsl(142 76% 50%));
-    --gradient-africa: linear-gradient(135deg, hsl(142 76% 35%), hsl(45 95% 50%), hsl(0 75% 55%));
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 48%), hsl(142 76% 62%));
+    --gradient-africa: linear-gradient(135deg, hsl(142 76% 48%), hsl(45 95% 50%), hsl(0 75% 55%));
     --gradient-crypto: linear-gradient(135deg, hsl(260 60% 55%), hsl(210 100% 60%), hsl(186 89% 45%));
-    --gradient-hero: linear-gradient(135deg, hsl(142 76% 35%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 71% 40%), hsl(142 71% 50%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 76% 48%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 71% 50%), hsl(142 71% 60%));
     --gradient-card: linear-gradient(180deg, hsl(215 25% 10%), hsl(215 25% 12%));
     --gradient-gold: linear-gradient(135deg, hsl(45 95% 50%), hsl(38 90% 45%));
-    --gradient-overlay: linear-gradient(180deg, hsl(142 76% 35% / 0.1), hsl(45 95% 50% / 0.1));
+    --gradient-overlay: linear-gradient(180deg, hsl(142 76% 48% / 0.1), hsl(45 95% 50% / 0.1));
   }
 }
 
@@ -161,7 +161,7 @@ All colors MUST be HSL.
   /* Pan-African pattern background */
   .african-pattern {
     background-image: 
-      repeating-linear-gradient(45deg, transparent, transparent 10px, hsl(142 76% 36% / 0.03) 10px, hsl(142 76% 36% / 0.03) 20px),
+      repeating-linear-gradient(45deg, transparent, transparent 10px, hsl(142 76% 52% / 0.03) 10px, hsl(142 76% 52% / 0.03) 20px),
       repeating-linear-gradient(-45deg, transparent, transparent 10px, hsl(45 95% 50% / 0.03) 10px, hsl(45 95% 50% / 0.03) 20px);
   }
 
