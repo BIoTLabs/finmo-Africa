@@ -1,5 +1,21 @@
+# https://www.robotstxt.org/robotstxt.html
+# FinMo Africa - Robots Configuration
+
+User-agent: *
+Allow: /
+Disallow: /admin
+Disallow: /settings
+
+# Sitemap location
+Sitemap: https://finmo-africa.lovable.app/sitemap.xml
+
+# Crawl-delay for respectful crawling
+Crawl-delay: 1
+
+# Specific bots
 User-agent: Googlebot
 Allow: /
+Crawl-delay: 0
 
 User-agent: Bingbot
 Allow: /
@@ -8,7 +24,4 @@ User-agent: Twitterbot
 Allow: /
 
 User-agent: facebookexternalhit
-Allow: /
-
-User-agent: *
 Allow: /
