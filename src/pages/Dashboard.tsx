@@ -97,8 +97,8 @@ const Dashboard = () => {
         throw new Error(balanceResult.data.error);
       }
 
-      // Reload balances after sync
-      await loadUserData();
+      // Force reload of transactions list by refetching
+      window.location.reload();
       
       const syncedCount = txResult.data?.synced_count || 0;
       toast.success(`Synced ${syncedCount} blockchain transactions!`);
