@@ -2,6 +2,7 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { useAutoLogout } from "@/hooks/useAutoLogout";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -42,53 +43,58 @@ import Staking from "./pages/Staking";
 
 const queryClient = new QueryClient();
 
-const App = () => (
-  <QueryClientProvider client={queryClient}>
-    <Toaster />
-    <Sonner />
-    <BrowserRouter>
-      <Routes>
-        <Route path="/" element={<Index />} />
-        <Route path="/auth" element={<Auth />} />
-        <Route path="/verify-phone" element={<PhoneVerification />} />
-        <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
-        <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-        <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
-        <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
-        <Route path="/receive" element={<ProtectedRoute><Receive /></ProtectedRoute>} />
-        <Route path="/add-funds" element={<ProtectedRoute><AddFunds /></ProtectedRoute>} />
-        <Route path="/transaction/:id" element={<ProtectedRoute><TransactionDetails /></ProtectedRoute>} />
-        <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-        <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-        <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-        <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
-        <Route path="/p2p/create-listing" element={<ProtectedRoute><P2PCreateListing /></ProtectedRoute>} />
-        <Route path="/virtual-card" element={<ProtectedRoute><VirtualCard /></ProtectedRoute>} />
-        <Route path="/virtual-card/create" element={<ProtectedRoute><VirtualCardCreate /></ProtectedRoute>} />
-        <Route path="/virtual-card/:cardId/fund" element={<ProtectedRoute><VirtualCardFund /></ProtectedRoute>} />
-        <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
-        <Route path="/p2p/order/:listingId" element={<ProtectedRoute><P2POrderDetail /></ProtectedRoute>} />
-        <Route path="/p2p/order-status/:orderId" element={<ProtectedRoute><P2POrderStatus /></ProtectedRoute>} />
-        <Route path="/virtual-card/:cardId/transactions" element={<ProtectedRoute><VirtualCardTransactions /></ProtectedRoute>} />
-          <Route path="/request-payment" element={<ProtectedRoute><RequestPayment /></ProtectedRoute>} />
-          <Route path="/payment-history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
-          <Route path="/pay/:id" element={<PaymentRequest />} />
-          <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
-          <Route path="/marketplace/create" element={<ProtectedRoute><MarketplaceCreate /></ProtectedRoute>} />
-          <Route path="/marketplace/listing/:id" element={<ProtectedRoute><MarketplaceListing /></ProtectedRoute>} />
-          <Route path="/marketplace/listing/:id/bids" element={<ProtectedRoute><MarketplaceListingBids /></ProtectedRoute>} />
-          <Route path="/marketplace/listing/:id/edit" element={<ProtectedRoute><MarketplaceCreate /></ProtectedRoute>} />
-          <Route path="/marketplace/orders" element={<ProtectedRoute><MarketplaceOrders /></ProtectedRoute>} />
-          <Route path="/marketplace/order/:id" element={<ProtectedRoute><MarketplaceOrderDetail /></ProtectedRoute>} />
-          <Route path="/kyc-verification" element={<ProtectedRoute><KYCVerification /></ProtectedRoute>} />
-          <Route path="/account-statement" element={<ProtectedRoute><AccountStatement /></ProtectedRoute>} />
-          <Route path="/my-ads" element={<ProtectedRoute><MyAds /></ProtectedRoute>} />
-          <Route path="/staking" element={<ProtectedRoute><Staking /></ProtectedRoute>} />
-        {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>
-  </QueryClientProvider>
-);
+const App = () => {
+  // Enable automatic logout after 2 minutes of inactivity
+  useAutoLogout(120000); // 120000ms = 2 minutes
+
+  return (
+    <QueryClientProvider client={queryClient}>
+      <Toaster />
+      <Sonner />
+      <BrowserRouter>
+        <Routes>
+          <Route path="/" element={<Index />} />
+          <Route path="/auth" element={<Auth />} />
+          <Route path="/verify-phone" element={<PhoneVerification />} />
+          <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
+          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+          <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+          <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
+          <Route path="/receive" element={<ProtectedRoute><Receive /></ProtectedRoute>} />
+          <Route path="/add-funds" element={<ProtectedRoute><AddFunds /></ProtectedRoute>} />
+          <Route path="/transaction/:id" element={<ProtectedRoute><TransactionDetails /></ProtectedRoute>} />
+          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+          <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
+          <Route path="/p2p/create-listing" element={<ProtectedRoute><P2PCreateListing /></ProtectedRoute>} />
+          <Route path="/virtual-card" element={<ProtectedRoute><VirtualCard /></ProtectedRoute>} />
+          <Route path="/virtual-card/create" element={<ProtectedRoute><VirtualCardCreate /></ProtectedRoute>} />
+          <Route path="/virtual-card/:cardId/fund" element={<ProtectedRoute><VirtualCardFund /></ProtectedRoute>} />
+          <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
+          <Route path="/p2p/order/:listingId" element={<ProtectedRoute><P2POrderDetail /></ProtectedRoute>} />
+          <Route path="/p2p/order-status/:orderId" element={<ProtectedRoute><P2POrderStatus /></ProtectedRoute>} />
+          <Route path="/virtual-card/:cardId/transactions" element={<ProtectedRoute><VirtualCardTransactions /></ProtectedRoute>} />
+            <Route path="/request-payment" element={<ProtectedRoute><RequestPayment /></ProtectedRoute>} />
+            <Route path="/payment-history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
+            <Route path="/pay/:id" element={<PaymentRequest />} />
+            <Route path="/marketplace" element={<ProtectedRoute><Marketplace /></ProtectedRoute>} />
+            <Route path="/marketplace/create" element={<ProtectedRoute><MarketplaceCreate /></ProtectedRoute>} />
+            <Route path="/marketplace/listing/:id" element={<ProtectedRoute><MarketplaceListing /></ProtectedRoute>} />
+            <Route path="/marketplace/listing/:id/bids" element={<ProtectedRoute><MarketplaceListingBids /></ProtectedRoute>} />
+            <Route path="/marketplace/listing/:id/edit" element={<ProtectedRoute><MarketplaceCreate /></ProtectedRoute>} />
+            <Route path="/marketplace/orders" element={<ProtectedRoute><MarketplaceOrders /></ProtectedRoute>} />
+            <Route path="/marketplace/order/:id" element={<ProtectedRoute><MarketplaceOrderDetail /></ProtectedRoute>} />
+            <Route path="/kyc-verification" element={<ProtectedRoute><KYCVerification /></ProtectedRoute>} />
+            <Route path="/account-statement" element={<ProtectedRoute><AccountStatement /></ProtectedRoute>} />
+            <Route path="/my-ads" element={<ProtectedRoute><MyAds /></ProtectedRoute>} />
+            <Route path="/staking" element={<ProtectedRoute><Staking /></ProtectedRoute>} />
+          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </QueryClientProvider>
+  );
+};
 
 export default App;
