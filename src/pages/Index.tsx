@@ -29,17 +29,24 @@ const Index = () => {
     setIsSubmitting(true);
 
     try {
-      const { error } = await supabase.functions.invoke("send-contact-email", {
+      console.log("Submitting contact form:", contactForm);
+      
+      const { data, error } = await supabase.functions.invoke("send-contact-email", {
         body: contactForm
       });
 
-      if (error) throw error;
+      console.log("Response from send-contact-email:", { data, error });
+
+      if (error) {
+        console.error("Error from function:", error);
+        throw error;
+      }
 
       toast.success("Message sent successfully! We'll get back to you soon.");
       setContactForm({ name: "", email: "", message: "" });
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error sending message:", error);
-      toast.error("Failed to send message. Please try again.");
+      toast.error(error?.message || "Failed to send message. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
