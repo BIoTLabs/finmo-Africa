@@ -84,21 +84,27 @@ const Dashboard = () => {
   const handleSyncBlockchain = async () => {
     setSyncing(true);
     try {
-      const { data, error } = await supabase.functions.invoke('sync-blockchain-balance');
+      // Sync both balances and transactions
+      const [balanceResult, txResult] = await Promise.all([
+        supabase.functions.invoke('sync-blockchain-balance'),
+        supabase.functions.invoke('sync-blockchain-transactions')
+      ]);
       
-      if (error) throw error;
+      if (balanceResult.error) throw balanceResult.error;
+      if (txResult.error) throw txResult.error;
       
-      if (data?.error) {
-        throw new Error(data.error);
+      if (balanceResult.data?.error) {
+        throw new Error(balanceResult.data.error);
       }
 
       // Reload balances after sync
       await loadUserData();
       
-      toast.success("Blockchain balances synced!");
+      const syncedCount = txResult.data?.synced_count || 0;
+      toast.success(`Synced ${syncedCount} blockchain transactions!`);
     } catch (error: any) {
       console.error('Sync error:', error);
-      toast.error("We couldn't sync your balance. Please try again later.");
+      toast.error("We couldn't sync your blockchain data. Please try again later.");
     } finally {
       setSyncing(false);
     }
