@@ -159,14 +159,15 @@ const Auth = () => {
         toast.success("Welcome back!");
         navigate("/dashboard");
       } else {
-        // Sign up with phone verification
+        // Sign up without OTP verification
         const { data, error } = await supabase.auth.signUp({
-          phone: fullPhone,
+          email: `${fullPhone}@finmo.app`,
           password,
           options: {
             data: {
               phone_number: fullPhone,
             },
+            emailRedirectTo: `${window.location.origin}/dashboard`
           },
         });
 
@@ -175,9 +176,9 @@ const Auth = () => {
           throw error;
         }
         
-        // Redirect to phone verification page
-        toast.success("Verification code sent to your phone!");
-        navigate("/verify-phone", { state: { phoneNumber: fullPhone } });
+        // Auto-confirm is enabled, so directly navigate to dashboard
+        toast.success("Account created successfully!");
+        navigate("/dashboard");
       }
     } catch (error: any) {
       console.error("Auth error:", error);
