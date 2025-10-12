@@ -94,12 +94,44 @@ export const use2FAPreferences = () => {
         return false; // User doesn't have 2FA enabled at all
       }
 
-      // Fetch preferences if not loaded
-      if (!preferences) {
-        await fetchPreferences();
+      // Get current user
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) return false;
+
+      // Fetch preferences directly from database
+      const { data: prefs, error } = await supabase
+        .from("user_2fa_preferences")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      if (error && error.code !== "PGRST116") {
+        console.error("Error fetching 2FA preferences:", error);
+        return false;
       }
 
-      return preferences?.[action] ?? false;
+      // If no preferences exist, create default ones
+      if (!prefs) {
+        const { data: newPrefs } = await supabase
+          .from("user_2fa_preferences")
+          .insert({
+            user_id: user.id,
+            require_on_login: true,
+            require_on_send: false,
+            require_on_withdraw: true,
+            require_on_p2p_trade: false,
+            require_on_marketplace_purchase: false,
+            require_on_security_changes: true,
+            require_on_payment_method_changes: false,
+            require_on_staking: false,
+          })
+          .select()
+          .single();
+
+        return newPrefs?.[action] ?? false;
+      }
+
+      return prefs[action] ?? false;
     } catch (error) {
       console.error("Error checking if 2FA required:", error);
       return false;

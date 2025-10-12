@@ -35,6 +35,7 @@ const Auth = () => {
   const [showInfo, setShowInfo] = useState(false);
   const [show2FAVerify, setShow2FAVerify] = useState(false);
   const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
+  const [pending2FASession, setPending2FASession] = useState(false);
   const { challengeMFA, verifyChallenge } = use2FA();
   const { checkIfRequired } = use2FAPreferences();
 
@@ -74,9 +75,20 @@ const Auth = () => {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      console.log("Auth state changed:", event, session?.user?.id);
+      
       if (event === 'SIGNED_OUT') {
         setChecking(false);
+        setShow2FAVerify(false);
+        setPendingFactorId(null);
+        setPending2FASession(false);
       } else if (session && event === 'SIGNED_IN') {
+        // If we're waiting for 2FA, don't navigate
+        if (pending2FASession) {
+          console.log("Signed in but waiting for 2FA verification");
+          return;
+        }
+        // Otherwise navigate to dashboard
         navigate("/dashboard", { replace: true });
       }
     });
@@ -105,7 +117,7 @@ const Auth = () => {
           throw error;
         }
         
-        console.log("Login response:", data);
+        console.log("Login successful, checking 2FA requirements...");
         
         // Check if 2FA is required for login
         const requires2FA = await checkIfRequired("require_on_login");
@@ -121,12 +133,20 @@ const Auth = () => {
             
             if (verifiedFactor) {
               // User has 2FA enabled and it's required, show verification dialog
-              console.log("2FA enabled, showing verification");
+              console.log("2FA enabled and required, showing verification dialog");
+              setPending2FASession(true);
               setPendingFactorId(verifiedFactor.id);
               setShow2FAVerify(true);
-              return; // Don't navigate yet
+              setLoading(false);
+              return; // Don't navigate yet - wait for 2FA verification
+            } else {
+              console.log("2FA required but no verified factor found");
             }
+          } else {
+            console.log("2FA required but user has no factors enrolled");
           }
+        } else {
+          console.log("2FA not required for login, proceeding to dashboard");
         }
         
         // No 2FA required or not enabled, proceed to dashboard
@@ -166,6 +186,9 @@ const Auth = () => {
     
     const success = await verifyChallenge(pendingFactorId, code);
     if (success) {
+      setPending2FASession(false);
+      setShow2FAVerify(false);
+      setPendingFactorId(null);
       toast.success("Welcome back!");
       navigate("/dashboard");
     }
@@ -175,7 +198,9 @@ const Auth = () => {
   const handle2FACancel = async () => {
     setShow2FAVerify(false);
     setPendingFactorId(null);
+    setPending2FASession(false);
     await supabase.auth.signOut();
+    toast.info("Login cancelled");
   };
 
   if (checking) {
