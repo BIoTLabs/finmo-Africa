@@ -5,7 +5,6 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Search, RefreshCw, Shield } from "lucide-react";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
@@ -21,7 +20,6 @@ interface Contact {
 const Contacts = () => {
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState("");
-  const [showPermissionDialog, setShowPermissionDialog] = useState(false);
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
 
@@ -67,34 +65,21 @@ const Contacts = () => {
     }
   };
 
-  const handleSyncContacts = () => {
-    setShowPermissionDialog(true);
-  };
-
-  const handlePermissionGrant = async () => {
-    setShowPermissionDialog(false);
+  const handleSyncContacts = async () => {
+    if (!userId) return;
     
-    // Add some demo contacts
-    if (userId) {
-      const demoContacts = [
-        { contact_name: "Adebayo Johnson", contact_phone: "+234 801 234 5678" },
-        { contact_name: "Amina Mohammed", contact_phone: "+234 802 345 6789" },
-      ];
-
-      for (const contact of demoContacts) {
-        await supabase
-          .from("contacts")
-          .upsert({ user_id: userId, ...contact }, { onConflict: "user_id,contact_phone" });
+    try {
+      const { syncPhoneContacts, saveContactsToDatabase } = await import("@/utils/contactSync");
+      
+      const contacts = await syncPhoneContacts();
+      
+      if (contacts.length > 0) {
+        await saveContactsToDatabase(contacts);
+        await loadContacts(userId);
       }
-
-      await loadContacts(userId);
-      toast.success("Contacts synced successfully!");
+    } catch (error) {
+      console.error("Contact sync error:", error);
     }
-  };
-
-  const handlePermissionDeny = () => {
-    setShowPermissionDialog(false);
-    toast.error("To sync your contacts, please allow access when prompted.");
   };
 
   const filteredContacts = contacts.filter(
@@ -183,33 +168,6 @@ const Contacts = () => {
           ))
         )}
       </div>
-
-      {/* Permission Dialog */}
-      <Dialog open={showPermissionDialog} onOpenChange={setShowPermissionDialog}>
-        <DialogContent className="w-[calc(100%-2rem)] max-w-md">
-          <DialogHeader>
-            <DialogTitle className="text-lg sm:text-xl">Access Your Contacts?</DialogTitle>
-            <DialogDescription className="text-sm">
-              FinMo would like to access your contacts to help you find friends who are also using FinMo for instant, fee-free transfers.
-            </DialogDescription>
-          </DialogHeader>
-          <div className="flex flex-col sm:flex-row gap-3 mt-4">
-            <Button
-              variant="outline"
-              className="flex-1 h-11"
-              onClick={handlePermissionDeny}
-            >
-              Don't Allow
-            </Button>
-            <Button
-              className="flex-1 bg-gradient-primary hover:opacity-90 h-11"
-              onClick={handlePermissionGrant}
-            >
-              Allow
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
       <MobileNav />
     </div>
   );

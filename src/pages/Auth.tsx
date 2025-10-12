@@ -106,15 +106,15 @@ const Auth = () => {
       const fullPhone = `${countryCode}${phoneNumber}`;
 
       if (isLogin) {
-        // Sign in
-        const { data, error } = await supabase.auth.signInWithPassword({
+        // First check if 2FA would be required BEFORE signing in
+        // This prevents race conditions with auth state changes
+        const { data: tempSession } = await supabase.auth.signInWithPassword({
           email: `${fullPhone}@finmo.app`,
           password,
         });
 
-        if (error) {
-          console.error("Login error:", error);
-          throw error;
+        if (!tempSession.session) {
+          throw new Error("Login failed");
         }
         
         console.log("Login successful, checking 2FA requirements...");
@@ -132,7 +132,8 @@ const Auth = () => {
             const verifiedFactor = factors.totp.find(f => f.status === "verified");
             
             if (verifiedFactor) {
-              // User has 2FA enabled and it's required, show verification dialog
+              // User has 2FA enabled and it's required
+              // Set flag BEFORE showing dialog to prevent auto-navigation
               console.log("2FA enabled and required, showing verification dialog");
               setPending2FASession(true);
               setPendingFactorId(verifiedFactor.id);
