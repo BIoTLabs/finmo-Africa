@@ -103,19 +103,27 @@ const Auth = () => {
           throw error;
         }
         
-        if (data.session) {
-          // Check if user has 2FA enabled
-          const factorId = await challengeMFA();
-          if (factorId) {
+        console.log("Login response:", data);
+        
+        // Check if user has 2FA enabled
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        console.log("MFA factors:", factors);
+        
+        if (factors && factors.totp && factors.totp.length > 0) {
+          const verifiedFactor = factors.totp.find(f => f.status === "verified");
+          
+          if (verifiedFactor) {
             // User has 2FA enabled, show verification dialog
-            setPendingFactorId(factorId);
+            console.log("2FA enabled, showing verification");
+            setPendingFactorId(verifiedFactor.id);
             setShow2FAVerify(true);
-          } else {
-            // No 2FA, proceed to dashboard
-            toast.success("Welcome back!");
-            navigate("/dashboard");
+            return; // Don't navigate yet
           }
         }
+        
+        // No 2FA, proceed to dashboard
+        toast.success("Welcome back!");
+        navigate("/dashboard");
       } else {
         // Sign up with phone verification
         const { data, error } = await supabase.auth.signUp({
