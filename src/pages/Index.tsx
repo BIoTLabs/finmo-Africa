@@ -7,7 +7,8 @@ import {
   Zap, Users, Wallet, ArrowRight, CheckCircle, Shield, 
   CreditCard, TrendingUp, Lock, Smartphone, Globe, 
   ShoppingBag, RefreshCw, FileCheck, Users2, Banknote,
-  QrCode, ChevronRight, Mail, Send, Twitter, MessageCircle
+  QrCode, ChevronRight, Mail, Send, Twitter, MessageCircle,
+  Phone, Store
 } from "lucide-react";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { useState } from "react";
@@ -46,19 +47,24 @@ const Index = () => {
 
   const features = [
     {
-      icon: Zap,
-      title: "Instant Transfers",
-      description: "Send money to FinMo users instantly with zero fees using just phone numbers. Real-time balance updates.",
+      icon: Phone,
+      title: "Send Crypto via Phone Numbers",
+      description: "Revolutionary feature: Send cryptocurrency to anyone using just their phone number. No complex wallet addresses needed!",
     },
     {
-      icon: Shield,
-      title: "Bank-Level Security",
-      description: "KYC verification, encrypted payment methods, Row Level Security policies, and secure blockchain technology.",
+      icon: Store,
+      title: "Goods & Services Marketplace",
+      description: "Buy and sell physical goods, digital products, and services with crypto. Complete marketplace with escrow protection.",
+    },
+    {
+      icon: Zap,
+      title: "Instant Transfers",
+      description: "Send money to FinMo users instantly with zero fees. Real-time balance updates and transaction confirmations.",
     },
     {
       icon: ShoppingBag,
-      title: "P2P Marketplace",
-      description: "Buy and sell cryptocurrencies peer-to-peer with escrow protection and secure payment methods.",
+      title: "P2P Crypto Trading",
+      description: "Trade cryptocurrencies peer-to-peer with multiple payment methods and built-in escrow for secure transactions.",
     },
     {
       icon: CreditCard,
@@ -76,14 +82,9 @@ const Index = () => {
       description: "Access Polygon, Base, and Arbitrum networks. Hold USDC, MATIC, and other popular cryptocurrencies.",
     },
     {
-      icon: Smartphone,
-      title: "Contact Sync",
-      description: "Automatically sync your phone contacts and easily find friends who are already using FinMo.",
-    },
-    {
-      icon: RefreshCw,
-      title: "Real-Time Updates",
-      description: "Live transaction notifications, automatic balance synchronization, and instant payment confirmations.",
+      icon: Shield,
+      title: "Bank-Level Security",
+      description: "KYC verification, encrypted payment methods, Row Level Security policies, and secure blockchain technology.",
     },
   ];
 
@@ -111,15 +112,15 @@ const Index = () => {
   ];
 
   const benefits = [
+    "Send crypto with just phone numbers - no addresses needed",
+    "Marketplace for goods, services & cryptocurrency",
     "Zero fees for FinMo-to-FinMo transfers",
     "Lightning-fast blockchain transactions",
-    "Phone number-based payments - no wallet addresses",
-    "Buy & sell crypto in P2P marketplace",
+    "P2P trading with escrow protection",
     "Virtual cards for online shopping",
-    "Earn rewards through staking",
+    "Earn rewards through crypto staking",
     "Multi-chain cryptocurrency support",
     "Bank-level security and encryption",
-    "Real-time balance synchronization",
     "KYC-verified user community",
   ];
 
@@ -142,8 +143,8 @@ const Index = () => {
             </h1>
             
             <p className="mb-8 text-xl text-muted-foreground">
-              Send money instantly, trade P2P, create virtual cards, and earn through staking. 
-              All in one secure, KYC-verified platform built for Africa.
+              Send crypto using phone numbers, buy goods & services with crypto, trade P2P, 
+              create virtual cards, and earn through staking. All in one platform built for Africa.
             </p>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
@@ -170,12 +171,12 @@ const Index = () => {
 
       {/* Features Grid */}
       <div className="container mx-auto px-6 py-20">
-        <div className="mb-12 text-center">
-          <h2 className="mb-4 text-3xl font-bold">Complete Financial Ecosystem</h2>
-          <p className="text-lg text-muted-foreground">
-            Everything you need to send, receive, trade, and grow your cryptocurrency
-          </p>
-        </div>
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold">Revolutionary Features for Africa</h2>
+            <p className="text-lg text-muted-foreground">
+              Send crypto via phone numbers and trade goods & services - plus everything else you need
+            </p>
+          </div>
 
         <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
           {features.map((feature, index) => (
@@ -268,22 +269,22 @@ const Index = () => {
         <div className="grid gap-8 md:grid-cols-3 max-w-5xl mx-auto">
           {[
             {
-              icon: Users2,
-              title: "Personal Transfers",
-              desc: "Send money to friends and family instantly using just their phone number. Zero fees, real-time delivery.",
-              features: ["Phone number transfers", "Contact sync", "Payment requests", "QR code payments"]
+              icon: Phone,
+              title: "Phone Number Payments",
+              desc: "Send cryptocurrency to anyone using just their phone number. No wallet addresses, no complexity - just like sending a text message.",
+              features: ["Send crypto via phone", "No wallet addresses needed", "Contact sync integration", "QR code payments"]
             },
             {
-              icon: Banknote,
-              title: "Crypto Trading",
-              desc: "Buy and sell cryptocurrencies peer-to-peer with escrow protection and multiple payment methods.",
-              features: ["P2P marketplace", "Escrow protection", "Multiple payment methods", "Secure trades"]
+              icon: Store,
+              title: "Marketplace Trading",
+              desc: "Complete marketplace for buying/selling goods, services, and cryptocurrencies with built-in escrow protection.",
+              features: ["Physical goods", "Digital products", "Services marketplace", "Crypto P2P trading"]
             },
             {
               icon: CreditCard,
-              title: "Online Shopping",
-              desc: "Create instant virtual cards funded from your crypto wallet for safe online shopping anywhere.",
-              features: ["Instant card creation", "Real-time funding", "Transaction tracking", "Spending controls"]
+              title: "Virtual Cards & Staking",
+              desc: "Create instant virtual cards for shopping and earn passive income through flexible staking options.",
+              features: ["Instant card creation", "Real-time funding", "Crypto staking rewards", "Multi-chain support"]
             },
           ].map((useCase, index) => (
             <Card key={useCase.title} className="shadow-finmo-md hover:shadow-finmo-lg transition-all animate-fade-in" style={{ animationDelay: `${index * 0.1}s` }}>
