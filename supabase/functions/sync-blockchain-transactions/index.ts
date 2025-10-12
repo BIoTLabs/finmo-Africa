@@ -62,8 +62,8 @@ serve(async (req) => {
     const latestBlockData = await latestBlockResponse.json();
     const latestBlock = parseInt(latestBlockData.result, 16);
     
-    // Scan last 10000 blocks for testnet (more blocks to catch faucet transactions)
-    const fromBlock = Math.max(0, latestBlock - 10000);
+    // Scan last 50000 blocks for testnet to capture full transaction history
+    const fromBlock = Math.max(0, latestBlock - 50000);
     
     console.log(`Scanning from block ${fromBlock} to ${latestBlock}`);
 
