@@ -1051,7 +1051,7 @@ export type Database = {
           id: string
           recipient_id: string | null
           recipient_wallet: string
-          sender_id: string
+          sender_id: string | null
           sender_wallet: string
           status: string
           token: string
@@ -1067,7 +1067,7 @@ export type Database = {
           id?: string
           recipient_id?: string | null
           recipient_wallet: string
-          sender_id: string
+          sender_id?: string | null
           sender_wallet: string
           status?: string
           token: string
@@ -1083,7 +1083,7 @@ export type Database = {
           id?: string
           recipient_id?: string | null
           recipient_wallet?: string
-          sender_id?: string
+          sender_id?: string | null
           sender_wallet?: string
           status?: string
           token?: string
