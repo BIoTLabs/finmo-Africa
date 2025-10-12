@@ -11,12 +11,16 @@ export const useAutoBalanceSync = (userId: string | null, walletAddress: string 
   useEffect(() => {
     if (!userId || !walletAddress) return;
 
-    // Sync on mount
+    // Sync on mount - both balances and transactions
     const initialSync = async () => {
       try {
-        await supabase.functions.invoke('sync-blockchain-balance');
+        await Promise.all([
+          supabase.functions.invoke('sync-blockchain-balance'),
+          supabase.functions.invoke('sync-blockchain-transactions')
+        ]);
+        console.log('Initial blockchain sync completed');
       } catch (error) {
-        console.error('Initial balance sync failed:', error);
+        console.error('Initial blockchain sync failed:', error);
       }
     };
 
@@ -25,9 +29,13 @@ export const useAutoBalanceSync = (userId: string | null, walletAddress: string 
     // Sync every 2 minutes
     const interval = setInterval(async () => {
       try {
-        await supabase.functions.invoke('sync-blockchain-balance');
+        await Promise.all([
+          supabase.functions.invoke('sync-blockchain-balance'),
+          supabase.functions.invoke('sync-blockchain-transactions')
+        ]);
+        console.log('Periodic blockchain sync completed');
       } catch (error) {
-        console.error('Periodic balance sync failed:', error);
+        console.error('Periodic blockchain sync failed:', error);
       }
     }, 120000); // 2 minutes
 

@@ -62,26 +62,11 @@ serve(async (req) => {
     const latestBlockData = await latestBlockResponse.json();
     const latestBlock = parseInt(latestBlockData.result, 16);
     
-    // Scan last 1000 blocks (adjust based on needs)
-    const fromBlock = Math.max(0, latestBlock - 1000);
+    // Scan last 10000 blocks for testnet (more blocks to catch faucet transactions)
+    const fromBlock = Math.max(0, latestBlock - 10000);
     
     console.log(`Scanning from block ${fromBlock} to ${latestBlock}`);
 
-    // Fetch MATIC transactions (native transfers)
-    const maticTxResponse = await fetch(POLYGON_AMOY_RPC, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        jsonrpc: '2.0',
-        method: 'eth_getLogs',
-        params: [{
-          fromBlock: `0x${fromBlock.toString(16)}`,
-          toBlock: 'latest',
-          address: walletAddress,
-        }],
-        id: 2,
-      }),
-    });
 
     // Fetch USDC transfer events
     const usdcIncomingResponse = await fetch(POLYGON_AMOY_RPC, {
@@ -165,11 +150,12 @@ serve(async (req) => {
         amount
       });
 
-      // Insert transaction
+      // For incoming transactions, sender_id should be null (external)
+      // For outgoing transactions, sender_id is the user
       const { error: insertError } = await supabaseClient
         .from('transactions')
         .insert({
-          sender_id: user.id,
+          sender_id: isIncoming ? null : user.id,
           recipient_id: isIncoming ? user.id : null,
           sender_wallet: from,
           recipient_wallet: to,
