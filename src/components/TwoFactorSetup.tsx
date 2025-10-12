@@ -5,6 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Loader2 } from "lucide-react";
 import { use2FA } from "@/hooks/use2FA";
+import { supabase } from "@/integrations/supabase/client";
 
 interface TwoFactorSetupProps {
   open: boolean;
@@ -37,6 +38,23 @@ const TwoFactorSetup = ({ open, onOpenChange, onSuccess }: TwoFactorSetupProps) 
   };
 
   const handleClose = () => {
+    // Clean up any unverified factors on close
+    const cleanup = async () => {
+      try {
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        if (factors && factors.totp.length > 0) {
+          for (const factor of factors.totp) {
+            if (factor.status === "unverified") {
+              await supabase.auth.mfa.unenroll({ factorId: factor.id });
+            }
+          }
+        }
+      } catch (error) {
+        console.error("Error cleaning up unverified factors:", error);
+      }
+    };
+    
+    cleanup();
     onOpenChange(false);
     setStep("enroll");
     setVerificationCode("");

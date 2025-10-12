@@ -26,6 +26,18 @@ export const use2FA = (): Use2FAReturn => {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
 
+      // Check for existing factors and clean up unverified ones
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      
+      if (factors && factors.totp.length > 0) {
+        // Remove any existing unverified factors to allow fresh enrollment
+        for (const factor of factors.totp) {
+          if (factor.status === "unverified") {
+            await supabase.auth.mfa.unenroll({ factorId: factor.id });
+          }
+        }
+      }
+
       // Enroll TOTP (Time-based One-Time Password)
       const { data, error } = await supabase.auth.mfa.enroll({
         factorType: "totp",
@@ -93,14 +105,12 @@ export const use2FA = (): Use2FAReturn => {
         throw new Error("No 2FA factor found");
       }
 
-      // Unenroll all verified factors
+      // Unenroll all factors (both verified and unverified)
       for (const factor of factors.totp) {
-        if (factor.status === "verified") {
-          const { error } = await supabase.auth.mfa.unenroll({
-            factorId: factor.id,
-          });
-          if (error) throw error;
-        }
+        const { error } = await supabase.auth.mfa.unenroll({
+          factorId: factor.id,
+        });
+        if (error) throw error;
       }
 
       toast.success("2FA disabled successfully");
