@@ -11,11 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
+import { use2FAGuard } from "@/hooks/use2FAGuard";
 
 const Send = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const prefilledContact = location.state?.contact;
+  const { TwoFactorDialog, requireVerification, isVerifying } = use2FAGuard();
 
   const [transferType, setTransferType] = useState<"internal" | "external">(
     prefilledContact?.isFinMoUser ? "internal" : "external"
@@ -50,69 +52,72 @@ const Send = () => {
   const handleSend = async () => {
     if (!profile) return;
     
-    setLoading(true);
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (!session) {
-        throw new Error('Not authenticated');
-      }
-
-      // Check KYC status for external transfers (withdrawals)
-      if (transferType === 'external') {
-        const { data: kycData } = await supabase
-          .from('kyc_verifications')
-          .select('status')
-          .eq('user_id', session.user.id)
-          .maybeSingle();
-
-        if (!kycData || kycData.status !== 'approved') {
-          toast.error('Please complete KYC verification before making withdrawals');
-          navigate('/kyc-verification');
-          setLoading(false);
-          return;
+    // Wrap the entire send logic in 2FA verification
+    await requireVerification("require_on_send", async () => {
+      setLoading(true);
+      try {
+        const { data: { session } } = await supabase.auth.getSession();
+        if (!session) {
+          throw new Error('Not authenticated');
         }
+
+        // Check KYC status for external transfers (withdrawals)
+        if (transferType === 'external') {
+          const { data: kycData } = await supabase
+            .from('kyc_verifications')
+            .select('status')
+            .eq('user_id', session.user.id)
+            .maybeSingle();
+
+          if (!kycData || kycData.status !== 'approved') {
+            toast.error('Please complete KYC verification before making withdrawals');
+            navigate('/kyc-verification');
+            setLoading(false);
+            return;
+          }
+        }
+
+        // Route to appropriate endpoint based on transfer type
+        const endpoint = transferType === 'internal' ? 'process-transaction' : 'blockchain-withdraw';
+        
+        const { data, error } = await supabase.functions.invoke(endpoint, {
+          body: {
+            recipient_phone: transferType === 'internal' ? phoneNumber : undefined,
+            recipient_wallet: transferType === 'external' ? walletAddress : undefined,
+            amount: parseFloat(amount),
+            token: token,
+            transaction_type: transferType,
+          },
+        });
+
+        if (error) throw error;
+
+        if (transferType === 'external' && data.explorerUrl) {
+          toast.success(
+            <div>
+              <p>{data.message}</p>
+              <a 
+                href={data.explorerUrl} 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="text-primary underline text-sm"
+              >
+                View on Explorer
+              </a>
+            </div>
+          );
+        } else {
+          toast.success(data.message || 'Transaction completed!');
+        }
+
+        navigate("/dashboard");
+      } catch (error: any) {
+        console.error('Transaction error:', error);
+        toast.error("We couldn't send your money. Please check your balance and try again.");
+      } finally {
+        setLoading(false);
       }
-
-      // Route to appropriate endpoint based on transfer type
-      const endpoint = transferType === 'internal' ? 'process-transaction' : 'blockchain-withdraw';
-      
-      const { data, error } = await supabase.functions.invoke(endpoint, {
-        body: {
-          recipient_phone: transferType === 'internal' ? phoneNumber : undefined,
-          recipient_wallet: transferType === 'external' ? walletAddress : undefined,
-          amount: parseFloat(amount),
-          token: token,
-          transaction_type: transferType,
-        },
-      });
-
-      if (error) throw error;
-
-      if (transferType === 'external' && data.explorerUrl) {
-        toast.success(
-          <div>
-            <p>{data.message}</p>
-            <a 
-              href={data.explorerUrl} 
-              target="_blank" 
-              rel="noopener noreferrer"
-              className="text-primary underline text-sm"
-            >
-              View on Explorer
-            </a>
-          </div>
-        );
-      } else {
-        toast.success(data.message || 'Transaction completed!');
-      }
-
-      navigate("/dashboard");
-    } catch (error: any) {
-      console.error('Transaction error:', error);
-      toast.error("We couldn't send your money. Please check your balance and try again.");
-    } finally {
-      setLoading(false);
-    }
+    });
   };
 
   return (
@@ -249,11 +254,11 @@ const Send = () => {
         {/* Send Button */}
         <Button
           onClick={handleSend}
-          disabled={!amount || loading || (transferType === "internal" ? !phoneNumber : !walletAddress)}
+          disabled={!amount || loading || isVerifying || (transferType === "internal" ? !phoneNumber : !walletAddress)}
           className="w-full h-14 text-lg bg-gradient-success hover:opacity-90"
         >
-          {loading ? (
-            "Processing..."
+          {loading || isVerifying ? (
+            isVerifying ? "Verifying 2FA..." : "Processing..."
           ) : (
             <>
               <SendIcon className="w-5 h-5 mr-2" />
@@ -262,6 +267,8 @@ const Send = () => {
           )}
         </Button>
       </div>
+      
+      <TwoFactorDialog />
       <MobileNav />
     </div>
   );

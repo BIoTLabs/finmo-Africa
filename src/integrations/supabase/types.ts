@@ -1093,6 +1093,51 @@ export type Database = {
         }
         Relationships: []
       }
+      user_2fa_preferences: {
+        Row: {
+          created_at: string | null
+          id: string
+          require_on_login: boolean | null
+          require_on_marketplace_purchase: boolean | null
+          require_on_p2p_trade: boolean | null
+          require_on_payment_method_changes: boolean | null
+          require_on_security_changes: boolean | null
+          require_on_send: boolean | null
+          require_on_staking: boolean | null
+          require_on_withdraw: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          id?: string
+          require_on_login?: boolean | null
+          require_on_marketplace_purchase?: boolean | null
+          require_on_p2p_trade?: boolean | null
+          require_on_payment_method_changes?: boolean | null
+          require_on_security_changes?: boolean | null
+          require_on_send?: boolean | null
+          require_on_staking?: boolean | null
+          require_on_withdraw?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          id?: string
+          require_on_login?: boolean | null
+          require_on_marketplace_purchase?: boolean | null
+          require_on_p2p_trade?: boolean | null
+          require_on_payment_method_changes?: boolean | null
+          require_on_security_changes?: boolean | null
+          require_on_send?: boolean | null
+          require_on_staking?: boolean | null
+          require_on_withdraw?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_registry: {
         Row: {
           created_at: string

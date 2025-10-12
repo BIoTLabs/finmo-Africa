@@ -12,6 +12,7 @@ import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import TwoFactorVerify from "@/components/TwoFactorVerify";
 import { use2FA } from "@/hooks/use2FA";
+import { use2FAPreferences } from "@/hooks/use2FAPreferences";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -35,6 +36,7 @@ const Auth = () => {
   const [show2FAVerify, setShow2FAVerify] = useState(false);
   const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
   const { challengeMFA, verifyChallenge } = use2FA();
+  const { checkIfRequired } = use2FAPreferences();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -105,23 +107,29 @@ const Auth = () => {
         
         console.log("Login response:", data);
         
-        // Check if user has 2FA enabled
-        const { data: factors } = await supabase.auth.mfa.listFactors();
-        console.log("MFA factors:", factors);
+        // Check if 2FA is required for login
+        const requires2FA = await checkIfRequired("require_on_login");
+        console.log("2FA required for login:", requires2FA);
         
-        if (factors && factors.totp && factors.totp.length > 0) {
-          const verifiedFactor = factors.totp.find(f => f.status === "verified");
+        if (requires2FA) {
+          // Check if user has 2FA enabled
+          const { data: factors } = await supabase.auth.mfa.listFactors();
+          console.log("MFA factors:", factors);
           
-          if (verifiedFactor) {
-            // User has 2FA enabled, show verification dialog
-            console.log("2FA enabled, showing verification");
-            setPendingFactorId(verifiedFactor.id);
-            setShow2FAVerify(true);
-            return; // Don't navigate yet
+          if (factors && factors.totp && factors.totp.length > 0) {
+            const verifiedFactor = factors.totp.find(f => f.status === "verified");
+            
+            if (verifiedFactor) {
+              // User has 2FA enabled and it's required, show verification dialog
+              console.log("2FA enabled, showing verification");
+              setPendingFactorId(verifiedFactor.id);
+              setShow2FAVerify(true);
+              return; // Don't navigate yet
+            }
           }
         }
         
-        // No 2FA, proceed to dashboard
+        // No 2FA required or not enabled, proceed to dashboard
         toast.success("Welcome back!");
         navigate("/dashboard");
       } else {

@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
 import TwoFactorSetup from "@/components/TwoFactorSetup";
+import TwoFactorPreferences from "@/components/TwoFactorPreferences";
 import { use2FA } from "@/hooks/use2FA";
 
 const Settings = () => {
@@ -221,7 +222,7 @@ const Settings = () => {
                   <div>
                     <p className="font-semibold">Two-Factor Authentication</p>
                     <p className="text-sm text-muted-foreground">
-                      Extra security via email
+                      Extra security via authenticator app
                     </p>
                   </div>
                 </div>
@@ -232,6 +233,8 @@ const Settings = () => {
               </div>
             </CardContent>
           </Card>
+
+          {twoFactorEnabled && <TwoFactorPreferences />}
         </div>
 
         {/* Account & Compliance */}
