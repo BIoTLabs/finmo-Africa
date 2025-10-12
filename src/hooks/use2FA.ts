@@ -27,13 +27,19 @@ export const use2FA = (): Use2FAReturn => {
       if (!user) throw new Error("Not authenticated");
 
       // Check for existing factors and clean up unverified ones
-      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
       
-      if (factors && factors.totp.length > 0) {
+      // Only attempt cleanup if we successfully got factors and they exist
+      if (!listError && factors?.totp && factors.totp.length > 0) {
         // Remove any existing unverified factors to allow fresh enrollment
         for (const factor of factors.totp) {
           if (factor.status === "unverified") {
-            await supabase.auth.mfa.unenroll({ factorId: factor.id });
+            try {
+              await supabase.auth.mfa.unenroll({ factorId: factor.id });
+            } catch (unenrollError) {
+              console.error("Failed to cleanup unverified factor:", unenrollError);
+              // Continue with enrollment even if cleanup fails
+            }
           }
         }
       }
@@ -99,10 +105,13 @@ export const use2FA = (): Use2FAReturn => {
 
   const unenrollMFA = async () => {
     try {
-      const { data: factors } = await supabase.auth.mfa.listFactors();
+      const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
       
-      if (!factors || factors.totp.length === 0) {
-        throw new Error("No 2FA factor found");
+      if (listError) throw listError;
+      
+      if (!factors || !factors.totp || factors.totp.length === 0) {
+        toast.info("No 2FA is currently enabled");
+        return;
       }
 
       // Unenroll all factors (both verified and unverified)

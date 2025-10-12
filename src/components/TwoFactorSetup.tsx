@@ -41,11 +41,16 @@ const TwoFactorSetup = ({ open, onOpenChange, onSuccess }: TwoFactorSetupProps) 
     // Clean up any unverified factors on close
     const cleanup = async () => {
       try {
-        const { data: factors } = await supabase.auth.mfa.listFactors();
-        if (factors && factors.totp.length > 0) {
+        const { data: factors, error: listError } = await supabase.auth.mfa.listFactors();
+        
+        if (!listError && factors?.totp && factors.totp.length > 0) {
           for (const factor of factors.totp) {
             if (factor.status === "unverified") {
-              await supabase.auth.mfa.unenroll({ factorId: factor.id });
+              try {
+                await supabase.auth.mfa.unenroll({ factorId: factor.id });
+              } catch (unenrollError) {
+                console.error("Failed to cleanup unverified factor:", unenrollError);
+              }
             }
           }
         }
