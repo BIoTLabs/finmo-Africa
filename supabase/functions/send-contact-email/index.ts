@@ -57,9 +57,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending contact email from:", name, email);
 
+    // Note: Resend test mode only allows sending to verified email (wtowergates@gmail.com)
+    // To send to other recipients, verify a domain at resend.com/domains
     const emailResponse = await resend.emails.send({
       from: "FinMo Contact <onboarding@resend.dev>",
-      to: ["adedayo@finmo.africa"],
+      to: ["wtowergates@gmail.com"], // Using verified email for testing
       reply_to: email,
       subject: `Contact Form: Message from ${name}`,
       html: `

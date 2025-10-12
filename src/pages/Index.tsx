@@ -11,6 +11,8 @@ import {
   Phone, Store
 } from "lucide-react";
 import finmoLogo from "@/assets/finmo-logo.png";
+import cryptoBackground1 from "@/assets/crypto-background-1.png";
+import cryptoBackground2 from "@/assets/crypto-background-2.png";
 import { useState } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
@@ -36,6 +38,11 @@ const Index = () => {
       });
 
       console.log("Response from send-contact-email:", { data, error });
+
+      // Check for Resend API errors in the response data
+      if (data?.error) {
+        throw new Error(data.error.message || "Failed to send email");
+      }
 
       if (error) {
         console.error("Error from function:", error);
@@ -135,6 +142,19 @@ const Index = () => {
     <div className="min-h-screen bg-gradient-to-b from-background to-accent/20">
       {/* Hero Section */}
       <div className="relative overflow-hidden animate-fade-in bg-gradient-to-br from-primary/5 via-background to-secondary/5">
+        {/* Crypto Background Images */}
+        <div className="absolute inset-0 overflow-hidden pointer-events-none">
+          <img 
+            src={cryptoBackground1} 
+            alt="" 
+            className="absolute top-0 right-0 w-1/2 h-full object-cover opacity-10 mix-blend-luminosity"
+          />
+          <img 
+            src={cryptoBackground2} 
+            alt="" 
+            className="absolute bottom-0 left-0 w-1/2 h-full object-cover opacity-10 mix-blend-luminosity"
+          />
+        </div>
         <div className="relative container mx-auto px-6 py-20 text-center">
           <div className="mx-auto max-w-3xl">
             <div className="mb-8 inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-primary to-primary-glow px-5 py-2.5 shadow-finmo-md">
