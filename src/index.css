@@ -8,7 +8,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
-    /* FinMo Brand Colors - Mobile Wallet for Africa */
+    /* FinMo Brand Colors - Pan-African & Crypto Fusion */
     --background: 0 0% 100%;
     --foreground: 215 25% 15%;
 
@@ -18,18 +18,29 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    /* Primary: Deep Teal - Trust & Finance */
-    --primary: 186 89% 29%;
+    /* Primary: Vibrant African Green - Growth & Prosperity */
+    --primary: 142 76% 36%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 186 89% 45%;
+    --primary-glow: 142 76% 50%;
+    --primary-dark: 142 76% 28%;
 
-    /* Secondary: Vibrant Green - Success & Money */
-    --secondary: 142 71% 45%;
-    --secondary-foreground: 0 0% 100%;
+    /* Secondary: Royal Gold - African Heritage & Crypto Wealth */
+    --secondary: 45 95% 50%;
+    --secondary-foreground: 215 25% 15%;
+    --secondary-dark: 38 90% 45%;
     
-    /* Success indicators */
+    /* Success: Pan-African Green */
     --success: 142 71% 45%;
     --success-foreground: 0 0% 100%;
+
+    /* Crypto Accent: Deep Purple - Blockchain Technology */
+    --crypto-purple: 260 60% 55%;
+    --crypto-blue: 210 100% 60%;
+    --crypto-cyan: 186 89% 45%;
+
+    /* African Accent: Warm Red - Energy & Unity */
+    --african-red: 0 75% 55%;
+    --african-orange: 25 90% 55%;
 
     /* Warning indicators */
     --warning: 45 93% 47%;
@@ -39,71 +50,94 @@ All colors MUST be HSL.
     --muted: 210 20% 96%;
     --muted-foreground: 215 16% 47%;
 
-    /* Accent: Lighter Teal */
-    --accent: 186 60% 94%;
-    --accent-foreground: 186 89% 29%;
+    /* Accent: Light Gold Shimmer */
+    --accent: 45 95% 95%;
+    --accent-foreground: 142 76% 36%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 20% 90%;
     --input: 214 20% 90%;
-    --ring: 186 89% 29%;
+    --ring: 142 76% 36%;
 
     --radius: 0.75rem;
 
-    /* Custom gradients for premium feel */
-    --gradient-primary: linear-gradient(135deg, hsl(186 89% 29%), hsl(186 89% 45%));
+    /* Pan-African & Crypto Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 36%), hsl(142 76% 50%));
+    --gradient-africa: linear-gradient(135deg, hsl(142 76% 36%), hsl(45 95% 50%), hsl(0 75% 55%));
+    --gradient-crypto: linear-gradient(135deg, hsl(260 60% 55%), hsl(210 100% 60%), hsl(186 89% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 76% 36%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(142 71% 45%), hsl(142 71% 55%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(210 20% 98%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(142 76% 98%));
+    --gradient-gold: linear-gradient(135deg, hsl(45 95% 50%), hsl(38 90% 45%));
+    --gradient-overlay: linear-gradient(180deg, hsl(142 76% 36% / 0.05), hsl(45 95% 50% / 0.05));
     
-    /* Shadows for depth */
-    --shadow-sm: 0 2px 8px hsl(186 89% 29% / 0.08);
-    --shadow-md: 0 4px 16px hsl(186 89% 29% / 0.12);
-    --shadow-lg: 0 8px 32px hsl(186 89% 29% / 0.16);
+    /* Shadows with colored tints */
+    --shadow-sm: 0 2px 8px hsl(142 76% 36% / 0.08);
+    --shadow-md: 0 4px 16px hsl(142 76% 36% / 0.12);
+    --shadow-lg: 0 8px 32px hsl(142 76% 36% / 0.18);
+    --shadow-gold: 0 8px 32px hsl(45 95% 50% / 0.25);
+    --shadow-crypto: 0 8px 32px hsl(260 60% 55% / 0.20);
     
     /* Transitions */
     --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    --transition-bounce: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
   }
 
   .dark {
-    --background: 215 25% 10%;
+    --background: 215 25% 8%;
     --foreground: 0 0% 98%;
 
-    --card: 215 25% 12%;
+    --card: 215 25% 10%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 215 25% 12%;
+    --popover: 215 25% 10%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 186 89% 45%;
+    --primary: 142 76% 45%;
     --primary-foreground: 215 25% 10%;
+    --primary-glow: 142 76% 55%;
+    --primary-dark: 142 76% 35%;
 
-    --secondary: 142 71% 45%;
+    --secondary: 45 95% 55%;
     --secondary-foreground: 215 25% 10%;
+    --secondary-dark: 38 90% 50%;
 
     --success: 142 71% 45%;
     --success-foreground: 215 25% 10%;
 
-    --warning: 45 93% 47%;
+    --crypto-purple: 260 60% 60%;
+    --crypto-blue: 210 100% 65%;
+    --crypto-cyan: 186 89% 50%;
+
+    --african-red: 0 75% 60%;
+    --african-orange: 25 90% 60%;
+
+    --warning: 45 93% 52%;
     --warning-foreground: 215 25% 10%;
 
-    --muted: 215 25% 18%;
+    --muted: 215 25% 15%;
     --muted-foreground: 215 16% 65%;
 
-    --accent: 215 25% 18%;
+    --accent: 215 25% 15%;
     --accent-foreground: 0 0% 98%;
 
-    --destructive: 0 84% 60%;
+    --destructive: 0 84% 65%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 215 25% 20%;
-    --input: 215 25% 20%;
-    --ring: 186 89% 45%;
+    --border: 215 25% 18%;
+    --input: 215 25% 18%;
+    --ring: 142 76% 45%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(186 89% 35%), hsl(186 89% 50%));
+    --gradient-primary: linear-gradient(135deg, hsl(142 76% 35%), hsl(142 76% 50%));
+    --gradient-africa: linear-gradient(135deg, hsl(142 76% 35%), hsl(45 95% 50%), hsl(0 75% 55%));
+    --gradient-crypto: linear-gradient(135deg, hsl(260 60% 55%), hsl(210 100% 60%), hsl(186 89% 45%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 76% 35%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
     --gradient-success: linear-gradient(135deg, hsl(142 71% 40%), hsl(142 71% 50%));
-    --gradient-card: linear-gradient(180deg, hsl(215 25% 12%), hsl(215 25% 14%));
+    --gradient-card: linear-gradient(180deg, hsl(215 25% 10%), hsl(215 25% 12%));
+    --gradient-gold: linear-gradient(135deg, hsl(45 95% 50%), hsl(38 90% 45%));
+    --gradient-overlay: linear-gradient(180deg, hsl(142 76% 35% / 0.1), hsl(45 95% 50% / 0.1));
   }
 }
 
@@ -122,6 +156,36 @@ All colors MUST be HSL.
 
   .active\:scale-98:active {
     transform: scale(0.98);
+  }
+
+  /* Pan-African pattern background */
+  .african-pattern {
+    background-image: 
+      repeating-linear-gradient(45deg, transparent, transparent 10px, hsl(142 76% 36% / 0.03) 10px, hsl(142 76% 36% / 0.03) 20px),
+      repeating-linear-gradient(-45deg, transparent, transparent 10px, hsl(45 95% 50% / 0.03) 10px, hsl(45 95% 50% / 0.03) 20px);
+  }
+
+  /* Crypto grid background */
+  .crypto-grid {
+    background-image: 
+      linear-gradient(hsl(260 60% 55% / 0.03) 1px, transparent 1px),
+      linear-gradient(90deg, hsl(260 60% 55% / 0.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+  }
+
+  /* Shimmer effect for gold elements */
+  @keyframes shimmer {
+    0% { background-position: -100% 0; }
+    100% { background-position: 200% 0; }
+  }
+
+  .gold-shimmer {
+    background: linear-gradient(90deg, hsl(45 95% 50%), hsl(45 100% 65%), hsl(45 95% 50%));
+    background-size: 200% 100%;
+    animation: shimmer 3s infinite;
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
   }
 
   /* Hide scrollbar for horizontal scroll */
