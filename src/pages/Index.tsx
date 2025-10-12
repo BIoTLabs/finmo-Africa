@@ -125,12 +125,12 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-gradient-to-b from-background to-accent/20">
       {/* Hero Section */}
-      <div className="relative overflow-hidden animate-fade-in bg-primary/5">
+      <div className="relative overflow-hidden animate-fade-in bg-gradient-to-br from-primary/5 via-background to-secondary/5">
         <div className="relative container mx-auto px-6 py-20 text-center">
           <div className="mx-auto max-w-3xl">
-            <div className="mb-8 inline-flex items-center gap-3 rounded-full bg-primary px-5 py-2.5 shadow-finmo-md">
+            <div className="mb-8 inline-flex items-center gap-3 rounded-full bg-gradient-to-r from-primary to-primary-glow px-5 py-2.5 shadow-finmo-md">
               <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
                 <img src={finmoLogo} alt="FinMo" className="w-5 h-5" />
               </div>
@@ -140,7 +140,7 @@ const Index = () => {
             <h1 className="mb-6 text-5xl font-bold leading-tight md:text-7xl text-foreground">
               Africa's Complete
               <br />
-              <span className="text-primary text-6xl md:text-8xl">
+              <span className="bg-gradient-to-r from-primary via-primary-glow to-success bg-clip-text text-transparent text-6xl md:text-8xl">
                 Crypto Payment Platform
               </span>
             </h1>
@@ -156,7 +156,7 @@ const Index = () => {
               <Button
                 size="lg"
                 onClick={() => navigate("/auth")}
-                className="bg-primary hover:bg-primary/90 text-white text-lg h-14 px-8 font-bold"
+                className="bg-gradient-to-r from-primary to-primary-glow hover:shadow-finmo-md text-white text-lg h-14 px-8 font-bold transition-all"
               >
                 Get Started Free
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -165,7 +165,7 @@ const Index = () => {
                 size="lg"
                 variant="outline"
                 onClick={() => navigate("/auth")}
-                className="text-lg h-14 px-8 border-2 border-primary hover:bg-primary/10 font-semibold"
+                className="text-lg h-14 px-8 border-2 border-primary hover:bg-gradient-to-r hover:from-primary/10 hover:to-primary-glow/10 font-semibold transition-all"
               >
                 Sign In
               </Button>
@@ -194,7 +194,7 @@ const Index = () => {
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <CardContent className="p-6">
-                <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary">
+                <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-primary to-primary-glow shadow-finmo-sm">
                   <feature.icon className="w-7 h-7 text-white" />
                 </div>
                 <h3 className="mb-2 text-xl font-bold">{feature.title}</h3>
@@ -226,7 +226,7 @@ const Index = () => {
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <CardContent className="p-6">
-                  <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-success">
+                  <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-to-br from-success to-success/80 shadow-finmo-sm">
                     <feature.icon className="w-7 h-7 text-white" />
                   </div>
                   <h3 className="mb-2 text-xl font-bold">{feature.title}</h3>
@@ -239,7 +239,7 @@ const Index = () => {
       </div>
 
       {/* Benefits Section */}
-      <div className="bg-primary py-20">
+      <div className="bg-gradient-to-br from-primary via-primary to-primary-dark py-20">
         <div className="container mx-auto px-6">
           <div className="mx-auto max-w-4xl text-center text-white">
             <h2 className="mb-4 text-4xl font-bold">Everything You Need in One Platform</h2>
@@ -249,7 +249,7 @@ const Index = () => {
 
             <div className="grid gap-4 text-left sm:grid-cols-2">
               {benefits.map((benefit) => (
-                <div key={benefit} className="flex items-start gap-3 bg-white/10 p-4 rounded-lg hover:bg-white/20 transition-all">
+                <div key={benefit} className="flex items-start gap-3 bg-white/10 backdrop-blur-sm p-4 rounded-lg hover:bg-white/20 transition-all">
                   <CheckCircle className="mt-0.5 w-6 h-6 flex-shrink-0" />
                   <p className="text-lg font-medium">{benefit}</p>
                 </div>
@@ -284,26 +284,26 @@ const Index = () => {
               title: "Phone Number Payments",
               desc: "Send cryptocurrency to anyone using just their phone number. No wallet addresses, no complexity - just like sending a text message.",
               features: ["Send crypto via phone", "No wallet addresses needed", "Contact sync integration", "QR code payments"],
-              color: "bg-primary"
+              gradient: "bg-gradient-to-br from-primary to-primary-glow"
             },
             {
               icon: Store,
               title: "Marketplace Trading",
               desc: "Complete marketplace for buying/selling goods, services, and cryptocurrencies with built-in escrow protection.",
               features: ["Physical goods", "Digital products", "Services marketplace", "Crypto P2P trading"],
-              color: "bg-secondary"
+              gradient: "bg-gradient-to-br from-secondary to-secondary-dark"
             },
             {
               icon: CreditCard,
               title: "Virtual Cards & Staking",
               desc: "Create instant virtual cards for shopping and earn passive income through flexible staking options.",
               features: ["Instant card creation", "Real-time funding", "Crypto staking rewards", "Multi-chain support"],
-              color: "bg-success"
+              gradient: "bg-gradient-to-br from-success to-primary"
             },
           ].map((useCase, index) => (
             <Card key={useCase.title} className="shadow-finmo-md hover:shadow-finmo-lg transition-all animate-slide-up hover-scale border-2" style={{ animationDelay: `${index * 0.1}s` }}>
               <CardContent className="p-8">
-                <div className={`mb-4 inline-flex items-center justify-center w-16 h-16 rounded-2xl ${useCase.color}`}>
+                <div className={`mb-4 inline-flex items-center justify-center w-16 h-16 rounded-2xl ${useCase.gradient} shadow-finmo-sm`}>
                   <useCase.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="mb-3 text-2xl font-bold">{useCase.title}</h3>
@@ -341,23 +341,23 @@ const Index = () => {
                   step: "1", 
                   title: "Sign Up & Verify", 
                   desc: "Create your account with phone number and complete KYC verification for security",
-                  color: "bg-primary"
+                  gradient: "bg-gradient-to-br from-primary to-primary-glow"
                 },
                 { 
                   step: "2", 
                   title: "Get Your Wallet", 
                   desc: "Receive your secure multi-chain wallet address and sync your contacts",
-                  color: "bg-secondary"
+                  gradient: "bg-gradient-to-br from-secondary to-secondary-dark"
                 },
                 { 
                   step: "3", 
                   title: "Start Using FinMo", 
                   desc: "Send money, trade P2P, create virtual cards, and earn staking rewards",
-                  color: "bg-success"
+                  gradient: "bg-gradient-to-br from-success to-primary"
                 },
               ].map((item, index) => (
                 <div key={item.step} className="text-center animate-slide-up" style={{ animationDelay: `${index * 0.2}s` }}>
-                  <div className={`mb-4 mx-auto flex h-20 w-20 items-center justify-center rounded-2xl ${item.color} text-3xl font-bold text-white shadow-finmo-md`}>
+                  <div className={`mb-4 mx-auto flex h-20 w-20 items-center justify-center rounded-2xl ${item.gradient} text-3xl font-bold text-white shadow-finmo-md`}>
                     {item.step}
                   </div>
                   <h3 className="mb-2 text-xl font-bold">{item.title}</h3>
