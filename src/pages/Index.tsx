@@ -125,27 +125,22 @@ const Index = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background via-accent/30 to-background african-pattern">
+    <div className="min-h-screen bg-background">
       {/* Hero Section */}
-      <div className="relative overflow-hidden animate-fade-in crypto-grid">
-        <div className="absolute inset-0 bg-gradient-hero opacity-20"></div>
-        <div className="absolute top-0 right-0 w-96 h-96 bg-crypto-purple/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-0 left-0 w-96 h-96 bg-secondary/10 rounded-full blur-3xl"></div>
+      <div className="relative overflow-hidden animate-fade-in bg-primary/5">
         <div className="relative container mx-auto px-6 py-20 text-center">
           <div className="mx-auto max-w-3xl">
-            <div className="mb-8 inline-flex items-center gap-3 rounded-full bg-gradient-africa p-1 shadow-finmo-gold animate-pulse-glow">
-              <div className="w-10 h-10 bg-white rounded-full flex items-center justify-center">
-                <img src={finmoLogo} alt="FinMo" className="w-6 h-6" />
+            <div className="mb-8 inline-flex items-center gap-3 rounded-full bg-primary px-5 py-2.5 shadow-finmo-md">
+              <div className="w-8 h-8 bg-white rounded-full flex items-center justify-center">
+                <img src={finmoLogo} alt="FinMo" className="w-5 h-5" />
               </div>
-              <span className="text-sm font-bold text-white pr-4">African Crypto Revolution</span>
+              <span className="text-sm font-bold text-white">African Crypto Revolution</span>
             </div>
             
-            <h1 className="mb-6 text-5xl font-bold leading-tight md:text-7xl">
-              <span className="bg-gradient-hero bg-clip-text text-transparent">
-                Africa's Complete
-              </span>
+            <h1 className="mb-6 text-5xl font-bold leading-tight md:text-7xl text-foreground">
+              Africa's Complete
               <br />
-              <span className="gold-shimmer text-6xl md:text-8xl">
+              <span className="text-primary text-6xl md:text-8xl">
                 Crypto Payment Platform
               </span>
             </h1>
@@ -154,14 +149,14 @@ const Index = () => {
               Send crypto using <span className="font-bold text-primary">phone numbers</span>, 
               buy <span className="font-bold text-secondary">goods & services</span> with crypto, 
               trade P2P, create virtual cards, and earn through staking. 
-              <span className="block mt-2 text-crypto-purple font-semibold">All in one platform built for Africa.</span>
+              <span className="block mt-2 text-foreground font-semibold">All in one platform built for Africa.</span>
             </p>
 
             <div className="flex flex-col gap-4 sm:flex-row sm:justify-center">
               <Button
                 size="lg"
                 onClick={() => navigate("/auth")}
-                className="bg-gradient-africa hover:shadow-finmo-gold text-white text-lg h-14 px-8 font-bold animate-pulse-glow"
+                className="bg-primary hover:bg-primary/90 text-white text-lg h-14 px-8 font-bold"
               >
                 Get Started Free
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -182,10 +177,8 @@ const Index = () => {
       {/* Features Grid */}
       <div className="container mx-auto px-6 py-20">
         <div className="mb-12 text-center">
-          <h2 className="mb-4 text-4xl font-bold">
-            <span className="bg-gradient-hero bg-clip-text text-transparent">
-              Revolutionary Features for Africa
-            </span>
+          <h2 className="mb-4 text-4xl font-bold text-foreground">
+            Revolutionary Features for Africa
           </h2>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Send crypto via <span className="text-primary font-semibold">phone numbers</span> and 
@@ -197,11 +190,11 @@ const Index = () => {
           {features.map((feature, index) => (
             <Card 
               key={feature.title} 
-              className="shadow-finmo-md hover:shadow-finmo-gold transition-all hover-scale animate-fade-in border-2 hover:border-primary/50 bg-gradient-card"
+              className="shadow-finmo-md hover:shadow-finmo-lg transition-all hover-scale animate-fade-in border-2 hover:border-primary/50"
               style={{ animationDelay: `${index * 0.1}s` }}
             >
               <CardContent className="p-6">
-                <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-hero shadow-finmo-crypto">
+                <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary">
                   <feature.icon className="w-7 h-7 text-white" />
                 </div>
                 <h3 className="mb-2 text-xl font-bold">{feature.title}</h3>
@@ -213,16 +206,14 @@ const Index = () => {
       </div>
 
       {/* Security Features */}
-      <div className="bg-gradient-to-b from-muted to-accent py-20 crypto-grid">
+      <div className="bg-muted py-20">
         <div className="container mx-auto px-6">
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-4xl font-bold">
-              <span className="bg-gradient-crypto bg-clip-text text-transparent">
-                Enterprise-Grade Security
-              </span>
+            <h2 className="mb-4 text-4xl font-bold text-foreground">
+              Enterprise-Grade Security
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-              Your funds and data protected with <span className="text-crypto-purple font-semibold">blockchain technology</span> and 
+              Your funds and data protected with <span className="text-success font-semibold">blockchain technology</span> and 
               multiple layers of security
             </p>
           </div>
@@ -231,11 +222,11 @@ const Index = () => {
             {securityFeatures.map((feature, index) => (
               <Card 
                 key={feature.title} 
-                className="shadow-finmo-crypto hover:shadow-finmo-lg transition-all hover-scale animate-fade-in border-2 border-crypto-purple/20 hover:border-crypto-purple/50 bg-white"
+                className="shadow-finmo-md hover:shadow-finmo-lg transition-all hover-scale animate-fade-in border-2 hover:border-success/50"
                 style={{ animationDelay: `${index * 0.1}s` }}
               >
                 <CardContent className="p-6">
-                  <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-gradient-crypto">
+                  <div className="mb-4 inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-success">
                     <feature.icon className="w-7 h-7 text-white" />
                   </div>
                   <h3 className="mb-2 text-xl font-bold">{feature.title}</h3>
@@ -248,18 +239,17 @@ const Index = () => {
       </div>
 
       {/* Benefits Section */}
-      <div className="bg-gradient-africa py-20 relative overflow-hidden">
-        <div className="absolute inset-0 african-pattern opacity-20"></div>
-        <div className="container mx-auto px-6 relative">
+      <div className="bg-primary py-20">
+        <div className="container mx-auto px-6">
           <div className="mx-auto max-w-4xl text-center text-white">
-            <h2 className="mb-4 text-4xl font-bold drop-shadow-lg">Everything You Need in One Platform</h2>
+            <h2 className="mb-4 text-4xl font-bold">Everything You Need in One Platform</h2>
             <p className="mb-12 text-xl leading-relaxed">
               From instant transfers to P2P trading, virtual cards, and staking rewards
             </p>
 
             <div className="grid gap-4 text-left sm:grid-cols-2">
               {benefits.map((benefit) => (
-                <div key={benefit} className="flex items-start gap-3 bg-white/10 backdrop-blur-sm p-4 rounded-lg hover:bg-white/20 transition-all">
+                <div key={benefit} className="flex items-start gap-3 bg-white/10 p-4 rounded-lg hover:bg-white/20 transition-all">
                   <CheckCircle className="mt-0.5 w-6 h-6 flex-shrink-0" />
                   <p className="text-lg font-medium">{benefit}</p>
                 </div>
@@ -269,7 +259,7 @@ const Index = () => {
             <Button
               size="lg"
               onClick={() => navigate("/auth")}
-              className="mt-12 bg-white text-primary hover:bg-white/90 text-lg h-14 px-8 font-bold shadow-finmo-gold animate-pulse-glow"
+              className="mt-12 bg-white text-primary hover:bg-white/90 text-lg h-14 px-8 font-bold shadow-finmo-md"
             >
               Start Trading Now
               <ArrowRight className="ml-2 w-5 h-5" />
@@ -294,29 +284,26 @@ const Index = () => {
               title: "Phone Number Payments",
               desc: "Send cryptocurrency to anyone using just their phone number. No wallet addresses, no complexity - just like sending a text message.",
               features: ["Send crypto via phone", "No wallet addresses needed", "Contact sync integration", "QR code payments"],
-              gradient: "bg-gradient-primary",
-              shadow: "shadow-finmo-md"
+              color: "bg-primary"
             },
             {
               icon: Store,
               title: "Marketplace Trading",
               desc: "Complete marketplace for buying/selling goods, services, and cryptocurrencies with built-in escrow protection.",
               features: ["Physical goods", "Digital products", "Services marketplace", "Crypto P2P trading"],
-              gradient: "bg-gradient-gold",
-              shadow: "shadow-finmo-gold"
+              color: "bg-secondary"
             },
             {
               icon: CreditCard,
               title: "Virtual Cards & Staking",
               desc: "Create instant virtual cards for shopping and earn passive income through flexible staking options.",
               features: ["Instant card creation", "Real-time funding", "Crypto staking rewards", "Multi-chain support"],
-              gradient: "bg-gradient-crypto",
-              shadow: "shadow-finmo-crypto"
+              color: "bg-success"
             },
           ].map((useCase, index) => (
-            <Card key={useCase.title} className={`${useCase.shadow} hover:shadow-finmo-lg transition-all animate-slide-up hover-scale border-2`} style={{ animationDelay: `${index * 0.1}s` }}>
+            <Card key={useCase.title} className="shadow-finmo-md hover:shadow-finmo-lg transition-all animate-slide-up hover-scale border-2" style={{ animationDelay: `${index * 0.1}s` }}>
               <CardContent className="p-8">
-                <div className={`mb-4 inline-flex items-center justify-center w-16 h-16 rounded-2xl ${useCase.gradient}`}>
+                <div className={`mb-4 inline-flex items-center justify-center w-16 h-16 rounded-2xl ${useCase.color}`}>
                   <useCase.icon className="w-8 h-8 text-white" />
                 </div>
                 <h3 className="mb-3 text-2xl font-bold">{useCase.title}</h3>
@@ -336,13 +323,11 @@ const Index = () => {
       </div>
 
       {/* How It Works */}
-      <div className="bg-gradient-to-b from-accent/50 to-muted py-20 african-pattern">
+      <div className="bg-muted/50 py-20">
         <div className="container mx-auto px-6">
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-4xl font-bold">
-              <span className="bg-gradient-hero bg-clip-text text-transparent">
-                Get Started in Minutes
-              </span>
+            <h2 className="mb-4 text-4xl font-bold text-foreground">
+              Get Started in Minutes
             </h2>
             <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
               Simple onboarding process to start sending and receiving <span className="text-primary font-semibold">crypto payments</span>
@@ -356,23 +341,23 @@ const Index = () => {
                   step: "1", 
                   title: "Sign Up & Verify", 
                   desc: "Create your account with phone number and complete KYC verification for security",
-                  gradient: "bg-gradient-primary"
+                  color: "bg-primary"
                 },
                 { 
                   step: "2", 
                   title: "Get Your Wallet", 
                   desc: "Receive your secure multi-chain wallet address and sync your contacts",
-                  gradient: "bg-gradient-gold"
+                  color: "bg-secondary"
                 },
                 { 
                   step: "3", 
                   title: "Start Using FinMo", 
                   desc: "Send money, trade P2P, create virtual cards, and earn staking rewards",
-                  gradient: "bg-gradient-crypto"
+                  color: "bg-success"
                 },
               ].map((item, index) => (
                 <div key={item.step} className="text-center animate-slide-up" style={{ animationDelay: `${index * 0.2}s` }}>
-                  <div className={`mb-4 mx-auto flex h-20 w-20 items-center justify-center rounded-2xl ${item.gradient} text-3xl font-bold text-white shadow-finmo-lg`}>
+                  <div className={`mb-4 mx-auto flex h-20 w-20 items-center justify-center rounded-2xl ${item.color} text-3xl font-bold text-white shadow-finmo-md`}>
                     {item.step}
                   </div>
                   <h3 className="mb-2 text-xl font-bold">{item.title}</h3>
@@ -388,17 +373,15 @@ const Index = () => {
       <div className="container mx-auto px-6 py-20">
         <div className="mx-auto max-w-2xl">
           <div className="mb-12 text-center">
-            <h2 className="mb-4 text-4xl font-bold">
-              <span className="bg-gradient-hero bg-clip-text text-transparent">
-                Get in Touch
-              </span>
+            <h2 className="mb-4 text-4xl font-bold text-foreground">
+              Get in Touch
             </h2>
             <p className="text-lg text-muted-foreground">
               Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
             </p>
           </div>
 
-          <Card className="shadow-finmo-gold border-2 border-secondary/20 bg-gradient-card">
+          <Card className="shadow-finmo-md border-2">
             <CardContent className="p-8">
               <form onSubmit={handleContactSubmit} className="space-y-6">
                 <div>
@@ -409,7 +392,6 @@ const Index = () => {
                     value={contactForm.name}
                     onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
                     required
-                    className="border-2 focus:border-primary"
                   />
                 </div>
                 <div>
@@ -421,7 +403,6 @@ const Index = () => {
                     value={contactForm.email}
                     onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
                     required
-                    className="border-2 focus:border-primary"
                   />
                 </div>
                 <div>
@@ -433,13 +414,12 @@ const Index = () => {
                     onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
                     required
                     rows={5}
-                    className="border-2 focus:border-primary"
                   />
                 </div>
                 <Button 
                   type="submit" 
                   size="lg" 
-                  className="w-full bg-gradient-africa text-white font-bold shadow-finmo-gold hover:shadow-finmo-lg"
+                  className="w-full bg-primary hover:bg-primary/90 text-white font-bold"
                   disabled={isSubmitting}
                 >
                   {isSubmitting ? "Sending..." : "Send Message"}
@@ -452,13 +432,10 @@ const Index = () => {
       </div>
 
       {/* CTA Section */}
-      <div className="bg-gradient-hero py-20 relative overflow-hidden">
-        <div className="absolute inset-0 crypto-grid opacity-30"></div>
-        <div className="absolute top-10 right-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="absolute bottom-10 left-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
-        <div className="container mx-auto px-6 text-center relative">
+      <div className="bg-primary py-20">
+        <div className="container mx-auto px-6 text-center">
           <div className="mx-auto max-w-3xl text-white">
-            <h2 className="mb-4 text-4xl md:text-5xl font-bold drop-shadow-lg">
+            <h2 className="mb-4 text-4xl md:text-5xl font-bold">
               Join the Future of African Payments
             </h2>
             <p className="mb-8 text-xl leading-relaxed">
@@ -468,7 +445,7 @@ const Index = () => {
               <Button
                 size="lg"
                 onClick={() => navigate("/auth")}
-                className="bg-white text-primary hover:bg-white/90 text-lg h-14 px-8 font-bold shadow-finmo-gold animate-pulse-glow"
+                className="bg-white text-primary hover:bg-white/90 text-lg h-14 px-8 font-bold"
               >
                 Create Free Account
                 <ArrowRight className="ml-2 w-5 h-5" />
@@ -477,7 +454,7 @@ const Index = () => {
                 size="lg"
                 variant="outline"
                 onClick={() => navigate("/auth")}
-                className="bg-white/10 backdrop-blur-sm text-white border-2 border-white hover:bg-white/20 text-lg h-14 px-8 font-semibold"
+                className="border-2 border-white text-white hover:bg-white/10 text-lg h-14 px-8 font-semibold"
               >
                 Sign In Now
               </Button>
@@ -487,15 +464,15 @@ const Index = () => {
       </div>
 
       {/* Footer */}
-      <footer className="bg-gradient-to-b from-muted to-accent py-12 border-t-2 border-primary/20 african-pattern">
+      <footer className="bg-muted py-12 border-t">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row justify-between items-center gap-6">
             <div className="flex items-center gap-3">
-              <div className="w-12 h-12 bg-gradient-hero rounded-2xl flex items-center justify-center shadow-finmo-md">
+              <div className="w-12 h-12 bg-primary rounded-2xl flex items-center justify-center shadow-finmo-sm">
                 <img src={finmoLogo} alt="FinMo" className="w-7 h-7" />
               </div>
               <div>
-                <p className="font-bold text-lg bg-gradient-hero bg-clip-text text-transparent">FinMo Africa</p>
+                <p className="font-bold text-lg text-foreground">FinMo Africa</p>
                 <p className="text-sm text-muted-foreground font-medium">Pan-African Crypto Wallet</p>
               </div>
             </div>
@@ -507,7 +484,7 @@ const Index = () => {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-all hover-scale font-medium"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-primary flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-primary flex items-center justify-center">
                   <Twitter className="w-5 h-5 text-white" />
                 </div>
                 <span className="hidden sm:inline">Twitter</span>
@@ -518,16 +495,16 @@ const Index = () => {
                 rel="noopener noreferrer"
                 className="flex items-center gap-2 text-muted-foreground hover:text-secondary transition-all hover-scale font-medium"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-gold flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-secondary flex items-center justify-center">
                   <MessageCircle className="w-5 h-5 text-white" />
                 </div>
                 <span className="hidden sm:inline">Telegram</span>
               </a>
               <a 
                 href="mailto:adedayo@finmo.africa"
-                className="flex items-center gap-2 text-muted-foreground hover:text-crypto-purple transition-all hover-scale font-medium"
+                className="flex items-center gap-2 text-muted-foreground hover:text-success transition-all hover-scale font-medium"
               >
-                <div className="w-10 h-10 rounded-full bg-gradient-crypto flex items-center justify-center">
+                <div className="w-10 h-10 rounded-full bg-success flex items-center justify-center">
                   <Mail className="w-5 h-5 text-white" />
                 </div>
                 <span className="hidden sm:inline">Contact</span>
@@ -535,7 +512,7 @@ const Index = () => {
             </div>
           </div>
           
-          <div className="mt-8 pt-6 border-t border-primary/10 text-center">
+          <div className="mt-8 pt-6 border-t text-center">
             <p className="text-sm text-muted-foreground">
               © 2025 FinMo Africa. Powering the future of payments in Africa with blockchain technology.
             </p>
