@@ -1,16 +1,48 @@
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { 
   Zap, Users, Wallet, ArrowRight, CheckCircle, Shield, 
   CreditCard, TrendingUp, Lock, Smartphone, Globe, 
   ShoppingBag, RefreshCw, FileCheck, Users2, Banknote,
-  QrCode, ChevronRight
+  QrCode, ChevronRight, Mail, Send, Twitter, MessageCircle
 } from "lucide-react";
 import finmoLogo from "@/assets/finmo-logo.png";
+import { useState } from "react";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
 
 const Index = () => {
   const navigate = useNavigate();
+  const [contactForm, setContactForm] = useState({
+    name: "",
+    email: "",
+    message: ""
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleContactSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+
+    try {
+      const { error } = await supabase.functions.invoke("send-contact-email", {
+        body: contactForm
+      });
+
+      if (error) throw error;
+
+      toast.success("Message sent successfully! We'll get back to you soon.");
+      setContactForm({ name: "", email: "", message: "" });
+    } catch (error) {
+      console.error("Error sending message:", error);
+      toast.error("Failed to send message. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   const features = [
     {
@@ -317,6 +349,66 @@ const Index = () => {
         </div>
       </div>
 
+      {/* Contact Section */}
+      <div className="container mx-auto px-6 py-20">
+        <div className="mx-auto max-w-2xl">
+          <div className="mb-12 text-center">
+            <h2 className="mb-4 text-3xl font-bold">Get in Touch</h2>
+            <p className="text-lg text-muted-foreground">
+              Have questions? We'd love to hear from you. Send us a message and we'll respond as soon as possible.
+            </p>
+          </div>
+
+          <Card className="shadow-finmo-lg">
+            <CardContent className="p-8">
+              <form onSubmit={handleContactSubmit} className="space-y-6">
+                <div>
+                  <label htmlFor="name" className="block text-sm font-medium mb-2">Name</label>
+                  <Input
+                    id="name"
+                    placeholder="Your name"
+                    value={contactForm.name}
+                    onChange={(e) => setContactForm({ ...contactForm, name: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="email" className="block text-sm font-medium mb-2">Email</label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your.email@example.com"
+                    value={contactForm.email}
+                    onChange={(e) => setContactForm({ ...contactForm, email: e.target.value })}
+                    required
+                  />
+                </div>
+                <div>
+                  <label htmlFor="message" className="block text-sm font-medium mb-2">Message</label>
+                  <Textarea
+                    id="message"
+                    placeholder="Tell us what's on your mind..."
+                    value={contactForm.message}
+                    onChange={(e) => setContactForm({ ...contactForm, message: e.target.value })}
+                    required
+                    rows={5}
+                  />
+                </div>
+                <Button 
+                  type="submit" 
+                  size="lg" 
+                  className="w-full bg-gradient-primary"
+                  disabled={isSubmitting}
+                >
+                  {isSubmitting ? "Sending..." : "Send Message"}
+                  <Send className="ml-2 w-4 h-4" />
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+        </div>
+      </div>
+
       {/* CTA Section */}
       <div className="bg-gradient-primary py-20">
         <div className="container mx-auto px-6 text-center">
@@ -346,6 +438,53 @@ const Index = () => {
           </div>
         </div>
       </div>
+
+      {/* Footer */}
+      <footer className="bg-muted py-12 border-t">
+        <div className="container mx-auto px-6">
+          <div className="flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="flex items-center gap-3">
+              <img src={finmoLogo} alt="FinMo" className="w-10 h-10" />
+              <div>
+                <p className="font-semibold text-lg">FinMo Africa</p>
+                <p className="text-sm text-muted-foreground">Secure Mobile Wallet</p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-6">
+              <a 
+                href="https://x.com/finmoafrica?t=O96XJbpnVrmdAf4kuHLszA&s=09" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Twitter className="w-5 h-5" />
+                <span className="hidden sm:inline">Twitter</span>
+              </a>
+              <a 
+                href="https://t.me/finmoafrica" 
+                target="_blank" 
+                rel="noopener noreferrer"
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <MessageCircle className="w-5 h-5" />
+                <span className="hidden sm:inline">Telegram</span>
+              </a>
+              <a 
+                href="mailto:adedayo@finmo.africa"
+                className="flex items-center gap-2 text-muted-foreground hover:text-primary transition-colors"
+              >
+                <Mail className="w-5 h-5" />
+                <span className="hidden sm:inline">Contact</span>
+              </a>
+            </div>
+          </div>
+          
+          <div className="mt-8 pt-6 border-t text-center text-sm text-muted-foreground">
+            <p>&copy; {new Date().getFullYear()} FinMo Africa. All rights reserved.</p>
+          </div>
+        </div>
+      </footer>
     </div>
   );
 };
