@@ -152,6 +152,7 @@ serve(async (req) => {
 
       // For incoming transactions, sender_id should be null (external)
       // For outgoing transactions, sender_id is the user
+      // Use 'external' as transaction_type for all blockchain transactions
       const { error: insertError } = await supabaseClient
         .from('transactions')
         .insert({
@@ -161,7 +162,7 @@ serve(async (req) => {
           recipient_wallet: to,
           amount: amount,
           token: 'USDC',
-          transaction_type: isIncoming ? 'deposit' : 'withdrawal',
+          transaction_type: 'external',
           status: 'completed',
           transaction_hash: txHash,
           chain_id: 80002,

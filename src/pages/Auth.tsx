@@ -106,15 +106,22 @@ const Auth = () => {
       const fullPhone = `${countryCode}${phoneNumber}`;
 
       if (isLogin) {
-        // First check if 2FA would be required BEFORE signing in
-        // This prevents race conditions with auth state changes
-        const { data: tempSession } = await supabase.auth.signInWithPassword({
+        // CRITICAL: Set pending2FASession BEFORE signInWithPassword to prevent race condition
+        // Check if 2FA would be required before authentication
+        const { data: { user: checkUser } } = await supabase.auth.getUser();
+        
+        // Pre-check if this user would need 2FA (we'll verify after login)
+        setPending2FASession(true);
+        
+        // Now perform the actual sign in
+        const { data: tempSession, error: signInError } = await supabase.auth.signInWithPassword({
           email: `${fullPhone}@finmo.app`,
           password,
         });
 
-        if (!tempSession.session) {
-          throw new Error("Login failed");
+        if (signInError || !tempSession.session) {
+          setPending2FASession(false);
+          throw signInError || new Error("Login failed");
         }
         
         console.log("Login successful, checking 2FA requirements...");
@@ -133,9 +140,7 @@ const Auth = () => {
             
             if (verifiedFactor) {
               // User has 2FA enabled and it's required
-              // Set flag BEFORE showing dialog to prevent auto-navigation
               console.log("2FA enabled and required, showing verification dialog");
-              setPending2FASession(true);
               setPendingFactorId(verifiedFactor.id);
               setShow2FAVerify(true);
               setLoading(false);
@@ -146,11 +151,11 @@ const Auth = () => {
           } else {
             console.log("2FA required but user has no factors enrolled");
           }
-        } else {
-          console.log("2FA not required for login, proceeding to dashboard");
         }
         
-        // No 2FA required or not enabled, proceed to dashboard
+        // No 2FA required or not enabled, clear flag and proceed to dashboard
+        console.log("2FA not required for login, proceeding to dashboard");
+        setPending2FASession(false);
         toast.success("Welcome back!");
         navigate("/dashboard");
       } else {

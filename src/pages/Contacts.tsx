@@ -66,19 +66,30 @@ const Contacts = () => {
   };
 
   const handleSyncContacts = async () => {
-    if (!userId) return;
+    if (!userId) {
+      toast.error("Please log in to sync contacts");
+      return;
+    }
     
     try {
       const { syncPhoneContacts, saveContactsToDatabase } = await import("@/utils/contactSync");
       
+      toast.info("Opening contact picker...");
       const contacts = await syncPhoneContacts();
       
       if (contacts.length > 0) {
+        toast.info(`Saving ${contacts.length} contacts...`);
         await saveContactsToDatabase(contacts);
         await loadContacts(userId);
+        toast.success(`Successfully synced ${contacts.length} contacts!`);
+      } else {
+        toast.info("No contacts were selected");
       }
     } catch (error) {
       console.error("Contact sync error:", error);
+      toast.error("Failed to sync contacts", {
+        description: error instanceof Error ? error.message : "An unexpected error occurred"
+      });
     }
   };
 
