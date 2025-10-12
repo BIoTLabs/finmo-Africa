@@ -6,8 +6,9 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Smartphone, Lock, Shield, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft } from "lucide-react";
+import { Smartphone, Lock, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft } from "lucide-react";
 import { toast } from "sonner";
+import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 
 // African country codes
@@ -145,7 +146,7 @@ const Auth = () => {
         {/* Logo and Welcome */}
         <div className="text-center space-y-3">
           <div className="mx-auto w-20 h-20 bg-white/10 backdrop-blur-sm rounded-3xl flex items-center justify-center shadow-finmo-lg animate-scale-in">
-            <Shield className="w-10 h-10 text-white" />
+            <img src={finmoLogo} alt="FinMo" className="w-12 h-12" />
           </div>
           <div>
             <h1 className="text-4xl font-bold text-white">FinMo</h1>

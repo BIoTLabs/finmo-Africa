@@ -4,8 +4,9 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Shield, ArrowLeft } from "lucide-react";
+import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
+import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 
 const PhoneVerification = () => {
@@ -77,7 +78,7 @@ const PhoneVerification = () => {
         {/* Logo */}
         <div className="text-center space-y-3">
           <div className="mx-auto w-20 h-20 bg-white/10 backdrop-blur-sm rounded-3xl flex items-center justify-center shadow-finmo-lg animate-scale-in">
-            <Shield className="w-10 h-10 text-white" />
+            <img src={finmoLogo} alt="FinMo" className="w-12 h-12" />
           </div>
           <div>
             <h1 className="text-4xl font-bold text-white">FinMo</h1>
