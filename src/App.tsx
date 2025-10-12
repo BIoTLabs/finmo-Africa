@@ -6,6 +6,8 @@ import { useAutoLogout } from "@/hooks/useAutoLogout";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
+import ForgotPassword from "./pages/ForgotPassword";
+import ResetPassword from "./pages/ResetPassword";
 import Dashboard from "./pages/Dashboard";
 import Contacts from "./pages/Contacts";
 import Send from "./pages/Send";
@@ -55,6 +57,8 @@ const App = () => {
         <Routes>
           <Route path="/" element={<Index />} />
           <Route path="/auth" element={<Auth />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-phone" element={<PhoneVerification />} />
           <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

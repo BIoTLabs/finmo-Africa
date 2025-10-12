@@ -8,18 +8,22 @@ import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff, CreditCard, 
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
+import TwoFactorSetup from "@/components/TwoFactorSetup";
+import { use2FA } from "@/hooks/use2FA";
 
 const Settings = () => {
   const navigate = useNavigate();
   const [biometricEnabled, setBiometricEnabled] = useState(false);
   const [twoFactorEnabled, setTwoFactorEnabled] = useState(false);
   const [enrollingBiometric, setEnrollingBiometric] = useState(false);
-  const [enrolling2FA, setEnrolling2FA] = useState(false);
+  const [show2FASetup, setShow2FASetup] = useState(false);
   const [addressVisible, setAddressVisible] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const { unenrollMFA } = use2FA();
 
   useEffect(() => {
     checkAuth();
+    check2FAStatus();
   }, []);
 
   const checkAuth = async () => {
@@ -36,6 +40,18 @@ const Settings = () => {
       .maybeSingle();
     
     setProfile(profileData);
+  };
+
+  const check2FAStatus = async () => {
+    try {
+      const { data: factors } = await supabase.auth.mfa.listFactors();
+      if (factors && factors.totp.length > 0) {
+        const hasVerified = factors.totp.some(f => f.status === "verified");
+        setTwoFactorEnabled(hasVerified);
+      }
+    } catch (error) {
+      console.error("Error checking 2FA status:", error);
+    }
   };
 
   const handleLogout = async () => {
@@ -87,38 +103,22 @@ const Settings = () => {
 
   const handleTwoFactorToggle = async (enabled: boolean) => {
     if (enabled) {
-      // Enabling 2FA
-      setEnrolling2FA(true);
-      try {
-        if (!profile?.phone_number) {
-          toast.error("Phone number required for 2FA");
-          return;
-        }
-
-        // Send OTP to user's phone
-        const { error } = await supabase.auth.signInWithOtp({
-          phone: profile.phone_number,
-        });
-
-        if (error) throw error;
-
-        toast.success("Verification code sent to your phone");
-        
-        // Simulate 2FA enrollment
-        await new Promise(resolve => setTimeout(resolve, 2000));
-        
-        setTwoFactorEnabled(true);
-        toast.success("Two-factor authentication enabled");
-      } catch (error: any) {
-        console.error("2FA enrollment error:", error);
-        toast.error(error.message || "Failed to enable 2FA");
-      } finally {
-        setEnrolling2FA(false);
-      }
+      // Show 2FA setup dialog
+      setShow2FASetup(true);
     } else {
-      setTwoFactorEnabled(false);
-      toast.success("Two-factor authentication disabled");
+      // Disable 2FA
+      try {
+        await unenrollMFA();
+        setTwoFactorEnabled(false);
+      } catch (error) {
+        // Error already handled in hook
+      }
     }
+  };
+
+  const handle2FASuccess = () => {
+    setTwoFactorEnabled(true);
+    setShow2FASetup(false);
   };
 
   if (!profile) return null;
@@ -228,7 +228,6 @@ const Settings = () => {
                   <Switch
                     checked={twoFactorEnabled}
                     onCheckedChange={handleTwoFactorToggle}
-                    disabled={enrolling2FA}
                   />
               </div>
             </CardContent>
@@ -328,6 +327,13 @@ const Settings = () => {
           Logout
         </Button>
       </div>
+
+      <TwoFactorSetup
+        open={show2FASetup}
+        onOpenChange={setShow2FASetup}
+        onSuccess={handle2FASuccess}
+      />
+
       <MobileNav />
     </div>
   );

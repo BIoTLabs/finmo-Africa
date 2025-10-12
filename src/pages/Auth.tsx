@@ -10,6 +10,8 @@ import { Smartphone, Lock, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft }
 import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import TwoFactorVerify from "@/components/TwoFactorVerify";
+import { use2FA } from "@/hooks/use2FA";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -30,6 +32,9 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
+  const [show2FAVerify, setShow2FAVerify] = useState(false);
+  const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
+  const { challengeMFA, verifyChallenge } = use2FA();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -99,8 +104,17 @@ const Auth = () => {
         }
         
         if (data.session) {
-          toast.success("Welcome back!");
-          navigate("/dashboard");
+          // Check if user has 2FA enabled
+          const factorId = await challengeMFA();
+          if (factorId) {
+            // User has 2FA enabled, show verification dialog
+            setPendingFactorId(factorId);
+            setShow2FAVerify(true);
+          } else {
+            // No 2FA, proceed to dashboard
+            toast.success("Welcome back!");
+            navigate("/dashboard");
+          }
         }
       } else {
         // Sign up with phone verification
@@ -129,6 +143,23 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handle2FAVerify = async (code: string): Promise<boolean> => {
+    if (!pendingFactorId) return false;
+    
+    const success = await verifyChallenge(pendingFactorId, code);
+    if (success) {
+      toast.success("Welcome back!");
+      navigate("/dashboard");
+    }
+    return success;
+  };
+
+  const handle2FACancel = async () => {
+    setShow2FAVerify(false);
+    setPendingFactorId(null);
+    await supabase.auth.signOut();
   };
 
   if (checking) {
@@ -221,14 +252,27 @@ const Auth = () => {
                 {loading ? "Processing..." : (isLogin ? "Sign In" : "Create Account")}
               </Button>
 
-              <Button
-                type="button"
-                variant="ghost"
-                className="w-full"
-                onClick={() => setIsLogin(!isLogin)}
-              >
-                {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
-              </Button>
+              <div className="space-y-2">
+                <Button
+                  type="button"
+                  variant="ghost"
+                  className="w-full"
+                  onClick={() => setIsLogin(!isLogin)}
+                >
+                  {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
+                </Button>
+                
+                {isLogin && (
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="w-full text-sm"
+                    onClick={() => navigate("/forgot-password")}
+                  >
+                    Forgot your password?
+                  </Button>
+                )}
+              </div>
             </form>
 
             {/* Learn More Section */}
@@ -306,6 +350,12 @@ const Auth = () => {
         <p className="text-center text-white/60 text-xs">
           Powered by blockchain technology • Secure & Fast
         </p>
+
+        <TwoFactorVerify
+          open={show2FAVerify}
+          onVerify={handle2FAVerify}
+          onCancel={handle2FACancel}
+        />
       </div>
     </div>
   );
