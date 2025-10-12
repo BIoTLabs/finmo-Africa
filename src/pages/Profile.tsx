@@ -13,6 +13,7 @@ import { Separator } from "@/components/ui/separator";
 import { ArrowLeft, User, Mail, Phone, Share2, Users, CheckCircle2, Clock, X, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import LoadingScreen from "@/components/LoadingScreen";
+import ContactsGuide from "@/components/ContactsGuide";
 import { syncPhoneContacts, saveContactsToDatabase } from "@/utils/contactSync";
 
 interface Profile {
@@ -396,6 +397,9 @@ const Profile = () => {
                 </div>
               </CardHeader>
             </Card>
+
+            {/* How it works guide */}
+            <ContactsGuide />
 
             {/* Contacts List */}
             <Card>
