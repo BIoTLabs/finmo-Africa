@@ -925,6 +925,69 @@ export type Database = {
         }
         Relationships: []
       }
+      reward_activities: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["reward_activity_type"]
+          created_at: string
+          id: string
+          metadata: Json | null
+          points_awarded: number
+          user_id: string
+        }
+        Insert: {
+          activity_type: Database["public"]["Enums"]["reward_activity_type"]
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          points_awarded: number
+          user_id: string
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["reward_activity_type"]
+          created_at?: string
+          id?: string
+          metadata?: Json | null
+          points_awarded?: number
+          user_id?: string
+        }
+        Relationships: []
+      }
+      reward_rules: {
+        Row: {
+          activity_type: Database["public"]["Enums"]["reward_activity_type"]
+          created_at: string
+          id: string
+          is_active: boolean | null
+          max_points_per_period: number | null
+          metadata: Json | null
+          points_base: number
+          points_multiplier: number | null
+          updated_at: string
+        }
+        Insert: {
+          activity_type: Database["public"]["Enums"]["reward_activity_type"]
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_points_per_period?: number | null
+          metadata?: Json | null
+          points_base: number
+          points_multiplier?: number | null
+          updated_at?: string
+        }
+        Update: {
+          activity_type?: Database["public"]["Enums"]["reward_activity_type"]
+          created_at?: string
+          id?: string
+          is_active?: boolean | null
+          max_points_per_period?: number | null
+          metadata?: Json | null
+          points_base?: number
+          points_multiplier?: number | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       staking_positions: {
         Row: {
           apy_rate: number
@@ -1138,6 +1201,39 @@ export type Database = {
         }
         Relationships: []
       }
+      user_badges: {
+        Row: {
+          awarded_at: string
+          badge_description: string | null
+          badge_image_url: string | null
+          badge_name: string
+          badge_type: Database["public"]["Enums"]["badge_type"]
+          id: string
+          nft_token_id: string | null
+          user_id: string
+        }
+        Insert: {
+          awarded_at?: string
+          badge_description?: string | null
+          badge_image_url?: string | null
+          badge_name: string
+          badge_type: Database["public"]["Enums"]["badge_type"]
+          id?: string
+          nft_token_id?: string | null
+          user_id: string
+        }
+        Update: {
+          awarded_at?: string
+          badge_description?: string | null
+          badge_image_url?: string | null
+          badge_name?: string
+          badge_type?: Database["public"]["Enums"]["badge_type"]
+          id?: string
+          nft_token_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       user_registry: {
         Row: {
           created_at: string
@@ -1159,6 +1255,51 @@ export type Database = {
           phone_number?: string
           user_id?: string
           wallet_address?: string
+        }
+        Relationships: []
+      }
+      user_rewards: {
+        Row: {
+          activity_points: number
+          consecutive_active_months: number
+          created_at: string
+          current_level: number
+          early_bird_points: number
+          id: string
+          last_active_month: string | null
+          monthly_transaction_count: number
+          total_points: number
+          total_transaction_volume: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          activity_points?: number
+          consecutive_active_months?: number
+          created_at?: string
+          current_level?: number
+          early_bird_points?: number
+          id?: string
+          last_active_month?: string | null
+          monthly_transaction_count?: number
+          total_points?: number
+          total_transaction_volume?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          activity_points?: number
+          consecutive_active_months?: number
+          created_at?: string
+          current_level?: number
+          early_bird_points?: number
+          id?: string
+          last_active_month?: string | null
+          monthly_transaction_count?: number
+          total_points?: number
+          total_transaction_volume?: number
+          updated_at?: string
+          user_id?: string
         }
         Relationships: []
       }
@@ -1343,6 +1484,23 @@ export type Database = {
       }
     }
     Functions: {
+      award_badge: {
+        Args: {
+          _badge_description?: string
+          _badge_name: string
+          _badge_type: Database["public"]["Enums"]["badge_type"]
+          _user_id: string
+        }
+        Returns: string
+      }
+      award_points: {
+        Args: {
+          _activity_type: Database["public"]["Enums"]["reward_activity_type"]
+          _metadata?: Json
+          _user_id: string
+        }
+        Returns: number
+      }
       calculate_staking_rewards: {
         Args: { _amount: number; _apy_rate: number; _duration_days: number }
         Returns: number
@@ -1426,6 +1584,12 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
+      badge_type:
+        | "finmo_pioneer"
+        | "volume_trader"
+        | "steady_earner"
+        | "kyc_verified"
+        | "super_connector"
       p2p_listing_type: "buy" | "sell"
       p2p_order_status:
         | "pending"
@@ -1433,6 +1597,17 @@ export type Database = {
         | "completed"
         | "cancelled"
         | "disputed"
+      reward_activity_type:
+        | "account_creation"
+        | "kyc_completion"
+        | "contact_sync"
+        | "user_invitation"
+        | "first_transaction"
+        | "transaction_volume"
+        | "transaction_frequency"
+        | "p2p_trade"
+        | "marketplace_purchase"
+        | "monthly_retention"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -1561,6 +1736,13 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "user"],
+      badge_type: [
+        "finmo_pioneer",
+        "volume_trader",
+        "steady_earner",
+        "kyc_verified",
+        "super_connector",
+      ],
       p2p_listing_type: ["buy", "sell"],
       p2p_order_status: [
         "pending",
@@ -1568,6 +1750,18 @@ export const Constants = {
         "completed",
         "cancelled",
         "disputed",
+      ],
+      reward_activity_type: [
+        "account_creation",
+        "kyc_completion",
+        "contact_sync",
+        "user_invitation",
+        "first_transaction",
+        "transaction_volume",
+        "transaction_frequency",
+        "p2p_trade",
+        "marketplace_purchase",
+        "monthly_retention",
       ],
     },
   },

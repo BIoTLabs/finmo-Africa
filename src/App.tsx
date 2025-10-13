@@ -42,6 +42,8 @@ import KYCVerification from "./pages/KYCVerification";
 import AccountStatement from "./pages/AccountStatement";
 import MyAds from "./pages/MyAds";
 import Staking from "./pages/Staking";
+import Rewards from "./pages/Rewards";
+import RewardsDetails from "./pages/RewardsDetails";
 
 const queryClient = new QueryClient();
 
@@ -93,6 +95,8 @@ const App = () => {
             <Route path="/account-statement" element={<ProtectedRoute><AccountStatement /></ProtectedRoute>} />
             <Route path="/my-ads" element={<ProtectedRoute><MyAds /></ProtectedRoute>} />
             <Route path="/staking" element={<ProtectedRoute><Staking /></ProtectedRoute>} />
+            <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
+            <Route path="/rewards/details" element={<ProtectedRoute><RewardsDetails /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>
