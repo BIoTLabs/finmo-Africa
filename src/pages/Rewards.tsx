@@ -258,12 +258,9 @@ const Rewards = () => {
         {/* Call to Action */}
         <Card className="bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
           <CardContent className="pt-6 text-center">
-            <p className="text-sm text-muted-foreground mb-4">
+            <p className="text-sm text-muted-foreground">
               Your activity today defines your rewards tomorrow — stay active, earn more, and grow with FinMo.
             </p>
-            <Button variant="default" onClick={() => navigate("/")}>
-              Start Earning Points
-            </Button>
           </CardContent>
         </Card>
       </div>

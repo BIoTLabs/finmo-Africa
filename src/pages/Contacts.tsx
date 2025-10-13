@@ -76,19 +76,26 @@ const Contacts = () => {
     try {
       const { syncPhoneContacts, saveContactsToDatabase } = await import("@/utils/contactSync");
       
+      // Check if this is first sync BEFORE opening picker
+      const { count } = await supabase
+        .from("contacts")
+        .select("*", { count: 'exact', head: true })
+        .eq("user_id", userId);
+      
+      const isFirstSync = count === 0;
+      
       toast.info("Opening contact picker...");
       const contacts = await syncPhoneContacts();
       
       if (contacts.length > 0) {
         toast.info(`Saving ${contacts.length} contacts...`);
-        const isFirstSync = (await supabase.from("contacts").select("*", { count: 'exact', head: true }).eq("user_id", userId)).count === 0;
-        
         await saveContactsToDatabase(contacts);
         await loadContacts(userId);
         toast.success(`Successfully synced ${contacts.length} contacts!`);
         
         // Award points for first contact sync
         if (isFirstSync) {
+          console.log("Awarding contact sync points...");
           await trackActivity('contact_sync');
         }
       } else {
