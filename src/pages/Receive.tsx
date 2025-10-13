@@ -46,15 +46,27 @@ const Receive = () => {
   };
 
   const downloadQR = () => {
-    const canvas = document.getElementById('qr-code-canvas') as HTMLCanvasElement;
-    if (!canvas) return;
+    const svg = document.getElementById('qr-code-svg');
+    if (!svg || !(svg instanceof SVGElement)) return;
 
-    const url = canvas.toDataURL("image/png");
-    const link = document.createElement('a');
-    link.download = 'finmo-wallet-qr.png';
-    link.href = url;
-    link.click();
-    toast.success("QR code downloaded!");
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    const img = new Image();
+    
+    img.onload = () => {
+      canvas.width = img.width;
+      canvas.height = img.height;
+      ctx?.drawImage(img, 0, 0);
+      const url = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = 'finmo-wallet-qr.png';
+      link.href = url;
+      link.click();
+      toast.success("QR code downloaded!");
+    };
+    
+    img.src = 'data:image/svg+xml;base64,' + btoa(unescape(encodeURIComponent(svgData)));
   };
 
   const shareQR = async () => {
@@ -160,7 +172,7 @@ const Receive = () => {
           <div className="flex flex-col items-center gap-6 py-6">
             <div className="p-4 bg-white rounded-xl">
               <QRCodeSVG
-                id="qr-code-canvas"
+                id="qr-code-svg"
                 value={qrData}
                 size={200}
                 level="H"
