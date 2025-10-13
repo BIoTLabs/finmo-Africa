@@ -5,13 +5,14 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Send as SendIcon, Zap, ExternalLink } from "lucide-react";
+import { ArrowLeft, Send as SendIcon, Zap, ExternalLink, QrCode } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
 import { use2FAGuard } from "@/hooks/use2FAGuard";
+import { QRScanner } from "@/components/QRScanner";
 
 const Send = () => {
   const navigate = useNavigate();
@@ -28,6 +29,7 @@ const Send = () => {
   const [token, setToken] = useState("USDC");
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [showScanner, setShowScanner] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -47,6 +49,18 @@ const Send = () => {
       .maybeSingle();
     
     setProfile(profileData);
+  };
+
+  const handleQRScan = (data: { phone?: string; wallet?: string; isFinMo: boolean }) => {
+    if (data.isFinMo && data.phone) {
+      setTransferType("internal");
+      setPhoneNumber(data.phone);
+      toast.success("FinMo wallet detected - recipient loaded!");
+    } else if (data.wallet) {
+      setTransferType("external");
+      setWalletAddress(data.wallet);
+      toast.success("Wallet address loaded!");
+    }
   };
 
   const handleSend = async () => {
@@ -167,7 +181,19 @@ const Send = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Recipient Phone Number</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Recipient Phone Number</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowScanner(true)}
+                      className="gap-2"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      Scan QR
+                    </Button>
+                  </div>
                   <Input
                     type="tel"
                     placeholder="+234 801 234 5678"
@@ -191,7 +217,19 @@ const Send = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <Label>Wallet Address</Label>
+                  <div className="flex items-center justify-between">
+                    <Label>Wallet Address</Label>
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setShowScanner(true)}
+                      className="gap-2"
+                    >
+                      <QrCode className="w-4 h-4" />
+                      Scan QR
+                    </Button>
+                  </div>
                   <Input
                     type="text"
                     placeholder="0x742d35Cc6634C0532925a3b844Bc9e7595f8a9f1"
@@ -268,6 +306,11 @@ const Send = () => {
         </Button>
       </div>
       
+      <QRScanner 
+        open={showScanner} 
+        onClose={() => setShowScanner(false)}
+        onScan={handleQRScan}
+      />
       <TwoFactorDialog />
       <MobileNav />
     </div>
