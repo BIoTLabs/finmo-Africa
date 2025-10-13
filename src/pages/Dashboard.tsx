@@ -11,6 +11,7 @@ import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
 import { useRealtimeBalance } from "@/hooks/useRealtimeBalance";
 import { useAutoBalanceSync } from "@/hooks/useAutoBalanceSync";
 import RealtimeStatus from "@/components/RealtimeStatus";
+import { RewardsNotification } from "@/components/RewardsNotification";
 import finmoLogo from "@/assets/finmo-logo.png";
 
 interface WalletBalance {
@@ -116,6 +117,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background pb-20">
       <MobileNav />
       <RealtimeStatus connected={connected} />
+      <RewardsNotification userId={userId} />
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-4 sm:p-6 rounded-b-3xl shadow-finmo-lg">
         <div className="flex justify-between items-center mb-4 sm:mb-6">

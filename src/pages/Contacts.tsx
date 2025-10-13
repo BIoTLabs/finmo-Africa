@@ -8,6 +8,7 @@ import { ArrowLeft, Search, RefreshCw, Shield } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
+import { useRewardTracking } from "@/hooks/useRewardTracking";
 
 interface Contact {
   id: string;
@@ -22,6 +23,7 @@ const Contacts = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const { trackActivity } = useRewardTracking();
 
   useEffect(() => {
     checkAuth();
@@ -79,9 +81,16 @@ const Contacts = () => {
       
       if (contacts.length > 0) {
         toast.info(`Saving ${contacts.length} contacts...`);
+        const isFirstSync = (await supabase.from("contacts").select("*", { count: 'exact', head: true }).eq("user_id", userId)).count === 0;
+        
         await saveContactsToDatabase(contacts);
         await loadContacts(userId);
         toast.success(`Successfully synced ${contacts.length} contacts!`);
+        
+        // Award points for first contact sync
+        if (isFirstSync) {
+          await trackActivity('contact_sync');
+        }
       } else {
         toast.info("No contacts were selected");
       }

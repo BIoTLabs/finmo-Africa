@@ -13,12 +13,14 @@ import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
 import { use2FAGuard } from "@/hooks/use2FAGuard";
 import { QRScanner } from "@/components/QRScanner";
+import { useRewardTracking } from "@/hooks/useRewardTracking";
 
 const Send = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const prefilledContact = location.state?.contact;
   const { TwoFactorDialog, requireVerification, isVerifying } = use2FAGuard();
+  const { trackActivity } = useRewardTracking();
 
   const [transferType, setTransferType] = useState<"internal" | "external">(
     prefilledContact?.isFinMoUser ? "internal" : "external"
@@ -30,6 +32,7 @@ const Send = () => {
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [showScanner, setShowScanner] = useState(false);
+  const [isFirstTransaction, setIsFirstTransaction] = useState(false);
 
   useEffect(() => {
     checkAuth();
@@ -49,6 +52,14 @@ const Send = () => {
       .maybeSingle();
     
     setProfile(profileData);
+    
+    // Check if this is user's first transaction
+    const { count } = await supabase
+      .from("transactions")
+      .select("*", { count: 'exact', head: true })
+      .eq("sender_id", session.user.id);
+    
+    setIsFirstTransaction(count === 0);
   };
 
   const handleQRScan = (data: { phone?: string; wallet?: string; isFinMo: boolean }) => {
@@ -122,6 +133,16 @@ const Send = () => {
           );
         } else {
           toast.success(data.message || 'Transaction completed!');
+        }
+
+        // Award points for transaction
+        if (isFirstTransaction) {
+          await trackActivity('first_transaction');
+        } else {
+          await trackActivity('transaction_frequency');
+          await trackActivity('transaction_volume', { 
+            volume: parseFloat(amount) 
+          });
         }
 
         navigate("/dashboard");

@@ -7,6 +7,8 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Trophy, Gift, TrendingUp, Award, ArrowRight, Zap } from "lucide-react";
 import { toast } from "sonner";
+import { useRealtimeRewards } from "@/hooks/useRealtimeRewards";
+import MobileNav from "@/components/MobileNav";
 
 interface UserRewards {
   total_points: number;
@@ -24,8 +26,9 @@ interface UserBadge {
 
 const Rewards = () => {
   const navigate = useNavigate();
-  const [rewards, setRewards] = useState<UserRewards | null>(null);
+  const [userId, setUserId] = useState<string | null>(null);
   const [badges, setBadges] = useState<UserBadge[]>([]);
+  const { rewards, loading: rewardsLoading } = useRealtimeRewards(userId);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -40,15 +43,7 @@ const Rewards = () => {
         return;
       }
 
-      // Load rewards
-      const { data: rewardsData, error: rewardsError } = await supabase
-        .from("user_rewards")
-        .select("*")
-        .eq("user_id", user.id)
-        .single();
-
-      if (rewardsError) throw rewardsError;
-      setRewards(rewardsData);
+      setUserId(user.id);
 
       // Load badges
       const { data: badgesData, error: badgesError } = await supabase
@@ -84,9 +79,9 @@ const Rewards = () => {
     }
   };
 
-  if (loading) {
+  if (loading || rewardsLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center pb-20">
         <div className="text-center">
           <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
           <p className="mt-4 text-muted-foreground">Loading rewards...</p>
@@ -100,6 +95,7 @@ const Rewards = () => {
 
   return (
     <div className="min-h-screen bg-background pb-20">
+      <MobileNav />
       {/* Hero Section */}
       <div className="bg-gradient-to-br from-primary/10 via-background to-background px-4 pt-6 pb-8">
         <div className="max-w-3xl mx-auto">

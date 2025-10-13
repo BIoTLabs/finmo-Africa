@@ -8,6 +8,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { Upload, CheckCircle2, XCircle, Clock, ArrowLeft } from "lucide-react";
+import { useRewardTracking } from "@/hooks/useRewardTracking";
 
 export default function KYCVerification() {
   const [loading, setLoading] = useState(false);
@@ -24,6 +25,7 @@ export default function KYCVerification() {
   const [selfie, setSelfie] = useState<File | null>(null);
   const { toast } = useToast();
   const navigate = useNavigate();
+  const { trackActivity } = useRewardTracking();
 
   useEffect(() => {
     checkKYCStatus();
@@ -97,6 +99,9 @@ export default function KYCVerification() {
         title: "KYC Submitted",
         description: "Your verification documents have been submitted for review.",
       });
+
+      // Award points for KYC completion
+      await trackActivity('kyc_completion');
 
       checkKYCStatus();
     } catch (error: any) {

@@ -1,5 +1,5 @@
 import { useNavigate, useLocation } from "react-router-dom";
-import { Home, ArrowLeftRight, CreditCard, User, Store } from "lucide-react";
+import { Home, ArrowLeftRight, CreditCard, User, Store, Trophy } from "lucide-react";
 import finmoLogo from "@/assets/finmo-logo.png";
 
 const MobileNav = () => {
@@ -8,9 +8,9 @@ const MobileNav = () => {
 
   const navItems = [
     { icon: Home, label: "Home", path: "/dashboard" },
+    { icon: Trophy, label: "Rewards", path: "/rewards" },
     { icon: ArrowLeftRight, label: "P2P", path: "/p2p" },
     { icon: Store, label: "Market", path: "/marketplace" },
-    { icon: CreditCard, label: "Card", path: "/virtual-card" },
     { icon: User, label: "Profile", path: "/profile" },
   ];
 
