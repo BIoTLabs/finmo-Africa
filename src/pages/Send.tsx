@@ -14,6 +14,7 @@ import MobileNav from "@/components/MobileNav";
 import { use2FAGuard } from "@/hooks/use2FAGuard";
 import { QRScanner } from "@/components/QRScanner";
 import { useRewardTracking } from "@/hooks/useRewardTracking";
+import { ContactSelector } from "@/components/ContactSelector";
 
 const Send = () => {
   const navigate = useNavigate();
@@ -33,6 +34,7 @@ const Send = () => {
   const [profile, setProfile] = useState<any>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [isFirstTransaction, setIsFirstTransaction] = useState(false);
+  const [selectedContactName, setSelectedContactName] = useState(prefilledContact?.name || "");
 
   useEffect(() => {
     checkAuth();
@@ -66,11 +68,28 @@ const Send = () => {
     if (data.isFinMo && data.phone) {
       setTransferType("internal");
       setPhoneNumber(data.phone);
+      setSelectedContactName("");
       toast.success("FinMo wallet detected - recipient loaded!");
     } else if (data.wallet) {
       setTransferType("external");
       setWalletAddress(data.wallet);
+      setSelectedContactName("");
       toast.success("Wallet address loaded!");
+    }
+  };
+
+  const handleContactSelect = (contact: { name: string; phone: string; isFinMoUser: boolean; walletAddress?: string }) => {
+    setSelectedContactName(contact.name);
+    if (contact.isFinMoUser) {
+      setTransferType("internal");
+      setPhoneNumber(contact.phone);
+      setWalletAddress("");
+    } else {
+      // External contact - user can choose to send on-chain if they have wallet
+      setPhoneNumber(contact.phone);
+      if (contact.walletAddress) {
+        setWalletAddress(contact.walletAddress);
+      }
     }
   };
 
@@ -202,25 +221,39 @@ const Send = () => {
                 </div>
 
                 <div className="space-y-2">
-                  <div className="flex items-center justify-between">
+                  <div className="flex items-center justify-between gap-2">
                     <Label>Recipient Phone Number</Label>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => setShowScanner(true)}
-                      className="gap-2"
-                    >
-                      <QrCode className="w-4 h-4" />
-                      Scan QR
-                    </Button>
+                    <div className="flex gap-2">
+                      <ContactSelector 
+                        onSelectContact={handleContactSelect}
+                        selectedPhone={phoneNumber}
+                      />
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setShowScanner(true)}
+                        className="gap-2"
+                      >
+                        <QrCode className="w-4 h-4" />
+                        Scan QR
+                      </Button>
+                    </div>
                   </div>
                   <Input
                     type="tel"
                     placeholder="+234 801 234 5678"
                     value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    onChange={(e) => {
+                      setPhoneNumber(e.target.value);
+                      setSelectedContactName("");
+                    }}
                   />
+                  {selectedContactName && (
+                    <p className="text-sm text-muted-foreground">
+                      Sending to: <span className="font-semibold">{selectedContactName}</span>
+                    </p>
+                  )}
                 </div>
               </TabsContent>
 
