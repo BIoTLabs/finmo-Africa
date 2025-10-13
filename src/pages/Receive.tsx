@@ -84,11 +84,10 @@ const Receive = () => {
 
   if (!profile) return null;
 
-  const qrData = JSON.stringify({
-    type: 'finmo_wallet',
-    phone: profile.phone_number,
-    wallet: profile.wallet_address,
-  });
+  const qrData = `FinMo Wallet
+Phone: ${profile.phone_number}
+ERC-20: ${profile.wallet_address}
+Type: finmo_wallet`;
 
   return (
     <div className="min-h-screen bg-background pb-20">
