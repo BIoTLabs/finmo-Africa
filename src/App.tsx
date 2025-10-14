@@ -49,8 +49,8 @@ import AdminRewardsBackfill from "./pages/AdminRewardsBackfill";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Enable automatic logout after 2 minutes of inactivity
-  useAutoLogout(120000); // 120000ms = 2 minutes
+  // Auto logout disabled due to malfunctioning
+  // useAutoLogout(120000);
 
   return (
     <QueryClientProvider client={queryClient}>
