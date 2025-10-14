@@ -18,14 +18,14 @@ const AdminRewardsBackfill = () => {
     try {
       toast.info("Starting rewards backfill process...");
 
-      const { data, error } = await supabase.functions.invoke('backfill-rewards', {
+      const { data, error } = await supabase.functions.invoke('backfill-user-rewards', {
         body: {}
       });
 
       if (error) throw error;
 
       setResults(data);
-      toast.success(`Backfill complete! Processed ${data.stats.processed} users.`);
+      toast.success(`Backfill complete! Processed ${data.results.length} users.`);
     } catch (error: any) {
       console.error("Backfill error:", error);
       toast.error("Failed to run backfill", {
@@ -92,18 +92,16 @@ const AdminRewardsBackfill = () => {
                   <CardTitle className="text-lg">Backfill Results</CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  <div className="grid grid-cols-3 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div className="text-center">
-                      <p className="text-2xl font-bold">{results.stats.totalUsers}</p>
-                      <p className="text-xs text-muted-foreground">Total Users</p>
+                      <p className="text-2xl font-bold">{results.results.length}</p>
+                      <p className="text-xs text-muted-foreground">Total Processed</p>
                     </div>
                     <div className="text-center">
-                      <p className="text-2xl font-bold text-success">{results.stats.processed}</p>
-                      <p className="text-xs text-muted-foreground">Processed</p>
-                    </div>
-                    <div className="text-center">
-                      <p className="text-2xl font-bold text-destructive">{results.stats.errors}</p>
-                      <p className="text-xs text-muted-foreground">Errors</p>
+                      <p className="text-2xl font-bold text-success">
+                        {results.results.filter((r: any) => r.success).length}
+                      </p>
+                      <p className="text-xs text-muted-foreground">Successful</p>
                     </div>
                   </div>
 
@@ -123,12 +121,12 @@ const AdminRewardsBackfill = () => {
                                 <XCircle className="h-4 w-4 text-destructive" />
                               )}
                               <span className="font-mono text-xs">
-                                {result.userId.substring(0, 8)}...
+                                {result.user_id.substring(0, 8)}...
                               </span>
                             </div>
                             {result.success ? (
                               <span className="text-xs text-muted-foreground">
-                                +{result.pointsAwarded} pts
+                                {result.contact_count} contacts
                               </span>
                             ) : (
                               <span className="text-xs text-destructive">
