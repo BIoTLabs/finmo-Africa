@@ -62,7 +62,9 @@ export const ContactSelector = ({ onSelectContact, selectedPhone }: ContactSelec
             };
           })
         );
-        setContacts(enrichedContacts);
+        // Filter to only show FinMo users
+        const finmoUsers = enrichedContacts.filter(contact => contact.isFinMoUser);
+        setContacts(finmoUsers);
       }
     } catch (error: any) {
       console.error("Error loading contacts:", error);

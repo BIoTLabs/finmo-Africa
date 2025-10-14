@@ -117,6 +117,24 @@ serve(async (req) => {
         withdrawal_fee: 0
       });
 
+    // Award reward points for both buyer and seller
+    try {
+      console.log('Awarding P2P trade points...');
+      await supabaseClient.rpc('award_points', {
+        _user_id: order.buyer_id,
+        _activity_type: 'p2p_trade',
+        _metadata: { order_id, role: 'buyer', amount: order.crypto_amount }
+      });
+      await supabaseClient.rpc('award_points', {
+        _user_id: order.seller_id,
+        _activity_type: 'p2p_trade',
+        _metadata: { order_id, role: 'seller', amount: order.crypto_amount }
+      });
+    } catch (rewardError) {
+      console.error('Failed to award P2P points:', rewardError);
+      // Don't fail the order if reward points fail
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

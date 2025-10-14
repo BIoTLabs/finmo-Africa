@@ -151,6 +151,41 @@ Deno.serve(async (req) => {
 
       console.log('Transfer completed:', transactionId);
       
+      // Award reward points for transaction
+      try {
+        // Check if this is user's first transaction
+        const { count } = await supabase
+          .from('transactions')
+          .select('*', { count: 'exact', head: true })
+          .eq('sender_id', user.id);
+        
+        const isFirstTransaction = count === 1; // count is 1 because we just created the transaction
+        
+        if (isFirstTransaction) {
+          console.log('Awarding first transaction points...');
+          await supabase.rpc('award_points', {
+            _user_id: user.id,
+            _activity_type: 'first_transaction',
+            _metadata: {}
+          });
+        } else {
+          console.log('Awarding transaction frequency and volume points...');
+          await supabase.rpc('award_points', {
+            _user_id: user.id,
+            _activity_type: 'transaction_frequency',
+            _metadata: {}
+          });
+          await supabase.rpc('award_points', {
+            _user_id: user.id,
+            _activity_type: 'transaction_volume',
+            _metadata: { volume: amount }
+          });
+        }
+      } catch (rewardError) {
+        console.error('Failed to award points:', rewardError);
+        // Don't fail the transaction if reward points fail
+      }
+      
       return new Response(
         JSON.stringify({
           success: true,

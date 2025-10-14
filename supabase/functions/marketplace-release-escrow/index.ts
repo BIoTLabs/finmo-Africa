@@ -165,6 +165,19 @@ Deno.serve(async (req) => {
       ]);
     }
 
+    // Award reward points for marketplace purchase
+    try {
+      console.log('Awarding marketplace purchase points...');
+      await supabase.rpc('award_points', {
+        _user_id: order.buyer_id,
+        _activity_type: 'marketplace_purchase',
+        _metadata: { order_id, amount: order.amount }
+      });
+    } catch (rewardError) {
+      console.error('Failed to award marketplace points:', rewardError);
+      // Don't fail the escrow release if reward points fail
+    }
+
     console.log('Escrow released successfully:', { sellerAmount, riderAmount });
 
     return new Response(
