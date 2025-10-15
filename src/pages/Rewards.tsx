@@ -45,6 +45,26 @@ const Rewards = () => {
 
       setUserId(user.id);
 
+      // Check if user has rewards entry, if not initialize it
+      const { data: existingRewards } = await supabase
+        .from("user_rewards")
+        .select("*")
+        .eq("user_id", user.id)
+        .maybeSingle();
+
+      // If no rewards exist, initialize with default values
+      if (!existingRewards) {
+        await supabase
+          .from("user_rewards")
+          .insert({
+            user_id: user.id,
+            total_points: 0,
+            early_bird_points: 0,
+            activity_points: 0,
+            current_level: 1,
+          });
+      }
+
       // Load badges
       const { data: badgesData, error: badgesError } = await supabase
         .from("user_badges")
