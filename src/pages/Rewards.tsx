@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
-import { Trophy, Gift, TrendingUp, Award, ArrowRight, Zap } from "lucide-react";
+import { Trophy, Gift, TrendingUp, Award, ArrowRight, Zap, Users, ShoppingBag, Clock, CheckCircle } from "lucide-react";
 import { toast } from "sonner";
 import { useRealtimeRewards } from "@/hooks/useRealtimeRewards";
 import MobileNav from "@/components/MobileNav";
@@ -24,10 +24,19 @@ interface UserBadge {
   awarded_at: string;
 }
 
+interface ActivitySummary {
+  category: string;
+  icon: any;
+  color: string;
+  points: number;
+  count: number;
+}
+
 const Rewards = () => {
   const navigate = useNavigate();
   const [userId, setUserId] = useState<string | null>(null);
   const [badges, setBadges] = useState<UserBadge[]>([]);
+  const [activitySummary, setActivitySummary] = useState<ActivitySummary[]>([]);
   const { rewards, loading: rewardsLoading } = useRealtimeRewards(userId);
   const [loading, setLoading] = useState(true);
 
@@ -45,24 +54,35 @@ const Rewards = () => {
 
       setUserId(user.id);
 
-      // Check if user has rewards entry, if not initialize it
+      // Check if user has rewards entry
       const { data: existingRewards } = await supabase
         .from("user_rewards")
         .select("*")
         .eq("user_id", user.id)
         .maybeSingle();
 
-      // If no rewards exist, initialize with default values
+      // If no rewards exist, initialize with account creation reward
       if (!existingRewards) {
-        await supabase
-          .from("user_rewards")
-          .insert({
-            user_id: user.id,
-            total_points: 0,
-            early_bird_points: 0,
-            activity_points: 0,
-            current_level: 1,
+        // Award account creation points
+        await supabase.rpc('award_points', {
+          _user_id: user.id,
+          _activity_type: 'account_creation',
+          _metadata: {}
+        });
+
+        // Check if user has synced contacts and award points
+        const { count: contactCount } = await supabase
+          .from('contacts')
+          .select('*', { count: 'exact', head: true })
+          .eq('user_id', user.id);
+
+        if (contactCount && contactCount > 0) {
+          await supabase.rpc('award_points', {
+            _user_id: user.id,
+            _activity_type: 'contact_sync',
+            _metadata: { contact_count: contactCount }
           });
+        }
       }
 
       // Load badges
@@ -74,6 +94,76 @@ const Rewards = () => {
 
       if (badgesError) throw badgesError;
       setBadges(badgesData || []);
+
+      // Load activity summary
+      const { data: activitiesData } = await supabase
+        .from("reward_activities")
+        .select("activity_type, points_awarded")
+        .eq("user_id", user.id);
+
+      if (activitiesData) {
+        // Group activities by category
+        const summary: Record<string, { points: number; count: number }> = {};
+        
+        activitiesData.forEach((activity) => {
+          const type = activity.activity_type;
+          if (!summary[type]) {
+            summary[type] = { points: 0, count: 0 };
+          }
+          summary[type].points += activity.points_awarded;
+          summary[type].count += 1;
+        });
+
+        // Convert to array with metadata
+        const summaryArray: ActivitySummary[] = Object.entries(summary).map(([type, data]) => {
+          let category = "Other";
+          let icon = Award;
+          let color = "text-primary";
+
+          if (["account_creation", "kyc_completion"].includes(type)) {
+            category = "Account Setup";
+            icon = CheckCircle;
+            color = "text-green-500";
+          } else if (["contact_sync", "user_invitation"].includes(type)) {
+            category = "Network Building";
+            icon = Users;
+            color = "text-blue-500";
+          } else if (["first_transaction", "transaction_volume", "transaction_frequency"].includes(type)) {
+            category = "Transactions";
+            icon = TrendingUp;
+            color = "text-emerald-500";
+          } else if (["p2p_trade", "marketplace_purchase"].includes(type)) {
+            category = "Marketplace";
+            icon = ShoppingBag;
+            color = "text-purple-500";
+          } else if (type === "monthly_retention") {
+            category = "Retention";
+            icon = Clock;
+            color = "text-orange-500";
+          }
+
+          return {
+            category,
+            icon,
+            color,
+            points: data.points,
+            count: data.count
+          };
+        });
+
+        // Merge categories with same name
+        const mergedSummary: Record<string, ActivitySummary> = {};
+        summaryArray.forEach((item) => {
+          if (!mergedSummary[item.category]) {
+            mergedSummary[item.category] = item;
+          } else {
+            mergedSummary[item.category].points += item.points;
+            mergedSummary[item.category].count += item.count;
+          }
+        });
+
+        setActivitySummary(Object.values(mergedSummary).sort((a, b) => b.points - a.points));
+      }
     } catch (error: any) {
       console.error("Error loading rewards:", error);
       toast.error("Failed to load rewards data");
@@ -178,6 +268,48 @@ const Rewards = () => {
                 <p className="text-xl font-semibold">{rewards?.activity_points.toLocaleString() || 0}</p>
               </div>
             </div>
+          </CardContent>
+        </Card>
+
+        {/* Points by Category */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Points by Category</CardTitle>
+            <CardDescription>Breakdown of your earnings by activity type</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {activitySummary.length > 0 ? (
+              <div className="space-y-3">
+                {activitySummary.map((item, index) => {
+                  const IconComponent = item.icon;
+                  return (
+                    <div
+                      key={index}
+                      className="flex items-center justify-between p-3 bg-accent/50 rounded-lg border border-border"
+                    >
+                      <div className="flex items-center gap-3">
+                        <IconComponent className={`h-5 w-5 ${item.color}`} />
+                        <div>
+                          <p className="font-medium text-sm">{item.category}</p>
+                          <p className="text-xs text-muted-foreground">
+                            {item.count} {item.count === 1 ? 'activity' : 'activities'}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-lg font-bold text-primary">+{item.points}</p>
+                        <p className="text-xs text-muted-foreground">points</p>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            ) : (
+              <div className="text-center py-8 text-muted-foreground">
+                <TrendingUp className="h-12 w-12 mx-auto mb-3 opacity-50" />
+                <p>Start engaging to see your points breakdown!</p>
+              </div>
+            )}
           </CardContent>
         </Card>
 
