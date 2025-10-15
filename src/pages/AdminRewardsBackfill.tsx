@@ -47,23 +47,23 @@ const AdminRewardsBackfill = () => {
 
         <Card>
           <CardHeader>
-            <CardTitle>Rewards System Backfill</CardTitle>
+            <CardTitle>Comprehensive Rewards Backfill</CardTitle>
             <CardDescription>
-              This tool will retroactively calculate and award points and badges for all existing users
-              based on their historical activities.
+              This will recalculate and fix all user rewards based on their actual activities.
             </CardDescription>
           </CardHeader>
           <CardContent className="space-y-4">
-            <div className="bg-muted/50 p-4 rounded-lg space-y-2">
-              <p className="text-sm font-semibold">What this backfill does:</p>
-              <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground">
-                <li>Awards account creation points (100 pts)</li>
-                <li>Awards KYC completion points if verified</li>
-                <li>Awards contact sync points if contacts exist</li>
-                <li>Awards first transaction points</li>
-                <li>Calculates and awards transaction volume points</li>
-                <li>Calculates and awards transaction frequency points</li>
-                <li>Awards appropriate badges based on achievements</li>
+            <div className="bg-amber-500/10 border border-amber-500/20 p-4 rounded-lg space-y-2">
+              <p className="text-sm font-semibold text-amber-600 dark:text-amber-500">⚠️ Important: Run this to fix rewards!</p>
+              <p className="text-sm text-muted-foreground">
+                This backfill will scan all users and properly calculate their total points by:
+              </p>
+              <ul className="text-sm space-y-1 list-disc list-inside text-muted-foreground ml-2">
+                <li>Awarding account creation points (100 pts - Early Bird)</li>
+                <li>Awarding contact sync points (50 pts - Early Bird) for users with contacts</li>
+                <li>Awarding first transaction points (25 pts - Activity)</li>
+                <li>Summing all existing transaction volume and frequency points</li>
+                <li>Updating total_points, early_bird_points, and activity_points correctly</li>
               </ul>
             </div>
 
@@ -125,9 +125,13 @@ const AdminRewardsBackfill = () => {
                               </span>
                             </div>
                             {result.success ? (
-                              <span className="text-xs text-muted-foreground">
-                                {result.contact_count} contacts
-                              </span>
+                              <div className="text-xs text-muted-foreground">
+                                <span className="text-primary font-medium">{result.total_points} pts</span>
+                                {' · '}
+                                {result.contacts} contacts
+                                {' · '}
+                                {result.transactions} txs
+                              </div>
                             ) : (
                               <span className="text-xs text-destructive">
                                 {result.error}

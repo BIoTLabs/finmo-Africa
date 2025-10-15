@@ -54,37 +54,6 @@ const Rewards = () => {
 
       setUserId(user.id);
 
-      // Check if user has rewards entry
-      const { data: existingRewards } = await supabase
-        .from("user_rewards")
-        .select("*")
-        .eq("user_id", user.id)
-        .maybeSingle();
-
-      // If no rewards exist, initialize with account creation reward
-      if (!existingRewards) {
-        // Award account creation points
-        await supabase.rpc('award_points', {
-          _user_id: user.id,
-          _activity_type: 'account_creation',
-          _metadata: {}
-        });
-
-        // Check if user has synced contacts and award points
-        const { count: contactCount } = await supabase
-          .from('contacts')
-          .select('*', { count: 'exact', head: true })
-          .eq('user_id', user.id);
-
-        if (contactCount && contactCount > 0) {
-          await supabase.rpc('award_points', {
-            _user_id: user.id,
-            _activity_type: 'contact_sync',
-            _metadata: { contact_count: contactCount }
-          });
-        }
-      }
-
       // Load badges
       const { data: badgesData, error: badgesError } = await supabase
         .from("user_badges")

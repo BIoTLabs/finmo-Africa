@@ -39,7 +39,7 @@ Deno.serve(async (req) => {
       throw new Error('Admin access required');
     }
 
-    console.log('Starting rewards backfill process...');
+    console.log('Starting comprehensive rewards backfill process...');
 
     // Get all users
     const { data: profiles, error: profilesError } = await supabase
@@ -54,80 +54,155 @@ Deno.serve(async (req) => {
 
     for (const profile of profiles || []) {
       try {
-        // Check if user already has rewards
-        const { data: existingRewards } = await supabase
-          .from('user_rewards')
+        let totalPoints = 0;
+        let earlyBirdPoints = 0;
+        let activityPoints = 0;
+
+        // 1. Account Creation (100 pts - early bird)
+        const { data: accountCreationActivity } = await supabase
+          .from('reward_activities')
           .select('id')
           .eq('user_id', profile.id)
+          .eq('activity_type', 'account_creation')
           .maybeSingle();
 
-        if (!existingRewards) {
-          // Initialize rewards with account creation points
-          const { error: insertError } = await supabase
-            .from('user_rewards')
-            .insert({
-              user_id: profile.id,
-              early_bird_points: 100,
-              total_points: 100
-            });
-
-          if (insertError) {
-            console.error(`Error creating rewards for ${profile.id}:`, insertError);
-            results.push({
-              user_id: profile.id,
-              success: false,
-              error: insertError.message
-            });
-            continue;
-          }
-
-          // Log account creation reward activity
-          await supabase
-            .from('reward_activities')
-            .insert({
-              user_id: profile.id,
-              activity_type: 'account_creation',
-              points_awarded: 100
-            });
-
-          console.log(`Initialized rewards for user ${profile.id}`);
+        if (!accountCreationActivity) {
+          await supabase.from('reward_activities').insert({
+            user_id: profile.id,
+            activity_type: 'account_creation',
+            points_awarded: 100,
+            metadata: {}
+          });
+          earlyBirdPoints += 100;
+          totalPoints += 100;
+          console.log(`Awarded account creation to ${profile.id}`);
+        } else {
+          earlyBirdPoints += 100;
+          totalPoints += 100;
         }
 
-        // Check if user has synced contacts
+        // 2. Contact Sync (50 pts - early bird)
         const { count: contactCount } = await supabase
           .from('contacts')
           .select('*', { count: 'exact', head: true })
           .eq('user_id', profile.id);
 
         if (contactCount && contactCount > 0) {
-          // Check if contact sync reward already given
-          const { data: existingContactReward } = await supabase
+          const { data: contactSyncActivity } = await supabase
             .from('reward_activities')
             .select('id')
             .eq('user_id', profile.id)
             .eq('activity_type', 'contact_sync')
             .maybeSingle();
 
-          if (!existingContactReward) {
-            // Award contact sync points using the award_points function
-            const { error: awardError } = await supabase.rpc('award_points', {
-              _user_id: profile.id,
-              _activity_type: 'contact_sync',
-              _metadata: { contact_count: contactCount }
+          if (!contactSyncActivity) {
+            await supabase.from('reward_activities').insert({
+              user_id: profile.id,
+              activity_type: 'contact_sync',
+              points_awarded: 50,
+              metadata: { contact_count: contactCount }
             });
-
-            if (awardError) {
-              console.error(`Error awarding contact sync for ${profile.id}:`, awardError);
-            } else {
-              console.log(`Awarded contact sync points to user ${profile.id}`);
-            }
+            earlyBirdPoints += 50;
+            totalPoints += 50;
+            console.log(`Awarded contact sync to ${profile.id} (${contactCount} contacts)`);
+          } else {
+            earlyBirdPoints += 50;
+            totalPoints += 50;
           }
         }
+
+        // 3. First Transaction (25 pts - activity)
+        const { data: transactions, count: txCount } = await supabase
+          .from('transactions')
+          .select('*', { count: 'exact' })
+          .or(`sender_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
+          .order('created_at', { ascending: true })
+          .limit(1);
+
+        if (txCount && txCount > 0) {
+          const { data: firstTxActivity } = await supabase
+            .from('reward_activities')
+            .select('id')
+            .eq('user_id', profile.id)
+            .eq('activity_type', 'first_transaction')
+            .maybeSingle();
+
+          if (!firstTxActivity) {
+            await supabase.from('reward_activities').insert({
+              user_id: profile.id,
+              activity_type: 'first_transaction',
+              points_awarded: 25,
+              metadata: {}
+            });
+            activityPoints += 25;
+            totalPoints += 25;
+            console.log(`Awarded first transaction to ${profile.id}`);
+          } else {
+            activityPoints += 25;
+            totalPoints += 25;
+          }
+        }
+
+        // 4. Calculate transaction frequency points (already awarded activities)
+        const { data: txFreqActivities } = await supabase
+          .from('reward_activities')
+          .select('points_awarded')
+          .eq('user_id', profile.id)
+          .eq('activity_type', 'transaction_frequency');
+
+        if (txFreqActivities && txFreqActivities.length > 0) {
+          const txFreqPoints = txFreqActivities.reduce((sum, act) => sum + act.points_awarded, 0);
+          activityPoints += txFreqPoints;
+          totalPoints += txFreqPoints;
+        }
+
+        // 5. Calculate transaction volume points (already awarded activities)
+        const { data: txVolActivities } = await supabase
+          .from('reward_activities')
+          .select('points_awarded')
+          .eq('user_id', profile.id)
+          .eq('activity_type', 'transaction_volume');
+
+        if (txVolActivities && txVolActivities.length > 0) {
+          const txVolPoints = txVolActivities.reduce((sum, act) => sum + act.points_awarded, 0);
+          activityPoints += txVolPoints;
+          totalPoints += txVolPoints;
+        }
+
+        // 6. Update or insert user_rewards with calculated totals
+        const { error: upsertError } = await supabase
+          .from('user_rewards')
+          .upsert({
+            user_id: profile.id,
+            early_bird_points: earlyBirdPoints,
+            activity_points: activityPoints,
+            total_points: totalPoints,
+            current_level: Math.floor(totalPoints / 1000) + 1,
+            updated_at: new Date().toISOString()
+          }, {
+            onConflict: 'user_id'
+          });
+
+        if (upsertError) {
+          console.error(`Error updating rewards for ${profile.id}:`, upsertError);
+          results.push({
+            user_id: profile.id,
+            success: false,
+            error: upsertError.message
+          });
+          continue;
+        }
+
+        console.log(`Updated rewards for ${profile.id}: ${totalPoints} total points (${earlyBirdPoints} early bird, ${activityPoints} activity)`);
 
         results.push({
           user_id: profile.id,
           success: true,
-          contact_count: contactCount || 0
+          total_points: totalPoints,
+          early_bird_points: earlyBirdPoints,
+          activity_points: activityPoints,
+          contacts: contactCount || 0,
+          transactions: txCount || 0
         });
 
       } catch (error) {
@@ -140,12 +215,13 @@ Deno.serve(async (req) => {
       }
     }
 
-    console.log(`Backfill complete. Processed ${results.length} users`);
+    const successCount = results.filter(r => r.success).length;
+    console.log(`Backfill complete. Successfully processed ${successCount}/${results.length} users`);
 
     return new Response(
       JSON.stringify({
         success: true,
-        message: `Backfill completed for ${results.length} users`,
+        message: `Backfill completed: ${successCount}/${results.length} users processed successfully`,
         results
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
