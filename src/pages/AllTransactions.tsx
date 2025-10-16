@@ -3,10 +3,12 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Mail, RefreshCw } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Mail, RefreshCw, Compass } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Explorer from "./Explorer";
 
 interface Transaction {
   id: string;
@@ -194,9 +196,19 @@ const AllTransactions = () => {
         </div>
       </div>
 
-      {/* Activities List */}
-      <div className="p-6 space-y-4">
-        {activities.length === 0 ? (
+      <Tabs defaultValue="personal" className="w-full">
+        <TabsList className="w-full grid grid-cols-2 mx-4 mt-4 mb-2" style={{ width: 'calc(100% - 2rem)' }}>
+          <TabsTrigger value="personal">
+            My Transactions
+          </TabsTrigger>
+          <TabsTrigger value="explorer" className="gap-2">
+            <Compass className="h-4 w-4" />
+            Explorer
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="personal" className="p-6 pt-4 space-y-4">
+          {activities.length === 0 ? (
           <Card className="shadow-finmo-sm">
             <CardContent className="p-8 text-center text-muted-foreground">
               <p>No activity yet</p>
@@ -321,7 +333,12 @@ const AllTransactions = () => {
             }
           })
         )}
-      </div>
+        </TabsContent>
+
+        <TabsContent value="explorer" className="mt-0">
+          <Explorer />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

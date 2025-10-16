@@ -32,6 +32,7 @@ import PaymentHistory from "./pages/PaymentHistory";
 import ProtectedRoute from "./components/ProtectedRoute";
 import PhoneVerification from "./pages/PhoneVerification";
 import AllTransactions from "./pages/AllTransactions";
+import Explorer from "./pages/Explorer";
 import Marketplace from "./pages/Marketplace";
 import MarketplaceCreate from "./pages/MarketplaceCreate";
 import MarketplaceListing from "./pages/MarketplaceListing";
@@ -64,6 +65,7 @@ const App = () => {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-phone" element={<PhoneVerification />} />
           <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
+          <Route path="/explorer" element={<ProtectedRoute><Explorer /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
           <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
           <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
