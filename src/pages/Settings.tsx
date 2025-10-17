@@ -11,6 +11,7 @@ import MobileNav from "@/components/MobileNav";
 import TwoFactorSetup from "@/components/TwoFactorSetup";
 import TwoFactorPreferences from "@/components/TwoFactorPreferences";
 import { use2FA } from "@/hooks/use2FA";
+import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -184,6 +185,30 @@ const Settings = () => {
             </div>
           </CardContent>
         </Card>
+
+        {/* Appearance Settings */}
+        <div className="space-y-4">
+          <h2 className="text-lg font-semibold">Appearance</h2>
+
+          <Card className="shadow-finmo-md">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 bg-primary/10 rounded-full flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="font-semibold">Theme & Colors</p>
+                    <p className="text-sm text-muted-foreground">
+                      Customize appearance
+                    </p>
+                  </div>
+                </div>
+                <ThemeSwitcher />
+              </div>
+            </CardContent>
+          </Card>
+        </div>
 
         {/* Security Settings */}
         <div className="space-y-4">

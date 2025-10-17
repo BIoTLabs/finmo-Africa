@@ -18,19 +18,19 @@ All colors MUST be HSL.
     --popover: 0 0% 100%;
     --popover-foreground: 215 25% 15%;
 
-    /* Primary: Vibrant African Green - Growth & Prosperity (Lighter & Less Saturated) */
-    --primary: 142 45% 68%;
+    /* Primary: Vibrant African Green - Growth & Prosperity (Darker for better visibility) */
+    --primary: 142 50% 45%;
     --primary-foreground: 0 0% 100%;
-    --primary-glow: 142 45% 78%;
-    --primary-dark: 142 45% 58%;
+    --primary-glow: 142 50% 55%;
+    --primary-dark: 142 50% 35%;
 
     /* Secondary: Royal Gold - African Heritage & Crypto Wealth */
     --secondary: 45 95% 50%;
     --secondary-foreground: 215 25% 15%;
     --secondary-dark: 38 90% 45%;
     
-    /* Success: Pan-African Green (Lighter) */
-    --success: 142 50% 65%;
+    /* Success: Pan-African Green (Darker for better visibility) */
+    --success: 142 55% 42%;
     --success-foreground: 0 0% 100%;
 
     /* Crypto Accent: Deep Purple - Blockchain Technology */
@@ -52,31 +52,31 @@ All colors MUST be HSL.
 
     /* Accent: Light Gold Shimmer */
     --accent: 45 95% 95%;
-    --accent-foreground: 142 76% 52%;
+    --accent-foreground: 142 55% 45%;
 
     --destructive: 0 84% 60%;
     --destructive-foreground: 0 0% 100%;
 
     --border: 214 20% 90%;
     --input: 214 20% 90%;
-    --ring: 142 76% 52%;
+    --ring: 142 55% 45%;
 
     --radius: 0.75rem;
 
-    /* Pan-African & Crypto Gradients (Lighter & Less Saturated) */
-    --gradient-primary: linear-gradient(135deg, hsl(142 45% 68%), hsl(142 45% 78%));
-    --gradient-africa: linear-gradient(135deg, hsl(142 45% 68%), hsl(45 95% 50%), hsl(0 75% 55%));
+    /* Pan-African & Crypto Gradients (Darker for better visibility) */
+    --gradient-primary: linear-gradient(135deg, hsl(142 50% 45%), hsl(142 50% 55%));
+    --gradient-africa: linear-gradient(135deg, hsl(142 50% 45%), hsl(45 95% 50%), hsl(0 75% 55%));
     --gradient-crypto: linear-gradient(135deg, hsl(260 60% 55%), hsl(210 100% 60%), hsl(186 89% 45%));
-    --gradient-hero: linear-gradient(135deg, hsl(142 45% 68%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 50% 65%), hsl(142 50% 75%));
-    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(142 45% 98%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 50% 45%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 55% 42%), hsl(142 55% 52%));
+    --gradient-card: linear-gradient(180deg, hsl(0 0% 100%), hsl(142 50% 98%));
     --gradient-gold: linear-gradient(135deg, hsl(45 95% 50%), hsl(38 90% 45%));
-    --gradient-overlay: linear-gradient(180deg, hsl(142 45% 68% / 0.03), hsl(45 95% 50% / 0.03));
+    --gradient-overlay: linear-gradient(180deg, hsl(142 50% 45% / 0.03), hsl(45 95% 50% / 0.03));
     
-    /* Shadows with colored tints (Lighter) */
-    --shadow-sm: 0 2px 8px hsl(142 45% 68% / 0.06);
-    --shadow-md: 0 4px 16px hsl(142 45% 68% / 0.08);
-    --shadow-lg: 0 8px 32px hsl(142 45% 68% / 0.12);
+    /* Shadows with colored tints (Darker for better visibility) */
+    --shadow-sm: 0 2px 8px hsl(142 50% 45% / 0.08);
+    --shadow-md: 0 4px 16px hsl(142 50% 45% / 0.12);
+    --shadow-lg: 0 8px 32px hsl(142 50% 45% / 0.16);
     --shadow-gold: 0 8px 32px hsl(45 95% 50% / 0.25);
     --shadow-crypto: 0 8px 32px hsl(260 60% 55% / 0.20);
     
@@ -86,26 +86,26 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 215 25% 8%;
+    --background: 215 30% 6%;
     --foreground: 0 0% 98%;
 
-    --card: 215 25% 10%;
+    --card: 215 28% 8%;
     --card-foreground: 0 0% 98%;
 
-    --popover: 215 25% 10%;
+    --popover: 215 28% 8%;
     --popover-foreground: 0 0% 98%;
 
-    --primary: 142 45% 65%;
-    --primary-foreground: 215 25% 10%;
-    --primary-glow: 142 45% 75%;
-    --primary-dark: 142 45% 55%;
+    --primary: 142 50% 48%;
+    --primary-foreground: 0 0% 100%;
+    --primary-glow: 142 50% 58%;
+    --primary-dark: 142 50% 38%;
 
     --secondary: 45 95% 55%;
     --secondary-foreground: 215 25% 10%;
     --secondary-dark: 38 90% 50%;
 
-    --success: 142 50% 62%;
-    --success-foreground: 215 25% 10%;
+    --success: 142 55% 45%;
+    --success-foreground: 0 0% 100%;
 
     --crypto-purple: 260 60% 60%;
     --crypto-blue: 210 100% 65%;
@@ -117,27 +117,27 @@ All colors MUST be HSL.
     --warning: 45 93% 52%;
     --warning-foreground: 215 25% 10%;
 
-    --muted: 215 25% 15%;
-    --muted-foreground: 215 16% 65%;
+    --muted: 215 28% 12%;
+    --muted-foreground: 215 16% 70%;
 
-    --accent: 215 25% 15%;
+    --accent: 215 28% 14%;
     --accent-foreground: 0 0% 98%;
 
     --destructive: 0 84% 65%;
     --destructive-foreground: 0 0% 98%;
 
-    --border: 215 25% 18%;
-    --input: 215 25% 18%;
-    --ring: 142 45% 65%;
+    --border: 215 28% 16%;
+    --input: 215 28% 16%;
+    --ring: 142 50% 48%;
     
-    --gradient-primary: linear-gradient(135deg, hsl(142 45% 65%), hsl(142 45% 75%));
-    --gradient-africa: linear-gradient(135deg, hsl(142 45% 65%), hsl(45 95% 50%), hsl(0 75% 55%));
+    --gradient-primary: linear-gradient(135deg, hsl(142 50% 48%), hsl(142 50% 58%));
+    --gradient-africa: linear-gradient(135deg, hsl(142 50% 48%), hsl(45 95% 50%), hsl(0 75% 55%));
     --gradient-crypto: linear-gradient(135deg, hsl(260 60% 55%), hsl(210 100% 60%), hsl(186 89% 45%));
-    --gradient-hero: linear-gradient(135deg, hsl(142 45% 65%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
-    --gradient-success: linear-gradient(135deg, hsl(142 50% 60%), hsl(142 50% 70%));
-    --gradient-card: linear-gradient(180deg, hsl(215 25% 10%), hsl(215 25% 12%));
+    --gradient-hero: linear-gradient(135deg, hsl(142 50% 48%) 0%, hsl(45 95% 50%) 50%, hsl(260 60% 55%) 100%);
+    --gradient-success: linear-gradient(135deg, hsl(142 55% 45%), hsl(142 55% 55%));
+    --gradient-card: linear-gradient(180deg, hsl(215 28% 8%), hsl(215 28% 10%));
     --gradient-gold: linear-gradient(135deg, hsl(45 95% 50%), hsl(38 90% 45%));
-    --gradient-overlay: linear-gradient(180deg, hsl(142 45% 65% / 0.08), hsl(45 95% 50% / 0.08));
+    --gradient-overlay: linear-gradient(180deg, hsl(142 50% 48% / 0.08), hsl(45 95% 50% / 0.08));
   }
 }
 
