@@ -14,6 +14,9 @@ import MobileNav from "@/components/MobileNav";
 import { use2FAGuard } from "@/hooks/use2FAGuard";
 import { QRScanner } from "@/components/QRScanner";
 import { ContactSelector } from "@/components/ContactSelector";
+import { ChainSelector } from "@/components/ChainSelector";
+import { TokenSelector } from "@/components/TokenSelector";
+import { DEFAULT_CHAIN } from "@/utils/blockchain";
 
 const Send = () => {
   const navigate = useNavigate();
@@ -28,6 +31,7 @@ const Send = () => {
   const [walletAddress, setWalletAddress] = useState("");
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState("USDC");
+  const [chainId, setChainId] = useState(DEFAULT_CHAIN.chainId);
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const [showScanner, setShowScanner] = useState(false);
@@ -120,6 +124,7 @@ const Send = () => {
             amount: parseFloat(amount),
             token: token,
             transaction_type: transferType,
+            chain_id: transferType === 'external' ? chainId : undefined,
           },
         });
 

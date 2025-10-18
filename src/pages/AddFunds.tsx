@@ -9,14 +9,20 @@ import { ArrowLeft, Coins } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
+import { ChainSelector } from "@/components/ChainSelector";
+import { TokenSelector } from "@/components/TokenSelector";
+import { DEFAULT_CHAIN, SUPPORTED_CHAINS } from "@/utils/blockchain";
 
 const AddFunds = () => {
   const navigate = useNavigate();
   const [amount, setAmount] = useState("");
   const [token, setToken] = useState("USDC");
+  const [chainId, setChainId] = useState(DEFAULT_CHAIN.chainId);
   const [paymentMethod, setPaymentMethod] = useState("card");
   const [loading, setLoading] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  
+  const selectedChain = Object.values(SUPPORTED_CHAINS).find(c => c.chainId === chainId) || DEFAULT_CHAIN;
 
   useEffect(() => {
     loadProfile();
@@ -78,7 +84,8 @@ const AddFunds = () => {
         body: {
           token: token,
           amount: amountNum,
-          transaction_hash: txHash
+          transaction_hash: txHash,
+          chain_id: chainId
         }
       });
 
@@ -138,31 +145,28 @@ const AddFunds = () => {
           </CardContent>
         </Card>
 
+        {/* Chain and Token Selection */}
+        <Card className="shadow-finmo-md">
+          <CardContent className="p-6 space-y-4">
+            <ChainSelector value={chainId} onChange={setChainId} />
+            <TokenSelector chainId={chainId} value={token} onChange={setToken} />
+          </CardContent>
+        </Card>
+
         {/* Amount Input */}
         <Card className="shadow-finmo-md">
           <CardContent className="p-6 space-y-4">
             <div className="space-y-2">
               <Label>Amount</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="flex-1 text-2xl font-semibold"
-                  min="0"
-                  step="0.01"
-                />
-                <Select value={token} onValueChange={setToken}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USDC">USDC</SelectItem>
-                    <SelectItem value="MATIC">MATIC</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="text-2xl font-semibold"
+                min="0"
+                step="0.01"
+              />
             </div>
 
             {/* Quick amounts */}
@@ -221,7 +225,7 @@ const AddFunds = () => {
               </div>
               <div className="pt-2 border-t">
                 <p className="text-xs text-muted-foreground">
-                  Send {token} to your wallet address on Polygon Mumbai testnet, then enter the transaction hash when prompted.
+                  Send {token} to your wallet address on {selectedChain.name}, then enter the transaction hash when prompted.
                 </p>
               </div>
             </CardContent>
@@ -236,7 +240,7 @@ const AddFunds = () => {
               <ol className="text-sm space-y-2 text-muted-foreground">
                 <li>1. Send {token} to your wallet address</li>
                 <li>2. Your address: <code className="text-xs bg-muted px-1 py-0.5 rounded">{profile.wallet_address}</code></li>
-                <li>3. Network: Polygon Mumbai Testnet</li>
+                <li>3. Network: {selectedChain.name}</li>
                 <li>4. Click "Deposit" below</li>
                 <li>5. Enter the transaction hash when prompted</li>
               </ol>

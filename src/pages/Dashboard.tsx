@@ -13,6 +13,7 @@ import { useAutoBalanceSync } from "@/hooks/useAutoBalanceSync";
 import RealtimeStatus from "@/components/RealtimeStatus";
 import { RewardsNotification } from "@/components/RewardsNotification";
 import finmoLogo from "@/assets/finmo-logo.png";
+import { useSessionManager } from "@/hooks/useSessionManager";
 
 interface WalletBalance {
   token: string;
@@ -36,6 +37,9 @@ const Dashboard = () => {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
+  
+  // Initialize session manager
+  useSessionManager();
 
   // Use real-time hooks
   const { transactions, connected } = useRealtimeTransactions(userId);
@@ -87,7 +91,7 @@ const Dashboard = () => {
     try {
       // Sync both balances and transactions
       const [balanceResult, txResult] = await Promise.all([
-        supabase.functions.invoke('sync-blockchain-balance'),
+        supabase.functions.invoke('sync-multichain-balances'),
         supabase.functions.invoke('sync-blockchain-transactions')
       ]);
       

@@ -1,7 +1,18 @@
 import { ethers } from "ethers";
 
-// Supported L2 chains configuration
+// Supported testnet chains configuration
 export const SUPPORTED_CHAINS = {
+  POLYGON_MUMBAI: {
+    chainId: 80001,
+    name: "Polygon Mumbai",
+    rpcUrl: "https://rpc-mumbai.maticvigil.com",
+    blockExplorer: "https://mumbai.polygonscan.com",
+    nativeCurrency: {
+      name: "MATIC",
+      symbol: "MATIC",
+      decimals: 18,
+    },
+  },
   POLYGON_AMOY: {
     chainId: 80002,
     name: "Polygon Amoy Testnet",
@@ -12,7 +23,50 @@ export const SUPPORTED_CHAINS = {
       symbol: "MATIC",
       decimals: 18,
     },
-    usdc: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
+  },
+  ARBITRUM_SEPOLIA: {
+    chainId: 421614,
+    name: "Arbitrum Sepolia",
+    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+    blockExplorer: "https://sepolia.arbiscan.io",
+    nativeCurrency: {
+      name: "ETH",
+      symbol: "ETH",
+      decimals: 18,
+    },
+  },
+  OPTIMISM_SEPOLIA: {
+    chainId: 11155420,
+    name: "Optimism Sepolia",
+    rpcUrl: "https://sepolia.optimism.io",
+    blockExplorer: "https://sepolia-optimism.etherscan.io",
+    nativeCurrency: {
+      name: "ETH",
+      symbol: "ETH",
+      decimals: 18,
+    },
+  },
+  BASE_SEPOLIA: {
+    chainId: 84532,
+    name: "Base Sepolia",
+    rpcUrl: "https://sepolia.base.org",
+    blockExplorer: "https://sepolia.basescan.org",
+    nativeCurrency: {
+      name: "ETH",
+      symbol: "ETH",
+      decimals: 18,
+    },
+  },
+  SCROLL_SEPOLIA: {
+    chainId: 534351,
+    name: "Scroll Sepolia",
+    rpcUrl: "https://sepolia-rpc.scroll.io",
+    blockExplorer: "https://sepolia.scrollscan.com",
+    nativeCurrency: {
+      name: "ETH",
+      symbol: "ETH",
+      decimals: 18,
+    },
   },
   SEPOLIA: {
     chainId: 11155111,
@@ -24,13 +78,11 @@ export const SUPPORTED_CHAINS = {
       symbol: "ETH",
       decimals: 18,
     },
-    usdc: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
   },
 };
 
-// Default chain (Polygon Amoy)
-export const POLYGON_AMOY = SUPPORTED_CHAINS.POLYGON_AMOY;
-export const USDC_CONTRACT = POLYGON_AMOY.usdc;
+// Default chain (Polygon Mumbai)
+export const DEFAULT_CHAIN = SUPPORTED_CHAINS.POLYGON_MUMBAI;
 
 // Minimal ERC20 ABI for token transfers
 export const ERC20_ABI = [
@@ -50,7 +102,7 @@ export class BlockchainService {
     });
   }
 
-  getProvider(chainId: number = POLYGON_AMOY.chainId): ethers.JsonRpcProvider {
+  getProvider(chainId: number = DEFAULT_CHAIN.chainId): ethers.JsonRpcProvider {
     const provider = this.providers.get(chainId);
     if (!provider) {
       throw new Error(`No provider configured for chain ${chainId}`);
@@ -66,7 +118,7 @@ export class BlockchainService {
     return chain;
   }
 
-  async getNativeBalance(address: string, chainId: number = POLYGON_AMOY.chainId): Promise<string> {
+  async getNativeBalance(address: string, chainId: number = DEFAULT_CHAIN.chainId): Promise<string> {
     try {
       const provider = this.getProvider(chainId);
       const balance = await provider.getBalance(address);
@@ -77,7 +129,7 @@ export class BlockchainService {
     }
   }
 
-  async getTokenBalance(tokenAddress: string, walletAddress: string, chainId: number = POLYGON_AMOY.chainId): Promise<string> {
+  async getTokenBalance(tokenAddress: string, walletAddress: string, chainId: number = DEFAULT_CHAIN.chainId): Promise<string> {
     try {
       const provider = this.getProvider(chainId);
       const contract = new ethers.Contract(tokenAddress, ERC20_ABI, provider);
@@ -92,10 +144,10 @@ export class BlockchainService {
 
   // Legacy method for backward compatibility
   async getMaticBalance(address: string): Promise<string> {
-    return this.getNativeBalance(address, POLYGON_AMOY.chainId);
+    return this.getNativeBalance(address, DEFAULT_CHAIN.chainId);
   }
 
-  async estimateGas(to: string, value: string, chainId: number = POLYGON_AMOY.chainId): Promise<string> {
+  async estimateGas(to: string, value: string, chainId: number = DEFAULT_CHAIN.chainId): Promise<string> {
     try {
       const provider = this.getProvider(chainId);
       const gasEstimate = await provider.estimateGas({
@@ -111,7 +163,7 @@ export class BlockchainService {
     }
   }
 
-  async getTransactionReceipt(txHash: string, chainId: number = POLYGON_AMOY.chainId) {
+  async getTransactionReceipt(txHash: string, chainId: number = DEFAULT_CHAIN.chainId) {
     try {
       const provider = this.getProvider(chainId);
       return await provider.getTransactionReceipt(txHash);
@@ -121,7 +173,7 @@ export class BlockchainService {
     }
   }
 
-  getExplorerUrl(txHash: string, chainId: number = POLYGON_AMOY.chainId): string {
+  getExplorerUrl(txHash: string, chainId: number = DEFAULT_CHAIN.chainId): string {
     const chain = this.getChainConfig(chainId);
     return `${chain.blockExplorer}/tx/${txHash}`;
   }

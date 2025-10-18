@@ -13,6 +13,7 @@ import { supabase } from "@/integrations/supabase/client";
 import TwoFactorVerify from "@/components/TwoFactorVerify";
 import { use2FA } from "@/hooks/use2FA";
 import { use2FAPreferences } from "@/hooks/use2FAPreferences";
+import { useSessionManager } from "@/hooks/useSessionManager";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -38,6 +39,9 @@ const Auth = () => {
   const [pending2FASession, setPending2FASession] = useState(false);
   const { challengeMFA, verifyChallenge } = use2FA();
   const { checkIfRequired } = use2FAPreferences();
+  
+  // Initialize session manager
+  useSessionManager();
 
   useEffect(() => {
     // Check if user is already logged in

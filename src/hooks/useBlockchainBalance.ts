@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { blockchainService, USDC_CONTRACT } from "@/utils/blockchain";
+import { blockchainService } from "@/utils/blockchain";
 import { supabase } from "@/integrations/supabase/client";
 
 interface BlockchainBalances {
@@ -28,14 +28,11 @@ export const useBlockchainBalance = (walletAddress: string | null) => {
     if (!walletAddress) return;
 
     try {
-      const [maticBalance, usdcBalance] = await Promise.all([
-        blockchainService.getMaticBalance(walletAddress),
-        blockchainService.getTokenBalance(USDC_CONTRACT, walletAddress),
-      ]);
-
+      const maticBalance = await blockchainService.getMaticBalance(walletAddress);
+      
       setBalances({
         MATIC: maticBalance,
-        USDC: usdcBalance,
+        USDC: "0", // USDC balance is now fetched per chain
       });
     } catch (error) {
       console.error("Error fetching blockchain balances:", error);
@@ -50,7 +47,7 @@ export const useBlockchainBalance = (walletAddress: string | null) => {
     setSyncing(true);
     try {
       // Call the edge function to sync balances from blockchain
-      const { data, error } = await supabase.functions.invoke('sync-blockchain-balance');
+      const { data, error } = await supabase.functions.invoke('sync-multichain-balances');
       
       if (error) throw error;
       

@@ -1324,6 +1324,33 @@ export type Database = {
         }
         Relationships: []
       }
+      user_sessions: {
+        Row: {
+          created_at: string | null
+          device_info: Json | null
+          id: string
+          last_active: string | null
+          session_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: string
+          last_active?: string | null
+          session_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          device_info?: Json | null
+          id?: string
+          last_active?: string | null
+          session_id?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       virtual_card_poll: {
         Row: {
           created_at: string
@@ -1402,6 +1429,7 @@ export type Database = {
       wallet_balances: {
         Row: {
           balance: number
+          chain_id: number | null
           created_at: string
           id: string
           token: string
@@ -1410,6 +1438,7 @@ export type Database = {
         }
         Insert: {
           balance?: number
+          chain_id?: number | null
           created_at?: string
           id?: string
           token: string
@@ -1418,13 +1447,22 @@ export type Database = {
         }
         Update: {
           balance?: number
+          chain_id?: number | null
           created_at?: string
           id?: string
           token?: string
           updated_at?: string
           user_id?: string
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "wallet_balances_chain_id_fkey"
+            columns: ["chain_id"]
+            isOneToOne: false
+            referencedRelation: "supported_chains"
+            referencedColumns: ["chain_id"]
+          },
+        ]
       }
     }
     Views: {
