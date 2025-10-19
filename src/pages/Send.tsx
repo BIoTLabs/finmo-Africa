@@ -255,6 +255,8 @@ const Send = () => {
                   </div>
                 </div>
 
+                <ChainSelector value={chainId} onChange={setChainId} />
+
                 <div className="space-y-2">
                   <div className="flex items-center justify-between">
                     <Label>Wallet Address</Label>
@@ -281,9 +283,13 @@ const Send = () => {
           </CardContent>
         </Card>
 
-        {/* Amount Input */}
+        {/* Token and Amount Selection */}
         <Card className="shadow-finmo-md">
           <CardContent className="p-6 space-y-4">
+            {transferType === "external" && (
+              <TokenSelector chainId={chainId} value={token} onChange={setToken} />
+            )}
+            
             <div className="space-y-2">
               <Label>Amount</Label>
               <div className="flex gap-2">
@@ -294,15 +300,17 @@ const Send = () => {
                   onChange={(e) => setAmount(e.target.value)}
                   className="flex-1 text-2xl font-semibold"
                 />
-                <Select value={token} onValueChange={setToken}>
-                  <SelectTrigger className="w-32">
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="USDC">USDC</SelectItem>
-                    <SelectItem value="MATIC">MATIC</SelectItem>
-                  </SelectContent>
-                </Select>
+                {transferType === "internal" && (
+                  <Select value={token} onValueChange={setToken}>
+                    <SelectTrigger className="w-32">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="USDC">USDC</SelectItem>
+                      <SelectItem value="MATIC">MATIC</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
             </div>
 
