@@ -3,12 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Mail, RefreshCw, Compass } from "lucide-react";
+import { ArrowLeft, ArrowUpRight, ArrowDownLeft, Mail, RefreshCw, Compass, Network } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Explorer from "./Explorer";
+import { SUPPORTED_CHAINS } from "@/utils/blockchain";
 
 interface Transaction {
   id: string;
@@ -22,6 +23,7 @@ interface Transaction {
   recipient_id: string | null;
   status: string;
   transaction_hash: string | null;
+  chain_id: number | null;
 }
 
 interface PaymentRequest {
@@ -223,6 +225,7 @@ const AllTransactions = () => {
               const isDeposit = tx.transaction_type === 'deposit';
               const isWithdrawal = tx.transaction_type === 'external' || tx.transaction_type === 'withdrawal';
               const isBlockchain = isDeposit || isWithdrawal;
+              const chainConfig = tx.chain_id ? Object.values(SUPPORTED_CHAINS).find(c => c.chainId === tx.chain_id) : null;
 
               return (
                 <Card 
@@ -251,9 +254,10 @@ const AllTransactions = () => {
                               Instant
                             </Badge>
                           )}
-                          {isBlockchain && (
-                            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary">
-                              On-chain
+                          {isBlockchain && chainConfig && (
+                            <Badge variant="secondary" className="text-xs bg-primary/10 text-primary flex items-center gap-1">
+                              <Network className="w-3 h-3" />
+                              {chainConfig.name.replace(' Testnet', '').replace(' Sepolia', '')}
                             </Badge>
                           )}
                         </div>

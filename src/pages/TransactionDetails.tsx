@@ -4,11 +4,11 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
-import { ArrowLeft, ExternalLink, CheckCircle, Clock, XCircle } from "lucide-react";
+import { ArrowLeft, ExternalLink, CheckCircle, Clock, XCircle, Network } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
-import { blockchainService } from "@/utils/blockchain";
+import { blockchainService, SUPPORTED_CHAINS } from "@/utils/blockchain";
 
 const TransactionDetails = () => {
   const navigate = useNavigate();
@@ -69,6 +69,7 @@ const TransactionDetails = () => {
 
   const isSender = transaction.sender_id === userProfile.id;
   const isInternal = transaction.transaction_type === 'internal';
+  const chainConfig = transaction.chain_id ? Object.values(SUPPORTED_CHAINS).find(c => c.chainId === transaction.chain_id) : null;
 
   return (
     <div className="min-h-screen bg-muted pb-24 animate-fade-in">
@@ -112,6 +113,19 @@ const TransactionDetails = () => {
                 {isInternal ? "Instant (FinMo)" : "On-Chain"}
               </Badge>
             </div>
+
+            {chainConfig && (
+              <>
+                <Separator />
+                <div className="flex justify-between">
+                  <span className="text-muted-foreground">Network</span>
+                  <Badge variant="outline" className="flex items-center gap-1">
+                    <Network className="w-3 h-3" />
+                    {chainConfig.name}
+                  </Badge>
+                </div>
+              </>
+            )}
 
             <Separator />
 
@@ -169,10 +183,13 @@ const TransactionDetails = () => {
                     variant="outline"
                     size="sm"
                     className="w-full"
-                    onClick={() => window.open(blockchainService.getExplorerUrl(transaction.transaction_hash), '_blank')}
+                    onClick={() => window.open(
+                      blockchainService.getExplorerUrl(transaction.transaction_hash, transaction.chain_id || undefined), 
+                      '_blank'
+                    )}
                   >
                     <ExternalLink className="w-4 h-4 mr-2" />
-                    View on Explorer
+                    View on {chainConfig?.name.replace(' Testnet', '').replace(' Sepolia', '')} Explorer
                   </Button>
                 </div>
               </>

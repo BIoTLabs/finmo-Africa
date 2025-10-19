@@ -3,11 +3,13 @@ import { useNavigate } from "react-router-dom";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { ArrowLeft, QrCode, Copy, Download, Share2 } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { ArrowLeft, QrCode, Copy, Download, Share2, Network } from "lucide-react";
 import { QRCodeSVG } from "qrcode.react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
+import { SUPPORTED_CHAINS } from "@/utils/blockchain";
 
 const Receive = () => {
   const navigate = useNavigate();
@@ -144,19 +146,36 @@ Type: finmo_wallet`;
         {/* Wallet Address */}
         <Card className="shadow-finmo-md">
           <CardHeader>
-            <CardTitle className="text-base">Wallet Address</CardTitle>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Network className="w-4 h-4" />
+              Wallet Address (Multi-Chain)
+            </CardTitle>
           </CardHeader>
-          <CardContent className="space-y-3">
+          <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              For external blockchain transfers
+              Your wallet supports {Object.keys(SUPPORTED_CHAINS).length} blockchain networks
             </p>
-            <div className="flex items-center gap-2">
-              <code className="flex-1 p-3 bg-muted rounded-lg font-mono text-xs break-all">
-                {profile.wallet_address}
-              </code>
-              <Button variant="outline" size="icon" onClick={copyAddress}>
-                <Copy className="w-4 h-4" />
-              </Button>
+            <div className="space-y-2">
+              <div className="flex items-center gap-2">
+                <code className="flex-1 p-3 bg-muted rounded-lg font-mono text-xs break-all">
+                  {profile.wallet_address}
+                </code>
+                <Button variant="outline" size="icon" onClick={copyAddress}>
+                  <Copy className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            
+            {/* Supported Networks */}
+            <div className="pt-3 border-t">
+              <p className="text-xs text-muted-foreground mb-2">Supported Networks:</p>
+              <div className="flex flex-wrap gap-1.5">
+                {Object.values(SUPPORTED_CHAINS).map((chain) => (
+                  <Badge key={chain.chainId} variant="secondary" className="text-xs">
+                    {chain.name.replace(' Testnet', '').replace(' Sepolia', '')}
+                  </Badge>
+                ))}
+              </div>
             </div>
           </CardContent>
         </Card>
