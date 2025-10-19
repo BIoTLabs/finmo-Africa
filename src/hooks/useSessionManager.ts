@@ -49,7 +49,7 @@ export const useSessionManager = () => {
       }
     });
 
-    // Periodic session check (every 30 seconds)
+    // Periodic session check (every 60 seconds - less aggressive)
     const intervalId = setInterval(async () => {
       const { data: { session } } = await supabase.auth.getSession();
       if (!session) return;
@@ -72,7 +72,7 @@ export const useSessionManager = () => {
           .update({ last_active: new Date().toISOString() })
           .eq('user_id', session.user.id);
       }
-    }, 30000); // Check every 30 seconds
+    }, 60000); // Check every 60 seconds
 
     return () => {
       subscription.unsubscribe();

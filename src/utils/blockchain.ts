@@ -96,16 +96,15 @@ export class BlockchainService {
 
   constructor() {
     this.providers = new Map();
-    // Initialize providers for all supported chains
-    Object.values(SUPPORTED_CHAINS).forEach(chain => {
-      this.providers.set(chain.chainId, new ethers.JsonRpcProvider(chain.rpcUrl));
-    });
   }
 
   getProvider(chainId: number = DEFAULT_CHAIN.chainId): ethers.JsonRpcProvider {
-    const provider = this.providers.get(chainId);
+    // Lazy initialization - only create provider when needed
+    let provider = this.providers.get(chainId);
     if (!provider) {
-      throw new Error(`No provider configured for chain ${chainId}`);
+      const chain = this.getChainConfig(chainId);
+      provider = new ethers.JsonRpcProvider(chain.rpcUrl);
+      this.providers.set(chainId, provider);
     }
     return provider;
   }
