@@ -869,11 +869,13 @@ export type Database = {
           created_at: string
           display_name: string | null
           email: string | null
+          encryption_key_version: string | null
           id: string
           phone_number: string
           socials: Json | null
           updated_at: string
           wallet_address: string
+          wallet_private_key_encrypted: string | null
         }
         Insert: {
           avatar_url?: string | null
@@ -881,11 +883,13 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          encryption_key_version?: string | null
           id: string
           phone_number: string
           socials?: Json | null
           updated_at?: string
           wallet_address: string
+          wallet_private_key_encrypted?: string | null
         }
         Update: {
           avatar_url?: string | null
@@ -893,11 +897,13 @@ export type Database = {
           created_at?: string
           display_name?: string | null
           email?: string | null
+          encryption_key_version?: string | null
           id?: string
           phone_number?: string
           socials?: Json | null
           updated_at?: string
           wallet_address?: string
+          wallet_private_key_encrypted?: string | null
         }
         Relationships: []
       }
@@ -1463,6 +1469,45 @@ export type Database = {
             referencedColumns: ["chain_id"]
           },
         ]
+      }
+      wallet_sweeps: {
+        Row: {
+          amount: number
+          completed_at: string | null
+          created_at: string | null
+          id: string
+          master_wallet_address: string
+          status: string
+          sweep_tx_hash: string | null
+          token: string
+          user_id: string
+          user_wallet_address: string
+        }
+        Insert: {
+          amount: number
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          master_wallet_address: string
+          status?: string
+          sweep_tx_hash?: string | null
+          token: string
+          user_id: string
+          user_wallet_address: string
+        }
+        Update: {
+          amount?: number
+          completed_at?: string | null
+          created_at?: string | null
+          id?: string
+          master_wallet_address?: string
+          status?: string
+          sweep_tx_hash?: string | null
+          token?: string
+          user_id?: string
+          user_wallet_address?: string
+        }
+        Relationships: []
       }
     }
     Views: {
