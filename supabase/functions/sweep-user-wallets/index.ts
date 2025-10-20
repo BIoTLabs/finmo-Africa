@@ -173,7 +173,7 @@ serve(async (req) => {
             if (usdcBalanceFormatted > 0.01) {
               console.log(`Sweeping ${usdcBalanceFormatted} USDC from ${profile.wallet_address}`);
 
-              const usdcContractWithSigner = usdcContract.connect(userWallet);
+              const usdcContractWithSigner = new ethers.Contract(chain.usdcContract, ERC20_ABI, userWallet);
               const tx = await usdcContractWithSigner.transfer(masterWalletAddress, usdcBalance);
               await tx.wait();
 
