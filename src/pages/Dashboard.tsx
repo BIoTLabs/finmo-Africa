@@ -45,8 +45,9 @@ const Dashboard = () => {
   const { transactions, connected } = useRealtimeTransactions(userId);
   const { balances } = useRealtimeBalance(userId);
   
-  // Auto-sync blockchain balances
-  useAutoBalanceSync(userId, profile?.wallet_address);
+  // Auto-sync blockchain balances - DISABLED to prevent automatic balance restoration
+  // Uncomment below to enable automatic blockchain sync every 2 minutes
+  // useAutoBalanceSync(userId, profile?.wallet_address);
 
   useEffect(() => {
     loadUserData();
