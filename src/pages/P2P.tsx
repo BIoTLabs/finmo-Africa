@@ -5,8 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { toast } from "sonner";
-import { ArrowLeft, TrendingUp, TrendingDown, Filter } from "lucide-react";
+import { ArrowLeft, TrendingUp, TrendingDown, Filter, ChevronDown, Info, Shield, Clock } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import MobileNav from "@/components/MobileNav";
 
@@ -75,6 +76,56 @@ const P2P = () => {
             <Filter className="h-5 w-5" />
           </Button>
         </div>
+      </div>
+
+      {/* About P2P Section */}
+      <div className="px-4 pt-4">
+        <Collapsible>
+          <Card className="shadow-finmo-md bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full p-4 h-auto flex items-center justify-between hover:bg-transparent"
+              >
+                <div className="flex items-center gap-2">
+                  <Info className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-semibold">About P2P Trading</h2>
+                </div>
+                <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="px-4 pb-4 pt-0 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Trade crypto directly with other users using your local payment methods. Set your own rates and terms.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <Shield className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Escrow Protection</p>
+                      <p className="text-xs text-muted-foreground">Funds are held in escrow until both parties confirm</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Clock className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Fast Settlements</p>
+                      <p className="text-xs text-muted-foreground">Complete trades within minutes with instant transfers</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Best Rates</p>
+                      <p className="text-xs text-muted-foreground">Competitive market rates from multiple sellers</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       </div>
 
       {/* Country & Token Selector */}

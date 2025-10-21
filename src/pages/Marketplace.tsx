@@ -6,8 +6,9 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import MobileNav from "@/components/MobileNav";
-import { ArrowLeft, Plus, Search, Store } from "lucide-react";
+import { ArrowLeft, Plus, Search, Store, ChevronDown, Info, ShoppingBag, TrendingUp } from "lucide-react";
 import { toast } from "sonner";
 
 interface Category {
@@ -120,6 +121,56 @@ const Marketplace = () => {
             className="pl-10 bg-background text-foreground"
           />
         </div>
+      </div>
+
+      {/* About Marketplace Section */}
+      <div className="px-4 pt-4">
+        <Collapsible>
+          <Card className="shadow-finmo-md bg-gradient-to-br from-primary/5 to-primary/10 border-primary/20">
+            <CollapsibleTrigger asChild>
+              <Button
+                variant="ghost"
+                className="w-full p-4 h-auto flex items-center justify-between hover:bg-transparent"
+              >
+                <div className="flex items-center gap-2">
+                  <Info className="w-5 h-5 text-primary" />
+                  <h2 className="text-lg font-semibold">About Marketplace</h2>
+                </div>
+                <ChevronDown className="w-5 h-5 text-muted-foreground transition-transform duration-200 group-data-[state=open]:rotate-180" />
+              </Button>
+            </CollapsibleTrigger>
+            <CollapsibleContent>
+              <CardContent className="px-4 pb-4 pt-0 space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Buy and sell items or services using cryptocurrency. Create listings, place bids, and complete secure transactions.
+                </p>
+                <div className="space-y-3">
+                  <div className="flex items-start gap-3">
+                    <ShoppingBag className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Bid or Buy Instantly</p>
+                      <p className="text-xs text-muted-foreground">Place bids on items or buy at fixed prices</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <TrendingUp className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Escrow Protection</p>
+                      <p className="text-xs text-muted-foreground">Secure transactions with built-in escrow</p>
+                    </div>
+                  </div>
+                  <div className="flex items-start gap-3">
+                    <Store className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
+                    <div>
+                      <p className="font-medium text-sm">Delivery Options</p>
+                      <p className="text-xs text-muted-foreground">Choose from multiple delivery methods and providers</p>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
       </div>
 
       {/* Categories */}
