@@ -29,7 +29,7 @@ const Explorer = () => {
   const { orders: p2pOrders, loading: p2pLoading, connected: p2pConnected } = useRealtimeP2PExplorer();
   const { orders: marketplaceOrders, loading: marketplaceLoading, connected: marketplaceConnected } = useRealtimeMarketplaceExplorer();
   const { positions: stakingPositions, loading: stakingLoading, connected: stakingConnected } = useRealtimeStakingExplorer();
-  const { hotWalletBalance, coldStorageTransfers, totalStaked, loading: transparencyLoading } = useWalletTransparency();
+  const { hotWallet, coldStorage, staked, loading: transparencyLoading } = useWalletTransparency();
 
   // Calculate stats
   const totalVolume = transactions.reduce((acc, tx) => {
@@ -62,9 +62,10 @@ const Explorer = () => {
             totalTransactions={transactions.length}
             totalVolume={totalVolume}
             connected={txConnected}
-            hotWalletBalance={hotWalletBalance}
-            coldStorageTransfers={coldStorageTransfers}
-            totalStaked={totalStaked}
+            hotWallet={hotWallet}
+            coldStorage={coldStorage}
+            staked={staked}
+            loading={transparencyLoading}
           />
         </div>
       </div>
