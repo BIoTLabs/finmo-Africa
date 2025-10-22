@@ -123,48 +123,6 @@ export type Database = {
           },
         ]
       }
-      cold_wallet_transfers: {
-        Row: {
-          admin_id: string
-          amount: number
-          cold_wallet_address: string
-          completed_at: string | null
-          created_at: string
-          hot_wallet_address: string
-          id: string
-          notes: string | null
-          status: string
-          token: string
-          transaction_hash: string | null
-        }
-        Insert: {
-          admin_id: string
-          amount: number
-          cold_wallet_address: string
-          completed_at?: string | null
-          created_at?: string
-          hot_wallet_address: string
-          id?: string
-          notes?: string | null
-          status?: string
-          token: string
-          transaction_hash?: string | null
-        }
-        Update: {
-          admin_id?: string
-          amount?: number
-          cold_wallet_address?: string
-          completed_at?: string | null
-          created_at?: string
-          hot_wallet_address?: string
-          id?: string
-          notes?: string | null
-          status?: string
-          token?: string
-          transaction_hash?: string | null
-        }
-        Relationships: []
-      }
       contact_invitations: {
         Row: {
           contact_name: string
