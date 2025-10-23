@@ -4,9 +4,9 @@ import { toast } from 'sonner';
 
 /**
  * Hook to automatically log out users after a period of inactivity
- * @param inactivityTimeout - Time in milliseconds before auto-logout (default: 4 minutes)
+ * @param inactivityTimeout - Time in milliseconds before auto-logout (default: 5 minutes)
  */
-export const useAutoLogout = (inactivityTimeout: number = 240000) => {
+export const useAutoLogout = (inactivityTimeout: number = 300000) => {
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
   const warningRef = useRef<NodeJS.Timeout | null>(null);
   const lastActivityRef = useRef<number>(Date.now());

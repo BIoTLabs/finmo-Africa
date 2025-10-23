@@ -12,6 +12,7 @@ import TwoFactorSetup from "@/components/TwoFactorSetup";
 import TwoFactorPreferences from "@/components/TwoFactorPreferences";
 import { use2FA } from "@/hooks/use2FA";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
+import { use2FAGuard } from "@/hooks/use2FAGuard";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ const Settings = () => {
   const [addressVisible, setAddressVisible] = useState(false);
   const [profile, setProfile] = useState<any>(null);
   const { unenrollMFA } = use2FA();
+  const { requireVerification, TwoFactorDialog } = use2FAGuard();
 
   useEffect(() => {
     checkAuth();
@@ -70,52 +72,60 @@ const Settings = () => {
   };
 
   const handleBiometricToggle = async (enabled: boolean) => {
-    if (enabled) {
-      // Enabling biometric
-      setEnrollingBiometric(true);
-      try {
-        // Check if biometrics are available
-        if (!window.PublicKeyCredential) {
-          toast.error("Biometric authentication not supported on this device");
-          return;
-        }
+    // Require 2FA verification before changing biometric settings
+    await requireVerification("require_on_send", async () => {
+      if (enabled) {
+        // Enabling biometric
+        setEnrollingBiometric(true);
+        try {
+          // Check if biometrics are available
+          if (!window.PublicKeyCredential) {
+            toast.error("Biometric authentication not supported on this device");
+            return;
+          }
 
-        const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
-        if (!available) {
-          toast.error("No biometric hardware detected");
-          return;
-        }
+          const available = await window.PublicKeyCredential.isUserVerifyingPlatformAuthenticatorAvailable();
+          if (!available) {
+            toast.error("No biometric hardware detected");
+            return;
+          }
 
-        // Simulate biometric enrollment
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
-        setBiometricEnabled(true);
-        toast.success("Biometric authentication enabled");
-      } catch (error) {
-        console.error("Biometric enrollment error:", error);
-        toast.error("Failed to enable biometric authentication");
-      } finally {
-        setEnrollingBiometric(false);
+          // Simulate biometric enrollment
+          await new Promise(resolve => setTimeout(resolve, 1000));
+          
+          setBiometricEnabled(true);
+          toast.success("Biometric authentication enabled");
+        } catch (error) {
+          console.error("Biometric enrollment error:", error);
+          toast.error("Failed to enable biometric authentication");
+        } finally {
+          setEnrollingBiometric(false);
+        }
+      } else {
+        setBiometricEnabled(false);
+        toast.success("Biometric authentication disabled");
       }
-    } else {
-      setBiometricEnabled(false);
-      toast.success("Biometric authentication disabled");
-    }
+    });
   };
 
   const handleTwoFactorToggle = async (enabled: boolean) => {
-    if (enabled) {
-      // Show 2FA setup dialog
-      setShow2FASetup(true);
-    } else {
-      // Disable 2FA
-      try {
-        await unenrollMFA();
-        setTwoFactorEnabled(false);
-      } catch (error) {
-        // Error already handled in hook
+    // Require 2FA verification before changing 2FA settings
+    await requireVerification("require_on_send", async () => {
+      if (enabled) {
+        // Show 2FA setup dialog
+        setShow2FASetup(true);
+      } else {
+        // Disable 2FA - WARNING: This should generally not be allowed if 2FA is mandatory
+        // But per requirements, users can disable it after providing 2FA code
+        try {
+          await unenrollMFA();
+          setTwoFactorEnabled(false);
+          toast.warning("Two-Factor Authentication disabled. Your account is now less secure. You may not be able to login until 2FA is re-enabled.");
+        } catch (error) {
+          // Error already handled in hook
+        }
       }
-    }
+    });
   };
 
   const handle2FASuccess = () => {
@@ -361,6 +371,8 @@ const Settings = () => {
         onOpenChange={setShow2FASetup}
         onSuccess={handle2FASuccess}
       />
+
+      <TwoFactorDialog />
 
       <MobileNav />
     </div>

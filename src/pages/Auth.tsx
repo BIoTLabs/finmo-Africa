@@ -13,7 +13,6 @@ import { supabase } from "@/integrations/supabase/client";
 import TwoFactorVerify from "@/components/TwoFactorVerify";
 import { use2FA } from "@/hooks/use2FA";
 import { use2FAPreferences } from "@/hooks/use2FAPreferences";
-import { useSessionManager } from "@/hooks/useSessionManager";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -39,9 +38,6 @@ const Auth = () => {
   const [pending2FASession, setPending2FASession] = useState(false);
   const { challengeMFA, verifyChallenge } = use2FA();
   const { checkIfRequired } = use2FAPreferences();
-  
-  // Initialize session manager
-  useSessionManager();
 
   useEffect(() => {
     // Check if user is already logged in
@@ -130,38 +126,36 @@ const Auth = () => {
         
         console.log("Login successful, checking 2FA requirements...");
         
-        // Check if 2FA is required for login
-        const requires2FA = await checkIfRequired("require_on_login");
-        console.log("2FA required for login:", requires2FA);
+        // MANDATORY 2FA CHECK - All users must have 2FA enabled to login
+        const { data: factors } = await supabase.auth.mfa.listFactors();
+        console.log("MFA factors:", factors);
         
-        if (requires2FA) {
-          // Check if user has 2FA enabled
-          const { data: factors } = await supabase.auth.mfa.listFactors();
-          console.log("MFA factors:", factors);
-          
-          if (factors && factors.totp && factors.totp.length > 0) {
-            const verifiedFactor = factors.totp.find(f => f.status === "verified");
-            
-            if (verifiedFactor) {
-              // User has 2FA enabled and it's required
-              console.log("2FA enabled and required, showing verification dialog");
-              setPendingFactorId(verifiedFactor.id);
-              setShow2FAVerify(true);
-              setLoading(false);
-              return; // Don't navigate yet - wait for 2FA verification
-            } else {
-              console.log("2FA required but no verified factor found");
-            }
-          } else {
-            console.log("2FA required but user has no factors enrolled");
-          }
+        if (!factors || !factors.totp || factors.totp.length === 0) {
+          // User doesn't have 2FA set up - force them to set it up
+          setPending2FASession(false);
+          await supabase.auth.signOut();
+          toast.error("Two-Factor Authentication is required. Please contact support to enable 2FA for your account.");
+          setLoading(false);
+          return;
         }
         
-        // No 2FA required or not enabled, clear flag and proceed to dashboard
-        console.log("2FA not required for login, proceeding to dashboard");
-        setPending2FASession(false);
-        toast.success("Welcome back!");
-        navigate("/dashboard");
+        const verifiedFactor = factors.totp.find(f => f.status === "verified");
+        
+        if (!verifiedFactor) {
+          // User has 2FA but it's not verified
+          setPending2FASession(false);
+          await supabase.auth.signOut();
+          toast.error("Two-Factor Authentication setup is incomplete. Please contact support.");
+          setLoading(false);
+          return;
+        }
+        
+        // User has verified 2FA - require verification on every login
+        console.log("2FA is mandatory and enabled, showing verification dialog");
+        setPendingFactorId(verifiedFactor.id);
+        setShow2FAVerify(true);
+        setLoading(false);
+        return; // Don't navigate yet - wait for 2FA verification
       } else {
         // Sign up without OTP verification
         const { data, error } = await supabase.auth.signUp({
