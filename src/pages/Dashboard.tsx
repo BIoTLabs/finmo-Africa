@@ -12,6 +12,7 @@ import { useRealtimeBalance } from "@/hooks/useRealtimeBalance";
 import { useAutoBalanceSync } from "@/hooks/useAutoBalanceSync";
 import RealtimeStatus from "@/components/RealtimeStatus";
 import { RewardsNotification } from "@/components/RewardsNotification";
+import { NotificationBell } from "@/components/NotificationBell";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { useSessionManager } from "@/hooks/useSessionManager";
 
@@ -138,6 +139,7 @@ const Dashboard = () => {
             </div>
           </div>
           <div className="flex gap-2 flex-shrink-0">
+            <NotificationBell />
             <Button
               variant="ghost"
               size="icon"

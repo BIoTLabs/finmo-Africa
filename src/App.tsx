@@ -49,6 +49,7 @@ import RewardsDetails from "./pages/RewardsDetails";
 import AdminRewardsBackfill from "./pages/AdminRewardsBackfill";
 import AdminKYC from "./pages/AdminKYC";
 import AdminListings from "./pages/AdminListings";
+import AdminMessaging from "./pages/AdminMessaging";
 
 const queryClient = new QueryClient();
 
@@ -109,6 +110,7 @@ const App = () => {
             <Route path="/admin/rewards-backfill" element={<ProtectedRoute><AdminRewardsBackfill /></ProtectedRoute>} />
             <Route path="/admin/kyc" element={<ProtectedRoute><AdminKYC /></ProtectedRoute>} />
             <Route path="/admin/listings" element={<ProtectedRoute><AdminListings /></ProtectedRoute>} />
+            <Route path="/admin/messaging" element={<ProtectedRoute><AdminMessaging /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

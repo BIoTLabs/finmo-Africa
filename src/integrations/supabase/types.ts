@@ -1153,6 +1153,42 @@ export type Database = {
         }
         Relationships: []
       }
+      system_notifications: {
+        Row: {
+          created_at: string | null
+          created_by: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          message: string
+          notification_type: string
+          priority: number | null
+          title: string
+        }
+        Insert: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message: string
+          notification_type?: string
+          priority?: number | null
+          title: string
+        }
+        Update: {
+          created_at?: string | null
+          created_by?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          message?: string
+          notification_type?: string
+          priority?: number | null
+          title?: string
+        }
+        Relationships: []
+      }
       transactions: {
         Row: {
           amount: number
@@ -1634,10 +1670,7 @@ export type Database = {
         Args: { _dispute_id: string; _user_id: string }
         Returns: boolean
       }
-      can_insert_profile_for_new_user: {
-        Args: Record<PropertyKey, never>
-        Returns: boolean
-      }
+      can_insert_profile_for_new_user: { Args: never; Returns: boolean }
       check_rate_limit: {
         Args: {
           _action_type: string
@@ -1647,10 +1680,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      generate_wallet_address: {
-        Args: Record<PropertyKey, never>
-        Returns: string
-      }
+      generate_wallet_address: { Args: never; Returns: string }
       get_payment_request_public_info: {
         Args: { _request_id: string }
         Returns: {
@@ -1679,10 +1709,7 @@ export type Database = {
         }
         Returns: boolean
       }
-      hash_phone_number: {
-        Args: { _phone: string }
-        Returns: string
-      }
+      hash_phone_number: { Args: { _phone: string }; Returns: string }
       is_listing_seller: {
         Args: { _listing_id: string; _user_id: string }
         Returns: boolean

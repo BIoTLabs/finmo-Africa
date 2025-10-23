@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store } from 'lucide-react';
+import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LoadingScreen from '@/components/LoadingScreen';
 import { AdminFeeSettings } from '@/components/AdminFeeSettings';
@@ -108,7 +108,7 @@ const Admin = () => {
             <VirtualCardPollResults />
 
             {/* Platform Management */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -139,6 +139,23 @@ const Admin = () => {
                 <CardContent>
                   <Button onClick={() => navigate('/admin/listings')} className="w-full">
                     Manage Listings
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Bell className="h-5 w-5" />
+                    System Messaging
+                  </CardTitle>
+                  <CardDescription>
+                    Send notifications to all users
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate('/admin/messaging')} className="w-full">
+                    Manage Notifications
                   </Button>
                 </CardContent>
               </Card>
