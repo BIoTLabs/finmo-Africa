@@ -3,7 +3,6 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { useAutoLogout } from "@/hooks/useAutoLogout";
-import { useSessionManager } from "@/hooks/useSessionManager";
 import Index from "./pages/Index";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
@@ -56,9 +55,6 @@ const queryClient = new QueryClient();
 const App = () => {
   // Enable auto-logout after 5 minutes of inactivity
   useAutoLogout(300000);
-  
-  // Enable single-device session management
-  useSessionManager();
 
   return (
     <QueryClientProvider client={queryClient}>
