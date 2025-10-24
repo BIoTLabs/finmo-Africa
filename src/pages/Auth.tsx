@@ -106,52 +106,49 @@ const Auth = () => {
       const fullPhone = `${countryCode}${phoneNumber}`;
 
       if (isLogin) {
-        // CRITICAL: Set pending2FASession BEFORE signInWithPassword to prevent race condition
-        // Check if 2FA would be required before authentication
-        const { data: { user: checkUser } } = await supabase.auth.getUser();
-        
-        // Pre-check if this user would need 2FA (we'll verify after login)
-        setPending2FASession(true);
-        
-        // Now perform the actual sign in
-        const { data: tempSession, error: signInError } = await supabase.auth.signInWithPassword({
+        // Perform sign in
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
           email: `${fullPhone}@finmo.app`,
           password,
         });
 
-        if (signInError || !tempSession.session) {
-          setPending2FASession(false);
-          throw signInError || new Error("Login failed");
+        if (signInError) {
+          throw signInError;
+        }
+        
+        if (!signInData.session) {
+          throw new Error("Login failed - no session created");
         }
         
         console.log("Login successful, checking 2FA requirements...");
         
-        // MANDATORY 2FA CHECK - All users must have 2FA enabled to login
+        // Set pending state to prevent automatic navigation
+        setPending2FASession(true);
+        
+        // Check for 2FA after successful login
         const { data: factors } = await supabase.auth.mfa.listFactors();
         console.log("MFA factors:", factors);
         
         if (!factors || !factors.totp || factors.totp.length === 0) {
-          // User doesn't have 2FA set up - force them to set it up
+          // User doesn't have 2FA set up - allow login without it
           setPending2FASession(false);
-          await supabase.auth.signOut();
-          toast.error("Two-Factor Authentication is required. Please contact support to enable 2FA for your account.");
-          setLoading(false);
+          toast.success("Welcome back!");
+          navigate("/dashboard");
           return;
         }
         
         const verifiedFactor = factors.totp.find(f => f.status === "verified");
         
         if (!verifiedFactor) {
-          // User has 2FA but it's not verified
+          // User has 2FA but it's not verified - allow login without it
           setPending2FASession(false);
-          await supabase.auth.signOut();
-          toast.error("Two-Factor Authentication setup is incomplete. Please contact support.");
-          setLoading(false);
+          toast.success("Welcome back!");
+          navigate("/dashboard");
           return;
         }
         
-        // User has verified 2FA - require verification on every login
-        console.log("2FA is mandatory and enabled, showing verification dialog");
+        // User has verified 2FA - require verification
+        console.log("2FA is enabled, showing verification dialog");
         setPendingFactorId(verifiedFactor.id);
         setShow2FAVerify(true);
         setLoading(false);
