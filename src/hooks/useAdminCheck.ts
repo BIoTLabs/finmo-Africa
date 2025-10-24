@@ -22,13 +22,15 @@ export const useAdminCheck = () => {
         if (error) {
           console.error('Error checking admin status:', error);
           setIsAdmin(false);
-        } else {
-          setIsAdmin(data || false);
+          setLoading(false);
+          return;
         }
+        
+        setIsAdmin(data || false);
+        setLoading(false);
       } catch (error) {
         console.error('Error in admin check:', error);
         setIsAdmin(false);
-      } finally {
         setLoading(false);
       }
     };

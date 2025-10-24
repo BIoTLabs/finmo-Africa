@@ -38,7 +38,14 @@ const Admin = () => {
   const fetchBackendInfo = async () => {
     setLoading(true);
     try {
-      const { data, error } = await supabase.functions.invoke('get-backend-info');
+      // Add a timeout to prevent endless loading
+      const timeoutPromise = new Promise((_, reject) => 
+        setTimeout(() => reject(new Error('Request timeout')), 10000)
+      );
+      
+      const fetchPromise = supabase.functions.invoke('get-backend-info');
+      
+      const { data, error } = await Promise.race([fetchPromise, timeoutPromise]) as any;
 
       if (error) throw error;
 
@@ -98,6 +105,16 @@ const Admin = () => {
             Refresh
           </Button>
         </div>
+
+        {!backendInfo && !loading && (
+          <Card>
+            <CardContent className="py-10 text-center">
+              <p className="text-muted-foreground">
+                Click the refresh button to load backend information
+              </p>
+            </CardContent>
+          </Card>
+        )}
 
         {backendInfo && (
           <div className="space-y-6">
