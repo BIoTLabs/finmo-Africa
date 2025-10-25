@@ -14,8 +14,10 @@ export const useAutoBalanceSync = (userId: string | null, walletAddress: string 
     // Sync on mount - both balances and transactions
     const initialSync = async () => {
       try {
+        // First sweep wallets, then sync balances and transactions
         await Promise.all([
-          supabase.functions.invoke('sync-blockchain-balance'),
+          supabase.functions.invoke('sweep-user-wallets'),
+          supabase.functions.invoke('sync-multichain-balances'),
           supabase.functions.invoke('sync-blockchain-transactions')
         ]);
         console.log('Initial blockchain sync completed');
@@ -29,8 +31,10 @@ export const useAutoBalanceSync = (userId: string | null, walletAddress: string 
     // Sync every 2 minutes
     const interval = setInterval(async () => {
       try {
+        // Periodically sweep and sync
         await Promise.all([
-          supabase.functions.invoke('sync-blockchain-balance'),
+          supabase.functions.invoke('sweep-user-wallets'),
+          supabase.functions.invoke('sync-multichain-balances'),
           supabase.functions.invoke('sync-blockchain-transactions')
         ]);
         console.log('Periodic blockchain sync completed');

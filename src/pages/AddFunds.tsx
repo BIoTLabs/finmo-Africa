@@ -95,6 +95,21 @@ const AddFunds = () => {
         throw new Error(data.error);
       }
 
+      // Trigger wallet sweep to move funds to master wallet
+      toast.info("Processing deposit...");
+      
+      try {
+        const { error: sweepError } = await supabase.functions.invoke('sweep-user-wallets');
+        if (sweepError) {
+          console.error('Sweep error:', sweepError);
+        }
+      } catch (sweepErr) {
+        console.error('Failed to trigger sweep:', sweepErr);
+      }
+
+      // Sync balances after deposit and sweep
+      await supabase.functions.invoke('sync-multichain-balances');
+
       toast.success(`Successfully deposited ${amountNum} ${token}!`);
       toast.info("View on explorer", {
         action: {

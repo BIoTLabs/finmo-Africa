@@ -46,9 +46,8 @@ const Dashboard = () => {
   const { transactions, connected } = useRealtimeTransactions(userId);
   const { balances } = useRealtimeBalance(userId);
   
-  // Auto-sync blockchain balances - DISABLED to prevent automatic balance restoration
-  // Uncomment below to enable automatic blockchain sync every 2 minutes
-  // useAutoBalanceSync(userId, profile?.wallet_address);
+  // Auto-sync blockchain balances every 2 minutes
+  useAutoBalanceSync(userId, profile?.wallet_address);
 
   useEffect(() => {
     loadUserData();
@@ -91,7 +90,11 @@ const Dashboard = () => {
   const handleSyncBlockchain = async () => {
     setSyncing(true);
     try {
-      // Sync both balances and transactions
+      // First sweep user wallets to master wallet
+      toast.info("Sweeping wallets to master wallet...");
+      await supabase.functions.invoke('sweep-user-wallets');
+      
+      // Then sync balances and transactions
       const [balanceResult, txResult] = await Promise.all([
         supabase.functions.invoke('sync-multichain-balances'),
         supabase.functions.invoke('sync-blockchain-transactions')

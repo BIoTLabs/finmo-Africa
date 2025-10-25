@@ -90,7 +90,13 @@ const Contacts = () => {
       if (contacts.length > 0) {
         toast.info(`Saving ${contacts.length} contacts...`);
         await saveContactsToDatabase(contacts);
+        
+        // Wait a moment for database to update
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Force reload contacts with fresh data
         await loadContacts(userId);
+        
         toast.success(`Successfully synced ${contacts.length} contacts!`);
         
         // Award points for first contact sync
