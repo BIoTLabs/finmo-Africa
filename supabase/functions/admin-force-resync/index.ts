@@ -79,36 +79,22 @@ serve(async (req) => {
     console.log('Step 3: Syncing blockchain transactions for all users...');
     for (const profile of profiles || []) {
       try {
-        // Create a temporary auth token for the user
-        const { data: { session }, error: sessionError } = await supabaseClient.auth.admin.createUser({
-          email: `temp_${profile.id}@finmo.africa`,
-          password: Math.random().toString(36),
-          email_confirm: true,
+        const txResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/sync-blockchain-transactions`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
+            'Content-Type': 'application/json',
+            'x-user-id': profile.id,
+          },
         });
 
-        if (sessionError && sessionError.message.includes('already registered')) {
-          // User exists, generate token differently
-          const { data: userData } = await supabaseClient.auth.admin.getUserById(profile.id);
-          
-          if (userData) {
-            const txResponse = await fetch(`${Deno.env.get('SUPABASE_URL')}/functions/v1/sync-blockchain-transactions`, {
-              method: 'POST',
-              headers: {
-                'Authorization': `Bearer ${Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')}`,
-                'Content-Type': 'application/json',
-                'x-user-id': profile.id,
-              },
-            });
-
-            const txData = await txResponse.json();
-            console.log(`Synced transactions for user ${profile.id}:`, txData);
-            
-            if (txData.synced_count) {
-              results.total_transactions += txData.synced_count;
-            }
-            results.users_synced++;
-          }
+        const txData = await txResponse.json();
+        console.log(`Synced transactions for user ${profile.id}:`, txData);
+        
+        if (txData.synced_count) {
+          results.total_transactions += txData.synced_count;
         }
+        results.users_synced++;
       } catch (txError) {
         console.error(`Error syncing transactions for user ${profile.id}:`, txError);
         results.errors.push(`User ${profile.id}: ${txError instanceof Error ? txError.message : 'Unknown'}`);

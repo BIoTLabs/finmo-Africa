@@ -237,6 +237,48 @@ const Admin = () => {
               </CardContent>
             </Card>
 
+            {/* Initialize Custodial Wallets */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Shield className="h-5 w-5" />
+                  Initialize Custodial Wallets
+                </CardTitle>
+                <CardDescription>
+                  Generate encrypted private keys for all users and enable automatic fund sweeping
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  This will create custodial wallets for users who don't have them yet and trigger the first sweep to the master wallet.
+                </p>
+                <Button 
+                  onClick={async () => {
+                    toast({ title: 'Initializing wallets...', description: 'This may take a few minutes' });
+                    try {
+                      const { data, error } = await supabase.functions.invoke('admin-initialize-wallets');
+                      if (error) throw error;
+                      toast({ 
+                        title: 'Wallets initialized!', 
+                        description: `Created ${data.results.wallets_created} wallets. Sweep initiated.`
+                      });
+                    } catch (error: any) {
+                      toast({ 
+                        title: 'Initialization failed', 
+                        description: error.message,
+                        variant: 'destructive' 
+                      });
+                    }
+                  }}
+                  className="w-full"
+                  variant="default"
+                >
+                  <Shield className="h-4 w-4 mr-2" />
+                  Initialize Wallets & Sweep
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Backend Info Tabs */}
             <Tabs defaultValue="database" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
