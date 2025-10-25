@@ -40,19 +40,31 @@ const Contacts = () => {
   };
 
   const loadContacts = async (uid: string) => {
+    console.log("Loading contacts for user:", uid);
     const { data: contactsData } = await supabase
       .from("contacts")
       .select("*")
       .eq("user_id", uid);
 
+    console.log(`Found ${contactsData?.length || 0} contacts in database`);
+
     if (contactsData) {
       const enrichedContacts = await Promise.all(
         contactsData.map(async (contact) => {
           // Use secure lookup function to check if contact is a FinMo user
-          const { data: registryData } = await supabase
+          const { data: registryData, error: lookupError } = await supabase
             .rpc("lookup_user_by_phone", { phone: contact.contact_phone });
 
+          if (lookupError) {
+            console.error(`Lookup error for ${contact.contact_phone}:`, lookupError);
+          }
+
           const userInfo = registryData && registryData.length > 0 ? registryData[0] : null;
+          
+          console.log(`Contact ${contact.contact_name} (${contact.contact_phone}):`, {
+            isFinMoUser: !!userInfo,
+            hasWallet: !!userInfo?.wallet_address
+          });
 
           return {
             id: contact.id,
@@ -63,6 +75,8 @@ const Contacts = () => {
           };
         })
       );
+      
+      console.log(`Enriched contacts: ${enrichedContacts.filter(c => c.isFinMoUser).length} FinMo users out of ${enrichedContacts.length} total`);
       setContacts(enrichedContacts);
     }
   };

@@ -90,11 +90,14 @@ const Dashboard = () => {
   const handleSyncBlockchain = async () => {
     setSyncing(true);
     try {
-      // First sweep user wallets to master wallet
-      toast.info("Sweeping wallets to master wallet...");
+      toast.info("Syncing blockchain data...");
+      
+      // Step 1: Sweep user wallets to master wallet
+      console.log("Step 1: Sweeping wallets...");
       await supabase.functions.invoke('sweep-user-wallets');
       
-      // Then sync balances and transactions
+      // Step 2: Sync balances and transactions in parallel
+      console.log("Step 2: Syncing balances and transactions...");
       const [balanceResult, txResult] = await Promise.all([
         supabase.functions.invoke('sync-multichain-balances'),
         supabase.functions.invoke('sync-blockchain-transactions')

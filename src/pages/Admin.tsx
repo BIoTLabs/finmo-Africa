@@ -196,6 +196,47 @@ const Admin = () => {
               </CardContent>
             </Card>
 
+            {/* Blockchain & Contact Force Sync */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Database className="h-5 w-5" />
+                  Force Resync All Data
+                </CardTitle>
+                <CardDescription>
+                  Force sync blockchain transactions, wallet sweeps, and contact FinMo status for all users
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  This will scan the last 50,000 blocks (~36+ hours) for deposits, sweep wallets to master, sync balances, and update contact FinMo status.
+                </p>
+                <Button 
+                  onClick={async () => {
+                    toast({ title: 'Starting force resync...', description: 'This may take a few minutes' });
+                    try {
+                      const { data, error } = await supabase.functions.invoke('admin-force-resync');
+                      if (error) throw error;
+                      toast({ 
+                        title: 'Resync completed!', 
+                        description: `Synced ${data.results.users_synced} users, ${data.results.total_transactions} transactions, ${data.results.total_sweeps} sweeps`
+                      });
+                    } catch (error: any) {
+                      toast({ 
+                        title: 'Resync failed', 
+                        description: error.message,
+                        variant: 'destructive' 
+                      });
+                    }
+                  }}
+                  className="w-full"
+                >
+                  <RefreshCw className="h-4 w-4 mr-2" />
+                  Force Resync All
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Backend Info Tabs */}
             <Tabs defaultValue="database" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
