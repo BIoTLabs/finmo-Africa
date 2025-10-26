@@ -1,5 +1,17 @@
 project_id = "khqsseqrmanpcbeyvkdp"
 
+[functions.detect-deposits]
+verify_jwt = false
+
+[functions.sweep-user-wallets]
+verify_jwt = false
+
+[functions.admin-initialize-wallets]
+verify_jwt = false
+
+[functions.admin-force-resync]
+verify_jwt = false
+
 [functions.marketplace-release-escrow]
 verify_jwt = true
 
