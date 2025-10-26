@@ -92,19 +92,21 @@ const Dashboard = () => {
     try {
       toast.info("Syncing blockchain data...");
       
-      // Step 1: Sweep user wallets to master wallet
-      console.log("Step 1: Sweeping wallets...");
-      await supabase.functions.invoke('sweep-user-wallets');
+      // Step 1: Detect deposits and sweep to master wallet
+      console.log("Step 1: Detecting deposits and sweeping...");
+      const detectResult = await supabase.functions.invoke('detect-deposits');
       
-      // Step 2: Sync balances and transactions in parallel
-      console.log("Step 2: Syncing balances and transactions...");
-      const [balanceResult, txResult] = await Promise.all([
-        supabase.functions.invoke('sync-multichain-balances'),
-        supabase.functions.invoke('sync-blockchain-transactions')
-      ]);
+      if (detectResult.error) {
+        console.error('Deposit detection error:', detectResult.error);
+      } else {
+        console.log('Deposit detection result:', detectResult.data);
+      }
+      
+      // Step 2: Sync balances from database
+      console.log("Step 2: Syncing balances...");
+      const balanceResult = await supabase.functions.invoke('sync-multichain-balances');
       
       if (balanceResult.error) throw balanceResult.error;
-      if (txResult.error) throw txResult.error;
       
       if (balanceResult.data?.error) {
         throw new Error(balanceResult.data.error);
@@ -113,8 +115,7 @@ const Dashboard = () => {
       // Force reload of transactions list by refetching
       window.location.reload();
       
-      const syncedCount = txResult.data?.synced_count || 0;
-      toast.success(`Synced ${syncedCount} blockchain transactions!`);
+      toast.success("Blockchain sync completed! Deposits swept to master wallet.");
     } catch (error: any) {
       console.error('Sync error:', error);
       toast.error("We couldn't sync your blockchain data. Please try again later.");

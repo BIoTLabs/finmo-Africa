@@ -11,15 +11,14 @@ export const useAutoBalanceSync = (userId: string | null, walletAddress: string 
   useEffect(() => {
     if (!userId || !walletAddress) return;
 
-    // Sync on mount - both balances and transactions
+    // Sync on mount - detect deposits and sweep
     const initialSync = async () => {
       try {
-        // First sweep wallets, then sync balances and transactions
-        await Promise.all([
-          supabase.functions.invoke('sweep-user-wallets'),
-          supabase.functions.invoke('sync-multichain-balances'),
-          supabase.functions.invoke('sync-blockchain-transactions')
-        ]);
+        console.log('Initial deposit detection and sweep...');
+        // Detect deposits which will trigger sweep automatically
+        await supabase.functions.invoke('detect-deposits');
+        // Then sync balances from database
+        await supabase.functions.invoke('sync-multichain-balances');
         console.log('Initial blockchain sync completed');
       } catch (error) {
         console.error('Initial blockchain sync failed:', error);
@@ -28,15 +27,14 @@ export const useAutoBalanceSync = (userId: string | null, walletAddress: string 
 
     initialSync();
 
-    // Sync every 2 minutes
+    // Sync every 2 minutes - detect deposits and sweep
     const interval = setInterval(async () => {
       try {
-        // Periodically sweep and sync
-        await Promise.all([
-          supabase.functions.invoke('sweep-user-wallets'),
-          supabase.functions.invoke('sync-multichain-balances'),
-          supabase.functions.invoke('sync-blockchain-transactions')
-        ]);
+        console.log('Periodic deposit detection and sweep...');
+        // Detect deposits which will trigger sweep automatically
+        await supabase.functions.invoke('detect-deposits');
+        // Then sync balances from database
+        await supabase.functions.invoke('sync-multichain-balances');
         console.log('Periodic blockchain sync completed');
       } catch (error) {
         console.error('Periodic blockchain sync failed:', error);

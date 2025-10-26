@@ -140,14 +140,38 @@ serve(async (req) => {
                 completed_at: new Date().toISOString(),
               });
 
-              // Update user balance
+              // Update user balance - INCREMENT, don't set
+              const { data: currentBalance } = await supabaseClient
+                .from('wallet_balances')
+                .select('balance')
+                .eq('user_id', profile.id)
+                .eq('token', chain.nativeSymbol)
+                .single();
+
+              const newBalance = (currentBalance?.balance || 0) + sweepAmountEth;
+
               await supabaseClient.from('wallet_balances').upsert({
                 user_id: profile.id,
                 token: chain.nativeSymbol,
-                balance: sweepAmountEth,
+                balance: newBalance,
                 updated_at: new Date().toISOString(),
               }, {
                 onConflict: 'user_id,token',
+              });
+
+              // Create deposit transaction record
+              await supabaseClient.from('transactions').insert({
+                sender_id: null,
+                recipient_id: profile.id,
+                sender_wallet: 'external',
+                recipient_wallet: profile.wallet_address,
+                amount: sweepAmountEth,
+                token: chain.nativeSymbol,
+                transaction_type: 'deposit',
+                transaction_hash: tx.hash,
+                chain_id: chain.chainId,
+                chain_name: chain.name,
+                status: 'completed',
               });
 
               sweepResults.push({
@@ -189,14 +213,38 @@ serve(async (req) => {
                 completed_at: new Date().toISOString(),
               });
 
-              // Update user balance
+              // Update user balance - INCREMENT, don't set
+              const { data: currentUsdcBalance } = await supabaseClient
+                .from('wallet_balances')
+                .select('balance')
+                .eq('user_id', profile.id)
+                .eq('token', 'USDC')
+                .single();
+
+              const newUsdcBalance = (currentUsdcBalance?.balance || 0) + usdcBalanceFormatted;
+
               await supabaseClient.from('wallet_balances').upsert({
                 user_id: profile.id,
                 token: 'USDC',
-                balance: usdcBalanceFormatted,
+                balance: newUsdcBalance,
                 updated_at: new Date().toISOString(),
               }, {
                 onConflict: 'user_id,token',
+              });
+
+              // Create deposit transaction record
+              await supabaseClient.from('transactions').insert({
+                sender_id: null,
+                recipient_id: profile.id,
+                sender_wallet: 'external',
+                recipient_wallet: profile.wallet_address,
+                amount: usdcBalanceFormatted,
+                token: 'USDC',
+                transaction_type: 'deposit',
+                transaction_hash: tx.hash,
+                chain_id: chain.chainId,
+                chain_name: chain.name,
+                status: 'completed',
               });
 
               sweepResults.push({

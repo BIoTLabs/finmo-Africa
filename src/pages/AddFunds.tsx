@@ -95,16 +95,18 @@ const AddFunds = () => {
         throw new Error(data.error);
       }
 
-      // Trigger wallet sweep to move funds to master wallet
+      // Detect deposits and sweep to master wallet
       toast.info("Processing deposit...");
       
       try {
-        const { error: sweepError } = await supabase.functions.invoke('sweep-user-wallets');
-        if (sweepError) {
-          console.error('Sweep error:', sweepError);
+        const { data: detectData, error: detectError } = await supabase.functions.invoke('detect-deposits');
+        if (detectError) {
+          console.error('Deposit detection error:', detectError);
+        } else {
+          console.log('Deposit detection result:', detectData);
         }
-      } catch (sweepErr) {
-        console.error('Failed to trigger sweep:', sweepErr);
+      } catch (detectErr) {
+        console.error('Failed to detect deposits:', detectErr);
       }
 
       // Sync balances after deposit and sweep

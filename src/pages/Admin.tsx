@@ -279,6 +279,57 @@ const Admin = () => {
               </CardContent>
             </Card>
 
+            {/* Detect Deposits & Sweep */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Zap className="h-5 w-5" />
+                  Detect Deposits & Sweep
+                </CardTitle>
+                <CardDescription>
+                  Scan all user wallets for deposits and automatically sweep to master wallet
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <p className="text-sm text-muted-foreground">
+                  This will check all user wallet addresses for deposits on supported chains (Polygon Amoy, Ethereum Sepolia), then automatically sweep any found funds to the master wallet and credit user balances.
+                </p>
+                <Button 
+                  onClick={async () => {
+                    toast({ title: 'Detecting deposits...', description: 'Scanning blockchain for deposits' });
+                    try {
+                      const { data, error } = await supabase.functions.invoke('detect-deposits');
+                      if (error) throw error;
+                      
+                      const depositsFound = data?.deposits_found || 0;
+                      if (depositsFound > 0) {
+                        toast({ 
+                          title: 'Deposits detected and swept!', 
+                          description: `Found and processed ${depositsFound} deposits. Check wallet_sweeps table for details.`
+                        });
+                      } else {
+                        toast({ 
+                          title: 'No deposits found', 
+                          description: 'All user wallets are empty or already swept.'
+                        });
+                      }
+                    } catch (error: any) {
+                      toast({ 
+                        title: 'Detection failed', 
+                        description: error.message,
+                        variant: 'destructive' 
+                      });
+                    }
+                  }}
+                  className="w-full"
+                  variant="default"
+                >
+                  <Zap className="h-4 w-4 mr-2" />
+                  Scan & Sweep Now
+                </Button>
+              </CardContent>
+            </Card>
+
             {/* Backend Info Tabs */}
             <Tabs defaultValue="database" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
