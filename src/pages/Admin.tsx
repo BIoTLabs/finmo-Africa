@@ -201,29 +201,29 @@ const Admin = () => {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Database className="h-5 w-5" />
-                  Force Resync All Data
+                  Blockchain Data Sync
                 </CardTitle>
                 <CardDescription>
-                  Force sync blockchain transactions, wallet sweeps, and contact FinMo status for all users
+                  Sync blockchain transactions and contact FinMo status for all users
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  This will scan the last 50,000 blocks (~36+ hours) for deposits, sweep wallets to master, sync balances, and update contact FinMo status.
+                  This will scan the last 50,000 blocks (~36+ hours) for deposits and update contact FinMo status. Deposits are automatically swept to the master wallet.
                 </p>
                 <Button 
                   onClick={async () => {
-                    toast({ title: 'Starting force resync...', description: 'This may take a few minutes' });
+                    toast({ title: 'Starting blockchain sync...', description: 'This may take a few minutes' });
                     try {
                       const { data, error } = await supabase.functions.invoke('admin-force-resync');
                       if (error) throw error;
                       toast({ 
-                        title: 'Resync completed!', 
-                        description: `Synced ${data.results.users_synced} users, ${data.results.total_transactions} transactions, ${data.results.total_sweeps} sweeps`
+                        title: 'Sync completed!', 
+                        description: `Synced ${data.results.users_synced} users, ${data.results.total_transactions} transactions`
                       });
                     } catch (error: any) {
                       toast({ 
-                        title: 'Resync failed', 
+                        title: 'Sync failed', 
                         description: error.message,
                         variant: 'destructive' 
                       });
@@ -232,100 +232,52 @@ const Admin = () => {
                   className="w-full"
                 >
                   <RefreshCw className="h-4 w-4 mr-2" />
-                  Force Resync All
+                  Sync Blockchain Data
                 </Button>
               </CardContent>
             </Card>
 
-            {/* Initialize Custodial Wallets */}
+            {/* Wallet Status Monitor */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Shield className="h-5 w-5" />
-                  Initialize Custodial Wallets
+                  Custodial Wallet Status
                 </CardTitle>
                 <CardDescription>
-                  Generate encrypted private keys for all users and enable automatic fund sweeping
+                  Monitor automatic deposit detection and sweeping
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
                 <p className="text-sm text-muted-foreground">
-                  This will create custodial wallets for users who don't have them yet and trigger the first sweep to the master wallet.
+                  Deposits are automatically detected every 2 minutes and swept to the master wallet. User balances are updated in the database while funds are securely held in the master wallet.
                 </p>
                 <Button 
                   onClick={async () => {
-                    toast({ title: 'Initializing wallets...', description: 'This may take a few minutes' });
+                    toast({ title: 'Checking wallet status...', description: 'Fetching latest sweep records' });
                     try {
-                      const { data, error } = await supabase.functions.invoke('admin-initialize-wallets');
-                      if (error) throw error;
-                      toast({ 
-                        title: 'Wallets initialized!', 
-                        description: `Created ${data.results.wallets_created} wallets. Sweep initiated.`
-                      });
-                    } catch (error: any) {
-                      toast({ 
-                        title: 'Initialization failed', 
-                        description: error.message,
-                        variant: 'destructive' 
-                      });
-                    }
-                  }}
-                  className="w-full"
-                  variant="default"
-                >
-                  <Shield className="h-4 w-4 mr-2" />
-                  Initialize Wallets & Sweep
-                </Button>
-              </CardContent>
-            </Card>
-
-            {/* Detect Deposits & Sweep */}
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Zap className="h-5 w-5" />
-                  Detect Deposits & Sweep
-                </CardTitle>
-                <CardDescription>
-                  Scan all user wallets for deposits and automatically sweep to master wallet
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                <p className="text-sm text-muted-foreground">
-                  This will check all user wallet addresses for deposits on supported chains (Polygon Amoy, Ethereum Sepolia), then automatically sweep any found funds to the master wallet and credit user balances.
-                </p>
-                <Button 
-                  onClick={async () => {
-                    toast({ title: 'Detecting deposits...', description: 'Scanning blockchain for deposits' });
-                    try {
-                      const { data, error } = await supabase.functions.invoke('detect-deposits');
+                      const { data, error } = await supabase.from('wallet_sweeps').select('*').order('created_at', { ascending: false }).limit(10);
                       if (error) throw error;
                       
-                      const depositsFound = data?.deposits_found || 0;
-                      if (depositsFound > 0) {
-                        toast({ 
-                          title: 'Deposits detected and swept!', 
-                          description: `Found and processed ${depositsFound} deposits. Check wallet_sweeps table for details.`
-                        });
-                      } else {
-                        toast({ 
-                          title: 'No deposits found', 
-                          description: 'All user wallets are empty or already swept.'
-                        });
-                      }
+                      const recentSweeps = data?.length || 0;
+                      const lastSweep = data?.[0]?.created_at;
+                      toast({ 
+                        title: 'Wallet Status', 
+                        description: `${recentSweeps} recent sweeps. Last sweep: ${lastSweep ? new Date(lastSweep).toLocaleString() : 'Never'}`
+                      });
                     } catch (error: any) {
                       toast({ 
-                        title: 'Detection failed', 
+                        title: 'Status check failed', 
                         description: error.message,
                         variant: 'destructive' 
                       });
                     }
                   }}
                   className="w-full"
-                  variant="default"
+                  variant="outline"
                 >
-                  <Zap className="h-4 w-4 mr-2" />
-                  Scan & Sweep Now
+                  <Shield className="h-4 w-4 mr-2" />
+                  Check Wallet Status
                 </Button>
               </CardContent>
             </Card>

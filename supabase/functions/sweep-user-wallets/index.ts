@@ -160,11 +160,11 @@ serve(async (req) => {
               });
 
               // Create deposit transaction record
-              await supabaseClient.from('transactions').insert({
-                sender_id: null,
+              const { error: txError } = await supabaseClient.from('transactions').insert({
+                sender_id: profile.id,
                 recipient_id: profile.id,
-                sender_wallet: 'external',
-                recipient_wallet: profile.wallet_address,
+                sender_wallet: profile.wallet_address,
+                recipient_wallet: masterWalletAddress,
                 amount: sweepAmountEth,
                 token: chain.nativeSymbol,
                 transaction_type: 'deposit',
@@ -173,6 +173,10 @@ serve(async (req) => {
                 chain_name: chain.name,
                 status: 'completed',
               });
+
+              if (txError) {
+                console.error('Failed to create deposit transaction:', txError);
+              }
 
               sweepResults.push({
                 user_id: profile.id,
@@ -233,11 +237,11 @@ serve(async (req) => {
               });
 
               // Create deposit transaction record
-              await supabaseClient.from('transactions').insert({
-                sender_id: null,
+              const { error: usdcTxError } = await supabaseClient.from('transactions').insert({
+                sender_id: profile.id,
                 recipient_id: profile.id,
-                sender_wallet: 'external',
-                recipient_wallet: profile.wallet_address,
+                sender_wallet: profile.wallet_address,
+                recipient_wallet: masterWalletAddress,
                 amount: usdcBalanceFormatted,
                 token: 'USDC',
                 transaction_type: 'deposit',
@@ -246,6 +250,10 @@ serve(async (req) => {
                 chain_name: chain.name,
                 status: 'completed',
               });
+
+              if (usdcTxError) {
+                console.error('Failed to create USDC deposit transaction:', usdcTxError);
+              }
 
               sweepResults.push({
                 user_id: profile.id,

@@ -90,32 +90,12 @@ const Dashboard = () => {
   const handleSyncBlockchain = async () => {
     setSyncing(true);
     try {
-      toast.info("Syncing blockchain data...");
+      toast.info("Refreshing balances...");
       
-      // Step 1: Detect deposits and sweep to master wallet
-      console.log("Step 1: Detecting deposits and sweeping...");
-      const detectResult = await supabase.functions.invoke('detect-deposits');
-      
-      if (detectResult.error) {
-        console.error('Deposit detection error:', detectResult.error);
-      } else {
-        console.log('Deposit detection result:', detectResult.data);
-      }
-      
-      // Step 2: Sync balances from database
-      console.log("Step 2: Syncing balances...");
-      const balanceResult = await supabase.functions.invoke('sync-multichain-balances');
-      
-      if (balanceResult.error) throw balanceResult.error;
-      
-      if (balanceResult.data?.error) {
-        throw new Error(balanceResult.data.error);
-      }
-
-      // Force reload of transactions list by refetching
+      // Simply reload the page to refresh all data
       window.location.reload();
       
-      toast.success("Blockchain sync completed! Deposits swept to master wallet.");
+      toast.success("Balance refresh completed!");
     } catch (error: any) {
       console.error('Sync error:', error);
       toast.error("We couldn't sync your blockchain data. Please try again later.");
@@ -314,8 +294,8 @@ const Dashboard = () => {
             const isReceived = tx.recipient_id === profile?.id;
             const isInternal = tx.transaction_type === 'internal';
             const isDeposit = tx.transaction_type === 'deposit';
-            const isWithdrawal = tx.transaction_type === 'external' || tx.transaction_type === 'withdrawal';
-            const isBlockchain = isDeposit || isWithdrawal;
+            const isWithdrawal = tx.transaction_type === 'withdrawal' || (tx.transaction_type === 'external' && !isReceived);
+            const isBlockchain = isDeposit || isWithdrawal || tx.transaction_type === 'external';
             
             return (
               <Card 

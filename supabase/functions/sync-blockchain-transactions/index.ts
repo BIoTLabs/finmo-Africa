@@ -153,6 +153,27 @@ serve(async (req) => {
       // For incoming transactions, sender_id should be null (external)
       // For outgoing transactions, sender_id is the user
       // Use 'external' as transaction_type for all blockchain transactions
+      // Check if this is a sweep transaction (to master wallet)
+      const isSweep = to.toLowerCase() === '0xc56200868ED6B741A9958f4AA8cEC3CEDA2D22d6'.toLowerCase();
+      
+      // Skip sweep transactions - they're handled by the sweep function
+      if (isSweep && !isIncoming) {
+        console.log(`Skipping sweep transaction ${txHash} - handled by sweep function`);
+        continue;
+      }
+      
+      // Check if transaction already exists
+      const { data: existingTx } = await supabaseClient
+        .from('transactions')
+        .select('id')
+        .eq('transaction_hash', txHash)
+        .single();
+      
+      if (existingTx) {
+        console.log(`Transaction ${txHash} already exists, skipping`);
+        continue;
+      }
+
       const { error: insertError } = await supabaseClient
         .from('transactions')
         .insert({
@@ -162,7 +183,7 @@ serve(async (req) => {
           recipient_wallet: to,
           amount: amount,
           token: 'USDC',
-          transaction_type: 'external',
+          transaction_type: isIncoming ? 'deposit' : 'withdrawal',
           status: 'completed',
           transaction_hash: txHash,
           chain_id: 80002,
