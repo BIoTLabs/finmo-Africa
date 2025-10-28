@@ -906,6 +906,9 @@ export type Database = {
       }
       profiles: {
         Row: {
+          aa_wallet_address: string | null
+          aa_wallet_deployed: boolean | null
+          aa_wallet_salt: string | null
           avatar_url: string | null
           bio: string | null
           created_at: string
@@ -920,6 +923,9 @@ export type Database = {
           wallet_private_key_encrypted: string | null
         }
         Insert: {
+          aa_wallet_address?: string | null
+          aa_wallet_deployed?: boolean | null
+          aa_wallet_salt?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
@@ -934,6 +940,9 @@ export type Database = {
           wallet_private_key_encrypted?: string | null
         }
         Update: {
+          aa_wallet_address?: string | null
+          aa_wallet_deployed?: boolean | null
+          aa_wallet_salt?: string | null
           avatar_url?: string | null
           bio?: string | null
           created_at?: string
