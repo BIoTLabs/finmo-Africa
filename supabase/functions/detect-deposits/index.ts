@@ -169,8 +169,6 @@ serve(async (req) => {
               to: walletInfo.wallet_address,
               value: gasAmount,
             });
-
-            await tx.wait();
             
             console.log(`Sent 0.01 ${walletInfo.chain.nativeSymbol} to ${walletInfo.wallet_address}: ${tx.hash}`);
             

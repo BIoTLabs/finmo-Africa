@@ -77,7 +77,7 @@ serve(async (req) => {
     const provider = new ethers.JsonRpcProvider(chainRpcUrl);
     const factory = new ethers.Contract(factoryAddress, SIMPLE_ACCOUNT_FACTORY_ABI, provider);
     
-    const scwAddress = await factory.getAddress(masterWallet.address, salt);
+    const scwAddress = await factory.getFunction('getAddress')(masterWallet.address, salt);
 
     console.log(`Generated AA wallet address: ${scwAddress} (counterfactual - not yet deployed)`);
 
@@ -116,9 +116,10 @@ serve(async (req) => {
 
   } catch (error) {
     console.error('Error generating AA wallet:', error);
+    const errorMessage = error instanceof Error ? error.message : 'Unknown error';
     return new Response(
       JSON.stringify({ 
-        error: error.message,
+        error: errorMessage,
         details: 'Failed to generate Account Abstraction wallet'
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' }, status: 400 }
