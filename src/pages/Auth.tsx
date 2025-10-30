@@ -208,7 +208,6 @@ const Auth = () => {
                         id="phone"
                         type="tel"
                         inputMode="numeric"
-                        pattern="[0-9]*"
                         placeholder={phoneValidation.rules.example.substring(countryCode.length)}
                         value={phoneValidation.formatted}
                         onChange={(e) => {
