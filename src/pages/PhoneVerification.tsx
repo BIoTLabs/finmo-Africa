@@ -55,91 +55,51 @@ const PhoneVerification = () => {
         return;
       }
 
-      if (isLogin) {
-        // Login flow - sign in with verified phone
-        const { data: authData, error: authError } = await supabase.auth.signInWithOtp({
-          phone: phoneNumber,
-          options: {
-            shouldCreateUser: false
-          }
-        });
+      // Signup flow - create new account
+      if (!email) {
+        toast.error("Email is required for account creation");
+        navigate("/auth");
+        return;
+      }
 
-        if (authError) {
-          // If direct OTP login fails, try to find user and create a session
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, email')
-            .eq('phone_number', phoneNumber)
-            .single();
+      const password = location.state?.password;
+      if (!password) {
+        toast.error("Password is required");
+        navigate("/auth");
+        return;
+      }
 
-          if (profileError || !profileData || !profileData.email) {
-            toast.error("Account not found. Please sign up first.");
-            navigate("/auth");
-            return;
-          }
-
-          // Generate a temporary password and sign in
-          const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
-          
-          // Try to sign in with email (user might have existing password)
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: profileData.email,
-            password: tempPassword, // This will fail but that's ok
-          });
-
-          // If that fails, we'll show a different message
-          if (signInError) {
-            toast.error("Unable to sign in. Please use the forgot password option.");
-            navigate("/auth");
-            return;
-          }
-        }
-
-        toast.success("Welcome back!");
-        navigate("/dashboard");
-      } else {
-        // Signup flow - create new account
-        if (!email) {
-          toast.error("Email is required for account creation");
-          navigate("/auth");
-          return;
-        }
-
-        // Generate a secure random password for the account
-        const generatedPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
-
-        const { data: signupData, error: signupError } = await supabase.auth.signUp({
-          email: email,
-          password: generatedPassword,
-          options: {
-            data: {
-              phone_number: phoneNumber,
-              phone_verified_at: new Date().toISOString(),
-            },
-            emailRedirectTo: `${window.location.origin}/dashboard`
+      const { data: signupData, error: signupError } = await supabase.auth.signUp({
+        email: email,
+        password: password,
+        options: {
+          data: {
+            phone_number: phoneNumber,
+            phone_verified_at: new Date().toISOString(),
           },
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        },
+      });
+
+      if (signupError) {
+        toast.error(signupError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (signupData.user) {
+        // Auto sign in after signup
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: email,
+          password: password,
         });
 
-        if (signupError) {
-          toast.error(signupError.message);
-          setLoading(false);
-          return;
-        }
-
-        if (signupData.user) {
-          // Auto sign in after signup
-          const { error: signInError } = await supabase.auth.signInWithPassword({
-            email: email,
-            password: generatedPassword,
-          });
-
-          if (signInError) {
-            toast.success("Account created! Please sign in.");
-            navigate("/auth");
-          } else {
-            toast.success("Account created successfully!");
-            navigate("/dashboard");
-          }
+        if (signInError) {
+          toast.success("Account created! Please sign in.");
+          navigate("/auth");
+        } else {
+          toast.success("Account created successfully!");
+          navigate("/dashboard");
         }
       }
     } catch (error: any) {

@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Smartphone, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft, Mail, Check, AlertCircle } from "lucide-react";
+import { Smartphone, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft, Mail, Check, AlertCircle, Lock } from "lucide-react";
 import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -28,6 +28,7 @@ const Auth = () => {
   const [countryCode, setCountryCode] = useState("+234");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
@@ -98,26 +99,55 @@ const Auth = () => {
       const fullPhone = phoneValidation.normalized || `${countryCode}${phoneNumber}`;
       
       if (isLogin) {
-        // Login flow - send OTP to phone
-        console.log("Attempting login - sending OTP to:", fullPhone);
-        
-        const { data: otpData, error: otpError } = await supabase.functions.invoke('verify-phone-otp', {
-          body: { phoneNumber: fullPhone }
-        });
-
-        if (otpError || !otpData.success) {
-          console.error("OTP send error:", otpError);
-          toast.error(otpData?.error || "Failed to send verification code. Please check your phone number.");
+        // Login flow - use phone number and password
+        if (!password || password.length < 6) {
+          toast.error("Please enter your password");
           setLoading(false);
           return;
         }
 
-        toast.success("Verification code sent to your phone");
-        navigate("/phone-verification", { state: { phoneNumber: fullPhone, isLogin: true } });
+        console.log("Attempting login with phone:", fullPhone);
+        
+        // Get user's email from profile using phone number
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('email')
+          .eq('phone_number', fullPhone)
+          .single();
+
+        if (profileError || !profileData || !profileData.email) {
+          toast.error("Account not found. Please check your phone number or sign up.");
+          setLoading(false);
+          return;
+        }
+
+        // Sign in with email and password
+        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+          email: profileData.email,
+          password: password,
+        });
+
+        if (signInError) {
+          console.error("Sign in error:", signInError);
+          toast.error("Invalid password. Please try again.");
+          setLoading(false);
+          return;
+        }
+
+        if (signInData.session) {
+          toast.success("Welcome back!");
+          navigate("/dashboard");
+        }
       } else {
-        // Signup flow - validate email
+        // Signup flow - validate email and send OTP
         if (!email || !email.includes('@')) {
           toast.error("Please enter a valid email address for account recovery");
+          setLoading(false);
+          return;
+        }
+
+        if (!password || password.length < 6) {
+          toast.error("Password must be at least 6 characters");
           setLoading(false);
           return;
         }
@@ -137,7 +167,7 @@ const Auth = () => {
         }
 
         toast.success("Verification code sent to your phone");
-        navigate("/phone-verification", { state: { phoneNumber: fullPhone, email, isLogin: false } });
+        navigate("/phone-verification", { state: { phoneNumber: fullPhone, email, password, isLogin: false } });
       }
     } catch (error: any) {
       console.error("Auth error:", error);
@@ -263,12 +293,28 @@ const Auth = () => {
                 </div>
               )}
 
+              <div className="space-y-2">
+                <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
+                  <Lock className="w-4 h-4" />
+                  Password
+                </Label>
+                <Input
+                  id="password"
+                  type="password"
+                  placeholder="••••••••"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                  minLength={6}
+                />
+              </div>
+
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-11 text-base font-semibold"
-                disabled={loading || (!isLogin && !phoneValidation.isValid)}
+                disabled={loading || !phoneValidation.isValid}
               >
-                {loading ? "Processing..." : (isLogin ? "Sign In" : "Create Account")}
+                {loading ? (isLogin ? "Signing in..." : "Sending code...") : (isLogin ? "Sign In" : "Create Account")}
               </Button>
 
               <div className="space-y-2">
