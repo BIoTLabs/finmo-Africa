@@ -4,18 +4,31 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { ArrowLeft, Mail } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { ArrowLeft, Mail, Phone, Lock } from "lucide-react";
 import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import { PhoneVerificationDialog } from "@/components/PhoneVerificationDialog";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
   const [email, setEmail] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [loading, setLoading] = useState(false);
   const [sent, setSent] = useState(false);
+  const [recoveryMethod, setRecoveryMethod] = useState<"email" | "phone">("email");
+  
+  // Phone OTP states
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
+  const [phoneVerified, setPhoneVerified] = useState(false);
+  const [verifiedPhone, setVerifiedPhone] = useState("");
+  
+  // Password reset after phone verification
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleEmailSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
 
@@ -35,6 +48,96 @@ const ForgotPassword = () => {
       toast.error(error.message || "Failed to send reset email");
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      // Send OTP to phone
+      const { error } = await supabase.functions.invoke('verify-phone-otp', {
+        body: { phoneNumber }
+      });
+
+      if (error) throw error;
+
+      setShowPhoneVerification(true);
+      toast.success("Verification code sent to your phone!");
+    } catch (error: any) {
+      console.error("Phone verification error:", error);
+      toast.error(error.message || "Failed to send verification code");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handlePhoneVerify = async (otp: string): Promise<boolean> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('confirm-phone-otp', {
+        body: { phoneNumber, otp }
+      });
+
+      if (error) throw error;
+
+      setPhoneVerified(true);
+      setVerifiedPhone(phoneNumber);
+      setShowPhoneVerification(false);
+      toast.success("Phone verified! Now set your new password.");
+      return true;
+    } catch (error: any) {
+      console.error("OTP verification error:", error);
+      throw error;
+    }
+  };
+
+  const handlePasswordReset = async (e: React.FormEvent) => {
+    e.preventDefault();
+
+    if (newPassword !== confirmPassword) {
+      toast.error("Passwords do not match");
+      return;
+    }
+
+    if (newPassword.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Use edge function to reset password
+      const { error } = await supabase.functions.invoke('reset-password-phone', {
+        body: { 
+          phoneNumber: verifiedPhone, 
+          newPassword 
+        }
+      });
+
+      if (error) throw error;
+
+      toast.success("Password reset successfully!");
+      navigate("/auth");
+    } catch (error: any) {
+      console.error("Password reset error:", error);
+      toast.error(error.message || "Failed to reset password");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResendOTP = async () => {
+    try {
+      const { error } = await supabase.functions.invoke('verify-phone-otp', {
+        body: { phoneNumber }
+      });
+
+      if (error) throw error;
+      toast.success("Verification code resent!");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to resend code");
     }
   };
 
@@ -67,27 +170,135 @@ const ForgotPassword = () => {
               <CardTitle className="text-2xl">Forgot Password</CardTitle>
             </div>
             <CardDescription>
-              {sent 
-                ? "Check your email for a password reset link"
-                : "Enter your email to receive a password reset link"}
+              Choose your recovery method
             </CardDescription>
           </CardHeader>
 
           <CardContent className="space-y-4">
-            {!sent ? (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
+            {!phoneVerified ? (
+              <Tabs value={recoveryMethod} onValueChange={(v) => setRecoveryMethod(v as "email" | "phone")}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="email" className="flex items-center gap-2">
                     <Mail className="w-4 h-4" />
-                    Email Address
+                    Email
+                  </TabsTrigger>
+                  <TabsTrigger value="phone" className="flex items-center gap-2">
+                    <Phone className="w-4 h-4" />
+                    Phone
+                  </TabsTrigger>
+                </TabsList>
+
+                <TabsContent value="email" className="space-y-4 mt-4">
+                  {!sent ? (
+                    <form onSubmit={handleEmailSubmit} className="space-y-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
+                          <Mail className="w-4 h-4" />
+                          Email Address
+                        </Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="your@email.com"
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          required
+                        />
+                      </div>
+
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-11 text-base font-semibold"
+                        disabled={loading}
+                      >
+                        {loading ? "Sending..." : "Send Reset Link"}
+                      </Button>
+                    </form>
+                  ) : (
+                    <div className="space-y-4">
+                      <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
+                        <p className="text-sm text-center">
+                          We've sent a password reset link to <strong>{email}</strong>
+                        </p>
+                      </div>
+                      <Button
+                        onClick={() => navigate("/auth")}
+                        variant="outline"
+                        className="w-full"
+                      >
+                        Back to Sign In
+                      </Button>
+                    </div>
+                  )}
+                </TabsContent>
+
+                <TabsContent value="phone" className="space-y-4 mt-4">
+                  <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
+                        <Phone className="w-4 h-4" />
+                        Phone Number
+                      </Label>
+                      <Input
+                        id="phone"
+                        type="tel"
+                        placeholder="08067386529"
+                        value={phoneNumber}
+                        onChange={(e) => setPhoneNumber(e.target.value)}
+                        required
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Enter your registered phone number
+                      </p>
+                    </div>
+
+                    <Button 
+                      type="submit" 
+                      className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-11 text-base font-semibold"
+                      disabled={loading}
+                    >
+                      {loading ? "Sending..." : "Send Verification Code"}
+                    </Button>
+                  </form>
+                </TabsContent>
+              </Tabs>
+            ) : (
+              <form onSubmit={handlePasswordReset} className="space-y-4">
+                <div className="p-4 bg-success/10 border border-success/20 rounded-lg mb-4">
+                  <p className="text-sm text-center">
+                    Phone verified: <strong>{verifiedPhone}</strong>
+                  </p>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newPassword" className="flex items-center gap-2 text-sm font-medium">
+                    <Lock className="w-4 h-4" />
+                    New Password
                   </Label>
                   <Input
-                    id="email"
-                    type="email"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    id="newPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
                     required
+                    minLength={6}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="confirmPassword" className="flex items-center gap-2 text-sm font-medium">
+                    <Lock className="w-4 h-4" />
+                    Confirm Password
+                  </Label>
+                  <Input
+                    id="confirmPassword"
+                    type="password"
+                    placeholder="••••••••"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    minLength={6}
                   />
                 </div>
 
@@ -96,27 +307,20 @@ const ForgotPassword = () => {
                   className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-11 text-base font-semibold"
                   disabled={loading}
                 >
-                  {loading ? "Sending..." : "Send Reset Link"}
+                  {loading ? "Resetting..." : "Reset Password"}
                 </Button>
               </form>
-            ) : (
-              <div className="space-y-4">
-                <div className="p-4 bg-success/10 border border-success/20 rounded-lg">
-                  <p className="text-sm text-center">
-                    We've sent a password reset link to <strong>{email}</strong>
-                  </p>
-                </div>
-                <Button
-                  onClick={() => navigate("/auth")}
-                  variant="outline"
-                  className="w-full"
-                >
-                  Back to Sign In
-                </Button>
-              </div>
             )}
           </CardContent>
         </Card>
+
+        <PhoneVerificationDialog
+          open={showPhoneVerification}
+          onCancel={() => setShowPhoneVerification(false)}
+          onVerify={handlePhoneVerify}
+          phoneNumber={phoneNumber}
+          onResend={handleResendOTP}
+        />
       </div>
     </div>
   );
