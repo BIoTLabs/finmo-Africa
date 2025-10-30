@@ -18,12 +18,14 @@ const PhoneVerification = () => {
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
   const [isLogin, setIsLogin] = useState(true);
+  const [useOTP, setUseOTP] = useState(false);
 
   useEffect(() => {
     // Get data from location state
     const phone = location.state?.phoneNumber;
     const userEmail = location.state?.email;
     const loginMode = location.state?.isLogin;
+    const otpMode = location.state?.useOTP;
     
     if (!phone) {
       toast.error("No phone number provided");
@@ -34,6 +36,7 @@ const PhoneVerification = () => {
     setPhoneNumber(phone);
     setEmail(userEmail || "");
     setIsLogin(loginMode !== false);
+    setUseOTP(otpMode === true);
   }, [location, navigate]);
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -55,52 +58,104 @@ const PhoneVerification = () => {
         return;
       }
 
-      // Signup flow - create new account
-      if (!email) {
-        toast.error("Email is required for account creation");
-        navigate("/auth");
-        return;
-      }
+      if (isLogin && useOTP) {
+        // OTP Login flow - sign in user with verified phone
+        if (!email) {
+          toast.error("Account information missing");
+          navigate("/auth");
+          return;
+        }
 
-      const password = location.state?.password;
-      if (!password) {
-        toast.error("Password is required");
-        navigate("/auth");
-        return;
-      }
+        // Get user profile to verify account exists
+        const { data: profileData, error: profileError } = await supabase
+          .from('profiles')
+          .select('id, email')
+          .eq('phone_number', phoneNumber)
+          .eq('email', email)
+          .maybeSingle();
 
-      const { data: signupData, error: signupError } = await supabase.auth.signUp({
-        email: email,
-        password: password,
-        options: {
-          data: {
-            phone_number: phoneNumber,
-            phone_verified_at: new Date().toISOString(),
-          },
-          emailRedirectTo: `${window.location.origin}/dashboard`
-        },
-      });
+        if (profileError) {
+          console.error("Profile lookup error:", profileError);
+          toast.error("Error verifying account");
+          navigate("/auth");
+          return;
+        }
 
-      if (signupError) {
-        toast.error(signupError.message);
-        setLoading(false);
-        return;
-      }
+        if (!profileData) {
+          toast.error("Account not found");
+          navigate("/auth");
+          return;
+        }
 
-      if (signupData.user) {
-        // Auto sign in after signup
-        const { error: signInError } = await supabase.auth.signInWithPassword({
+        // Create a magic link session for the verified user
+        const { error: signInError } = await supabase.auth.signInWithOtp({
           email: email,
-          password: password,
+          options: {
+            shouldCreateUser: false,
+          }
         });
 
         if (signInError) {
-          toast.success("Account created! Please sign in.");
+          console.error("Sign in error:", signInError);
+          toast.error("Unable to complete login. Please try password login.");
           navigate("/auth");
-        } else {
-          toast.success("Account created successfully!");
-          navigate("/dashboard");
+          return;
         }
+
+        toast.success("Welcome back!");
+        navigate("/dashboard");
+      } else if (!isLogin) {
+        // Signup flow - create new account
+        if (!email) {
+          toast.error("Email is required for account creation");
+          navigate("/auth");
+          return;
+        }
+
+        const password = location.state?.password;
+        if (!password) {
+          toast.error("Password is required");
+          navigate("/auth");
+          return;
+        }
+
+        const { data: signupData, error: signupError } = await supabase.auth.signUp({
+          email: email,
+          password: password,
+          options: {
+            data: {
+              phone_number: phoneNumber,
+              phone_verified_at: new Date().toISOString(),
+            },
+            emailRedirectTo: `${window.location.origin}/dashboard`
+          },
+        });
+
+        if (signupError) {
+          toast.error(signupError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (signupData.user) {
+          // Auto sign in after signup
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: password,
+          });
+
+          if (signInError) {
+            toast.success("Account created! Please sign in.");
+            navigate("/auth");
+          } else {
+            toast.success("Account created successfully!");
+            navigate("/dashboard");
+          }
+        }
+      } else {
+        // This shouldn't happen, but redirect to auth just in case
+        toast.error("Invalid verification flow");
+        navigate("/auth");
       }
     } catch (error: any) {
       console.error("Verification error:", error);
@@ -151,7 +206,11 @@ const PhoneVerification = () => {
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center">Enter Verification Code</CardTitle>
             <CardDescription className="text-center">
-              We sent a 6-digit code to {phoneNumber}
+              {isLogin && useOTP ? (
+                <>We sent a 6-digit code to {phoneNumber} to verify your login</>
+              ) : (
+                <>We sent a 6-digit code to {phoneNumber}</>
+              )}
               {!isLogin && email && (
                 <div className="mt-2 text-xs">
                   Account email: {email}

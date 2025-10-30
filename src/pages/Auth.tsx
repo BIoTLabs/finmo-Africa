@@ -25,6 +25,7 @@ const COUNTRY_CODES = [
 const Auth = () => {
   const navigate = useNavigate();
   const [isLogin, setIsLogin] = useState(true);
+  const [useOTP, setUseOTP] = useState(false);
   const [countryCode, setCountryCode] = useState("+234");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
@@ -99,44 +100,98 @@ const Auth = () => {
       const fullPhone = phoneValidation.normalized || `${countryCode}${phoneNumber}`;
       
       if (isLogin) {
-        // Login flow - use phone number and password
-        if (!password || password.length < 6) {
-          toast.error("Please enter your password");
-          setLoading(false);
-          return;
-        }
+        if (useOTP) {
+          // Login with OTP - send verification code
+          console.log("Attempting OTP login - sending code to:", fullPhone);
+          
+          // Verify user exists first
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .eq('phone_number', fullPhone)
+            .maybeSingle();
 
-        console.log("Attempting login with phone:", fullPhone);
-        
-        // Get user's email from profile using phone number
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('email')
-          .eq('phone_number', fullPhone)
-          .single();
+          if (profileError) {
+            console.error("Profile lookup error:", profileError);
+            toast.error("Error checking account. Please try again.");
+            setLoading(false);
+            return;
+          }
 
-        if (profileError || !profileData || !profileData.email) {
-          toast.error("Account not found. Please check your phone number or sign up.");
-          setLoading(false);
-          return;
-        }
+          if (!profileData) {
+            toast.error("Account not found. Please check your phone number or sign up.");
+            setLoading(false);
+            return;
+          }
 
-        // Sign in with email and password
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: profileData.email,
-          password: password,
-        });
+          // Send OTP
+          const { data: otpData, error: otpError } = await supabase.functions.invoke('verify-phone-otp', {
+            body: { phoneNumber: fullPhone }
+          });
 
-        if (signInError) {
-          console.error("Sign in error:", signInError);
-          toast.error("Invalid password. Please try again.");
-          setLoading(false);
-          return;
-        }
+          if (otpError || !otpData.success) {
+            console.error("OTP send error:", otpError);
+            toast.error(otpData?.error || "Failed to send verification code");
+            setLoading(false);
+            return;
+          }
 
-        if (signInData.session) {
-          toast.success("Welcome back!");
-          navigate("/dashboard");
+          toast.success("Verification code sent to your phone");
+          navigate("/phone-verification", { 
+            state: { 
+              phoneNumber: fullPhone, 
+              email: profileData.email,
+              isLogin: true,
+              useOTP: true
+            } 
+          });
+        } else {
+          // Login with password
+          if (!password || password.length < 6) {
+            toast.error("Please enter your password");
+            setLoading(false);
+            return;
+          }
+
+          console.log("Attempting password login with phone:", fullPhone);
+          
+          // Get user's email from profile using phone number
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('email')
+            .eq('phone_number', fullPhone)
+            .maybeSingle();
+
+          if (profileError) {
+            console.error("Profile lookup error:", profileError);
+            toast.error("Error checking account. Please try again.");
+            setLoading(false);
+            return;
+          }
+
+          if (!profileData || !profileData.email) {
+            toast.error("Account not found. Please check your phone number or sign up.");
+            setLoading(false);
+            return;
+          }
+
+          // Sign in with email and password
+          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
+            email: profileData.email,
+            password: password,
+          });
+
+          if (signInError) {
+            console.error("Sign in error:", signInError);
+            toast.error("Invalid password. Please try again or use OTP login.");
+            setLoading(false);
+            return;
+          }
+
+          if (signInData.session) {
+            toast.success("Welcome back!");
+            navigate("/dashboard");
+          }
         }
       } else {
         // Signup flow - validate email and send OTP
@@ -167,7 +222,15 @@ const Auth = () => {
         }
 
         toast.success("Verification code sent to your phone");
-        navigate("/phone-verification", { state: { phoneNumber: fullPhone, email, password, isLogin: false } });
+        navigate("/phone-verification", { 
+          state: { 
+            phoneNumber: fullPhone, 
+            email, 
+            password, 
+            isLogin: false,
+            useOTP: false
+          } 
+        });
       }
     } catch (error: any) {
       console.error("Auth error:", error);
@@ -293,28 +356,60 @@ const Auth = () => {
                 </div>
               )}
 
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
-                  <Lock className="w-4 h-4" />
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
+              {(isLogin && !useOTP) || !isLogin ? (
+                <div className="space-y-2">
+                  <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
+                    <Lock className="w-4 h-4" />
+                    Password
+                  </Label>
+                  <Input
+                    id="password"
+                    type="password"
+                    placeholder="••••••••"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    required
+                    minLength={6}
+                  />
+                </div>
+              ) : null}
+
+              {isLogin && (
+                <div className="flex items-center justify-between">
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="text-sm text-primary p-0 h-auto"
+                    onClick={() => {
+                      setUseOTP(!useOTP);
+                      setPassword("");
+                    }}
+                  >
+                    {useOTP ? "Use Password Instead" : "Use OTP Instead"}
+                  </Button>
+                  {!useOTP && (
+                    <Button
+                      type="button"
+                      variant="link"
+                      className="text-sm text-muted-foreground p-0 h-auto"
+                      onClick={() => navigate("/forgot-password")}
+                    >
+                      Forgot Password?
+                    </Button>
+                  )}
+                </div>
+              )}
 
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-11 text-base font-semibold"
                 disabled={loading || !phoneValidation.isValid}
               >
-                {loading ? (isLogin ? "Signing in..." : "Sending code...") : (isLogin ? "Sign In" : "Create Account")}
+                {loading ? (
+                  isLogin ? (useOTP ? "Sending code..." : "Signing in...") : "Sending code..."
+                ) : (
+                  isLogin ? (useOTP ? "Send Login Code" : "Sign In") : "Create Account"
+                )}
               </Button>
 
               <div className="space-y-2">
@@ -322,21 +417,15 @@ const Auth = () => {
                   type="button"
                   variant="ghost"
                   className="w-full"
-                  onClick={() => setIsLogin(!isLogin)}
+                  onClick={() => {
+                    setIsLogin(!isLogin);
+                    setEmail("");
+                    setPassword("");
+                    setUseOTP(false);
+                  }}
                 >
                   {isLogin ? "Don't have an account? Sign up" : "Already have an account? Sign in"}
                 </Button>
-                
-                {isLogin && (
-                  <Button
-                    type="button"
-                    variant="link"
-                    className="w-full text-sm"
-                    onClick={() => navigate("/forgot-password")}
-                  >
-                    Forgot your password?
-                  </Button>
-                )}
               </div>
             </form>
 
