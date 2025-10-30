@@ -26,3 +26,12 @@ verify_jwt = false
 
 [functions.sync-blockchain-transactions]
 verify_jwt = true
+
+[functions.get-user-email-by-phone]
+verify_jwt = false
+
+[functions.verify-phone-otp]
+verify_jwt = false
+
+[functions.confirm-phone-otp]
+verify_jwt = false

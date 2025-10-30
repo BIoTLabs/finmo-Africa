@@ -59,37 +59,24 @@ const PhoneVerification = () => {
       }
 
       if (isLogin && useOTP) {
-        // OTP Login flow - sign in user with verified phone
-        if (!email) {
-          toast.error("Account information missing");
+        // OTP Login flow - get user email and sign in
+        console.log("OTP login - getting user email for:", phoneNumber);
+
+        // Get user's email via backend function (bypasses RLS)
+        const { data: emailData, error: emailError } = await supabase.functions.invoke('get-user-email-by-phone', {
+          body: { phoneNumber: phoneNumber }
+        });
+
+        if (emailError || !emailData.success) {
+          console.error("Email lookup error:", emailError);
+          toast.error(emailData?.error || "Account not found. Please try again.");
           navigate("/auth");
           return;
         }
 
-        // Get user profile to verify account exists
-        const { data: profileData, error: profileError } = await supabase
-          .from('profiles')
-          .select('id, email')
-          .eq('phone_number', phoneNumber)
-          .eq('email', email)
-          .maybeSingle();
-
-        if (profileError) {
-          console.error("Profile lookup error:", profileError);
-          toast.error("Error verifying account");
-          navigate("/auth");
-          return;
-        }
-
-        if (!profileData) {
-          toast.error("Account not found");
-          navigate("/auth");
-          return;
-        }
-
-        // Create a magic link session for the verified user
+        // Sign in with magic link OTP
         const { error: signInError } = await supabase.auth.signInWithOtp({
-          email: email,
+          email: emailData.email,
           options: {
             shouldCreateUser: false,
           }

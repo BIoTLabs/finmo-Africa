@@ -9,6 +9,7 @@ const corsHeaders = {
 interface VerifyPhoneRequest {
   phoneNumber: string;
   ipAddress?: string;
+  isLogin?: boolean;
 }
 
 Deno.serve(async (req) => {
@@ -17,7 +18,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phoneNumber, ipAddress } = await req.json() as VerifyPhoneRequest;
+    const { phoneNumber, ipAddress, isLogin } = await req.json() as VerifyPhoneRequest;
 
     if (!phoneNumber) {
       return new Response(
@@ -42,6 +43,33 @@ Deno.serve(async (req) => {
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
     const supabase = createClient(supabaseUrl, supabaseKey);
+
+    // If this is a login request, verify the user exists
+    if (isLogin) {
+      const { data: profileData, error: profileError } = await supabase
+        .from('profiles')
+        .select('id')
+        .eq('phone_number', normalizedPhone)
+        .maybeSingle();
+
+      if (profileError) {
+        console.error('Error checking user existence:', profileError);
+        return new Response(
+          JSON.stringify({ error: 'Error validating account' }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      if (!profileData) {
+        console.log(`Login attempt for non-existent phone: ${normalizedPhone}`);
+        return new Response(
+          JSON.stringify({ error: 'Account not found. Please check your phone number or sign up.' }),
+          { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log(`OTP login validation passed for: ${normalizedPhone}`);
+    }
 
     // Check rate limiting - max 3 attempts per hour
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();

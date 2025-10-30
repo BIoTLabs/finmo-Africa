@@ -101,32 +101,12 @@ const Auth = () => {
       
       if (isLogin) {
         if (useOTP) {
-          // Login with OTP - send verification code
+          // Login with OTP - send verification code (backend validates user exists)
           console.log("Attempting OTP login - sending code to:", fullPhone);
-          
-          // Verify user exists first
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('id, email')
-            .eq('phone_number', fullPhone)
-            .maybeSingle();
 
-          if (profileError) {
-            console.error("Profile lookup error:", profileError);
-            toast.error("Error checking account. Please try again.");
-            setLoading(false);
-            return;
-          }
-
-          if (!profileData) {
-            toast.error("Account not found. Please check your phone number or sign up.");
-            setLoading(false);
-            return;
-          }
-
-          // Send OTP
+          // Send OTP (backend will validate user exists)
           const { data: otpData, error: otpError } = await supabase.functions.invoke('verify-phone-otp', {
-            body: { phoneNumber: fullPhone }
+            body: { phoneNumber: fullPhone, isLogin: true }
           });
 
           if (otpError || !otpData.success) {
@@ -140,13 +120,12 @@ const Auth = () => {
           navigate("/phone-verification", { 
             state: { 
               phoneNumber: fullPhone, 
-              email: profileData.email,
               isLogin: true,
               useOTP: true
             } 
           });
         } else {
-          // Login with password
+          // Login with password - use backend to get email
           if (!password || password.length < 6) {
             toast.error("Please enter your password");
             setLoading(false);
@@ -155,29 +134,21 @@ const Auth = () => {
 
           console.log("Attempting password login with phone:", fullPhone);
           
-          // Get user's email from profile using phone number
-          const { data: profileData, error: profileError } = await supabase
-            .from('profiles')
-            .select('email')
-            .eq('phone_number', fullPhone)
-            .maybeSingle();
+          // Get user's email via backend function (bypasses RLS)
+          const { data: emailData, error: emailError } = await supabase.functions.invoke('get-user-email-by-phone', {
+            body: { phoneNumber: fullPhone }
+          });
 
-          if (profileError) {
-            console.error("Profile lookup error:", profileError);
-            toast.error("Error checking account. Please try again.");
-            setLoading(false);
-            return;
-          }
-
-          if (!profileData || !profileData.email) {
-            toast.error("Account not found. Please check your phone number or sign up.");
+          if (emailError || !emailData.success) {
+            console.error("Email lookup error:", emailError);
+            toast.error(emailData?.error || "Account not found. Please check your phone number or sign up.");
             setLoading(false);
             return;
           }
 
           // Sign in with email and password
           const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: profileData.email,
+            email: emailData.email,
             password: password,
           });
 
