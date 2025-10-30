@@ -146,6 +146,8 @@ const Auth = () => {
             return;
           }
 
+          console.log("Found email for phone, attempting sign in with:", emailData.email);
+
           // Sign in with email and password
           const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
             email: emailData.email,
@@ -154,7 +156,14 @@ const Auth = () => {
 
           if (signInError) {
             console.error("Sign in error:", signInError);
-            toast.error("Invalid password. Please try again or use OTP login.");
+            console.error("Error code:", signInError.status);
+            console.error("Error message:", signInError.message);
+            
+            if (signInError.message.includes("Invalid login credentials") || signInError.message.includes("invalid_credentials")) {
+              toast.error("Invalid password. Try 'Forgot Password?' or use OTP login instead.");
+            } else {
+              toast.error(signInError.message);
+            }
             setLoading(false);
             return;
           }
