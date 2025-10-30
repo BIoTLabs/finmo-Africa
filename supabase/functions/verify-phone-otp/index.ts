@@ -92,7 +92,7 @@ Deno.serve(async (req) => {
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`Generated OTP for ${normalizedPhone}: ${otp}`);
+    console.log('OTP generated and will be sent via SMS');
 
     // Hash OTP using Web Crypto API
     const encoder = new TextEncoder();
