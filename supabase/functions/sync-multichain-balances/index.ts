@@ -124,31 +124,45 @@ serve(async (req) => {
           .eq('chain_id', chain.chainId)
           .or(`sender_wallet.eq.${walletAddress},recipient_wallet.eq.${walletAddress}`);
 
-        // Calculate net internal amounts
-        let internalNative = 0;
-        let internalUsdc = 0;
+        // Calculate database balance from all completed transactions
+        let dbNativeBalance = 0;
+        let dbUsdcBalance = 0;
 
         transactions?.forEach((tx: any) => {
+          if (tx.status !== 'completed') return;
+          
           const amount = parseFloat(tx.amount);
-          const isSender = tx.sender_wallet.toLowerCase() === walletAddress.toLowerCase();
-          const multiplier = isSender ? -1 : 1;
+          const isRecipient = tx.recipient_id === user.id;
+          const isSender = tx.sender_id === user.id;
 
           if (tx.token === chain.nativeSymbol) {
-            internalNative += amount * multiplier;
-            if (isSender && tx.withdrawal_fee) {
-              internalNative -= parseFloat(tx.withdrawal_fee);
+            if (isRecipient) {
+              dbNativeBalance += amount;
+            } else if (isSender) {
+              dbNativeBalance -= amount;
+              if (tx.withdrawal_fee) {
+                dbNativeBalance -= parseFloat(tx.withdrawal_fee);
+              }
             }
           } else if (tx.token === 'USDC') {
-            internalUsdc += amount * multiplier;
-            if (isSender && tx.withdrawal_fee) {
-              internalUsdc -= parseFloat(tx.withdrawal_fee);
+            if (isRecipient) {
+              dbUsdcBalance += amount;
+            } else if (isSender) {
+              dbUsdcBalance -= amount;
+              if (tx.withdrawal_fee) {
+                dbUsdcBalance -= parseFloat(tx.withdrawal_fee);
+              }
             }
           }
         });
 
-        // Final balances = blockchain balance + internal adjustments
-        const finalNativeBalance = nativeBalance + internalNative;
-        const finalUsdcBalance = usdcBalance + internalUsdc;
+        // Final balances are ONLY from database transactions
+        // Blockchain balances are for reference/verification only
+        const finalNativeBalance = Math.max(0, dbNativeBalance);
+        const finalUsdcBalance = Math.max(0, dbUsdcBalance);
+
+        console.log(`${chain.name} - DB Native: ${dbNativeBalance}, DB USDC: ${dbUsdcBalance}`);
+        console.log(`${chain.name} - Blockchain Native: ${nativeBalance}, Blockchain USDC: ${usdcBalance}`);
 
         balanceUpdates.push({
           token: chain.nativeSymbol,
