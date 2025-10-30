@@ -6,11 +6,12 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Smartphone, Lock, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft } from "lucide-react";
+import { Smartphone, Lock, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft, Mail } from "lucide-react";
 import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import TwoFactorVerify from "@/components/TwoFactorVerify";
+import { PhoneVerificationDialog } from "@/components/PhoneVerificationDialog";
 import { use2FA } from "@/hooks/use2FA";
 import { use2FAPreferences } from "@/hooks/use2FAPreferences";
 
@@ -29,13 +30,16 @@ const Auth = () => {
   const [isLogin, setIsLogin] = useState(true);
   const [countryCode, setCountryCode] = useState("+234");
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
   const [show2FAVerify, setShow2FAVerify] = useState(false);
+  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
   const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
   const [pending2FASession, setPending2FASession] = useState(false);
+  const [pendingSignupData, setPendingSignupData] = useState<{ phone: string; email: string; password: string } | null>(null);
   const { challengeMFA, verifyChallenge } = use2FA();
   const { checkIfRequired } = use2FAPreferences();
 
@@ -104,12 +108,19 @@ const Auth = () => {
 
     try {
       const fullPhone = `${countryCode}${phoneNumber}`;
-
+      
       if (isLogin) {
-        // Perform sign in
+        // Validate email for login
+        if (!email || !email.includes('@')) {
+          toast.error("Please enter a valid email address");
+          setLoading(false);
+          return;
+        }
+
+        console.log("Attempting login for:", email);
         const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: `${fullPhone}@finmo.app`,
-          password,
+          email: email,
+          password: password,
         });
 
         if (signInError) {
@@ -154,26 +165,32 @@ const Auth = () => {
         setLoading(false);
         return; // Don't navigate yet - wait for 2FA verification
       } else {
-        // Sign up without OTP verification
-        const { data, error } = await supabase.auth.signUp({
-          email: `${fullPhone}@finmo.app`,
-          password,
-          options: {
-            data: {
-              phone_number: fullPhone,
-            },
-            emailRedirectTo: `${window.location.origin}/dashboard`
-          },
+        // Signup flow - validate email
+        if (!email || !email.includes('@')) {
+          toast.error("Please enter a valid email address");
+          setLoading(false);
+          return;
+        }
+
+        console.log("Starting signup - sending OTP to:", fullPhone);
+        
+        // Step 1: Send OTP to phone
+        const { data: otpData, error: otpError } = await supabase.functions.invoke('verify-phone-otp', {
+          body: { phoneNumber: fullPhone }
         });
 
-        if (error) {
-          console.error("Signup error:", error);
-          throw error;
+        if (otpError || !otpData.success) {
+          console.error("OTP send error:", otpError);
+          toast.error(otpData?.error || "Failed to send verification code");
+          setLoading(false);
+          return;
         }
-        
-        // Auto-confirm is enabled, so directly navigate to dashboard
-        toast.success("Account created successfully!");
-        navigate("/dashboard");
+
+        // Store signup data and show verification dialog
+        setPendingSignupData({ phone: fullPhone, email, password });
+        setShowPhoneVerification(true);
+        toast.success("Verification code sent to your phone");
+        setLoading(false);
       }
     } catch (error: any) {
       console.error("Auth error:", error);
@@ -181,6 +198,101 @@ const Auth = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handlePhoneVerify = async (otp: string): Promise<boolean> => {
+    if (!pendingSignupData) return false;
+
+    try {
+      // Verify OTP
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('confirm-phone-otp', {
+        body: { 
+          phoneNumber: pendingSignupData.phone,
+          otp 
+        }
+      });
+
+      if (verifyError || !verifyData.success) {
+        console.error("OTP verification error:", verifyError);
+        toast.error(verifyData?.error || "Invalid verification code");
+        return false;
+      }
+
+      console.log("Phone verified, creating account...");
+
+      // Create account with real email
+      const { data, error } = await supabase.auth.signUp({
+        email: pendingSignupData.email,
+        password: pendingSignupData.password,
+        options: {
+          data: {
+            phone_number: pendingSignupData.phone,
+            phone_verified_at: new Date().toISOString(),
+          },
+          emailRedirectTo: `${window.location.origin}/dashboard`
+        },
+      });
+
+      if (error) {
+        console.error("Signup error:", error);
+        toast.error(error.message);
+        return false;
+      }
+
+      if (data.user) {
+        console.log("Account created successfully:", data.user.id);
+        toast.success("Account created successfully!");
+        
+        // Auto sign in
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: pendingSignupData.email,
+          password: pendingSignupData.password,
+        });
+
+        if (signInError) {
+          console.error("Auto sign-in error:", signInError);
+          toast.error("Account created but failed to sign in. Please try logging in.");
+          setIsLogin(true);
+        } else {
+          setShowPhoneVerification(false);
+          navigate("/dashboard");
+        }
+        return true;
+      }
+
+      toast.error("Signup failed. Please try again.");
+      return false;
+    } catch (error: any) {
+      console.error("Verification error:", error);
+      toast.error(error.message || "Verification failed");
+      return false;
+    }
+  };
+
+  const handleResendOTP = async () => {
+    if (!pendingSignupData) return;
+
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
+        body: { phoneNumber: pendingSignupData.phone }
+      });
+
+      if (error || !data.success) {
+        toast.error(data?.error || "Failed to resend code");
+        return;
+      }
+
+      toast.success("Verification code resent");
+    } catch (error) {
+      console.error("Resend error:", error);
+      toast.error("Failed to resend code");
+    }
+  };
+
+  const handleCancelVerification = () => {
+    setShowPhoneVerification(false);
+    setPendingSignupData(null);
+    setLoading(false);
   };
 
   const handle2FAVerify = async (code: string): Promise<boolean> => {
@@ -241,34 +353,51 @@ const Auth = () => {
 
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="space-y-2">
-                <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
-                  <Smartphone className="w-4 h-4" />
-                  Phone Number
-                </Label>
-                <div className="flex gap-2">
-                  <Select value={countryCode} onValueChange={setCountryCode}>
-                    <SelectTrigger className="w-28">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {COUNTRY_CODES.map((c) => (
-                        <SelectItem key={c.code} value={c.code}>
-                          {c.flag} {c.code}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Input
-                    id="phone"
-                    type="tel"
-                    placeholder="8012345678"
-                    value={phoneNumber}
-                    onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
-                    className="flex-1"
-                    required
-                  />
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
+                    <Smartphone className="w-4 h-4" />
+                    Phone Number
+                  </Label>
+                  <div className="flex gap-2">
+                    <Select value={countryCode} onValueChange={setCountryCode}>
+                      <SelectTrigger className="w-28">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {COUNTRY_CODES.map((c) => (
+                          <SelectItem key={c.code} value={c.code}>
+                            {c.flag} {c.code}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <Input
+                      id="phone"
+                      type="tel"
+                      placeholder="8012345678"
+                      value={phoneNumber}
+                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
+                      className="flex-1"
+                      required
+                    />
+                  </div>
                 </div>
+              )}
+
+              <div className="space-y-2">
+                <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
+                  <Mail className="w-4 h-4" />
+                  Email Address
+                </Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="your.email@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  required
+                />
               </div>
 
               <div className="space-y-2">
@@ -398,6 +527,14 @@ const Auth = () => {
           open={show2FAVerify}
           onVerify={handle2FAVerify}
           onCancel={handle2FACancel}
+        />
+        
+        <PhoneVerificationDialog
+          open={showPhoneVerification}
+          phoneNumber={pendingSignupData?.phone || ""}
+          onVerify={handlePhoneVerify}
+          onResend={handleResendOTP}
+          onCancel={handleCancelVerification}
         />
       </div>
     </div>
