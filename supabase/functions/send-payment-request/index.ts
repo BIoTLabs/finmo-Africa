@@ -33,9 +33,16 @@ const handler = async (req: Request): Promise<Response> => {
       message,
     }: PaymentRequestEmail = await req.json();
 
+    if (!resendApiKey) {
+      console.error("RESEND_API_KEY not configured");
+      throw new Error("Email service not configured. Please set RESEND_API_KEY.");
+    }
+
     console.log("Sending payment request email to:", recipient_email);
 
-    const paymentUrl = `https://39f749dd-e983-4411-b0e9-48f73cf4294c.lovableproject.com/payment-request/${payment_request_id}`;
+    // Get the site URL from environment
+    const siteUrl = Deno.env.get("SUPABASE_SITE_URL") || "https://memo-pay-africa.lovable.app";
+    const paymentUrl = `${siteUrl}/payment-request/${payment_request_id}`;
 
     const emailHtml = `
       <!DOCTYPE html>
@@ -112,12 +119,16 @@ const handler = async (req: Request): Promise<Response> => {
       const errorData = await emailResponse.json();
       console.error("Resend API error:", errorData);
       
-      // Check for domain verification error
-      if (errorData.statusCode === 403) {
-        throw new Error("Email domain not verified. Please verify a domain at resend.com/domains and update the 'from' address to use that domain.");
+      // Check for common errors
+      if (errorData.statusCode === 403 || errorData.message?.includes("verify")) {
+        throw new Error("Email domain not verified. Using onboarding@resend.dev for testing. For production, verify a domain at https://resend.com/domains");
       }
       
-      throw new Error(`Resend API error: ${JSON.stringify(errorData)}`);
+      if (errorData.statusCode === 401) {
+        throw new Error("Invalid Resend API key. Please check RESEND_API_KEY secret.");
+      }
+      
+      throw new Error(`Resend API error: ${errorData.message || JSON.stringify(errorData)}`);
     }
 
     const emailResult = await emailResponse.json();
