@@ -81,16 +81,6 @@ const Index = () => {
       description: "Trade cryptocurrencies peer-to-peer with multiple payment methods and built-in escrow for secure transactions.",
     },
     {
-      icon: CreditCard,
-      title: "Virtual Cards",
-      description: "Create instant virtual debit cards for online shopping. Fund, manage, and track spending in real-time.",
-    },
-    {
-      icon: TrendingUp,
-      title: "Crypto Staking",
-      description: "Earn passive income on your holdings with flexible or locked staking options and competitive APY rates.",
-    },
-    {
       icon: Globe,
       title: "Multi-Chain Support",
       description: "Access Polygon, Base, and Arbitrum networks. Hold USDC, MATIC, and other popular cryptocurrencies.",
@@ -131,11 +121,11 @@ const Index = () => {
     "Zero fees for FinMo-to-FinMo transfers",
     "Lightning-fast blockchain transactions",
     "P2P trading with escrow protection",
-    "Virtual cards for online shopping",
-    "Earn rewards through crypto staking",
     "Multi-chain cryptocurrency support",
     "Bank-level security and encryption",
     "KYC-verified user community",
+    "Real-time transaction tracking",
+    "Instant payment requests",
   ];
 
   return (
@@ -175,7 +165,7 @@ const Index = () => {
             <p className="mb-8 text-xl text-muted-foreground leading-relaxed">
               Send crypto using <span className="font-bold text-primary">phone numbers</span>, 
               buy <span className="font-bold text-secondary">goods & services</span> with crypto, 
-              trade P2P, create virtual cards, and earn through staking. 
+              and trade P2P securely. 
               <span className="block mt-2 text-foreground font-semibold">All in one platform built for Africa.</span>
             </p>
 
@@ -271,7 +261,7 @@ const Index = () => {
           <div className="mx-auto max-w-4xl text-center text-white">
             <h2 className="mb-4 text-4xl font-bold">Everything You Need in One Platform</h2>
             <p className="mb-12 text-xl leading-relaxed">
-              From instant transfers to P2P trading, virtual cards, and staking rewards
+              From instant transfers to P2P trading and marketplace shopping
             </p>
 
             <div className="grid gap-4 text-left sm:grid-cols-2">
@@ -321,10 +311,10 @@ const Index = () => {
               gradient: "bg-gradient-to-br from-secondary to-secondary-dark"
             },
             {
-              icon: CreditCard,
-              title: "Virtual Cards & Staking",
-              desc: "Create instant virtual cards for shopping and earn passive income through flexible staking options.",
-              features: ["Instant card creation", "Real-time funding", "Crypto staking rewards", "Multi-chain support"],
+              icon: Users2,
+              title: "Rewards & Growth",
+              desc: "Earn points for activities, refer friends, and grow your crypto portfolio with zero fees for internal transfers.",
+              features: ["Activity rewards", "Referral bonuses", "Zero-fee transfers", "Multi-chain support"],
               gradient: "bg-gradient-to-br from-success to-primary"
             },
           ].map((useCase, index) => (
@@ -379,7 +369,7 @@ const Index = () => {
                 { 
                   step: "3", 
                   title: "Start Using FinMo", 
-                  desc: "Send money, trade P2P, create virtual cards, and earn staking rewards",
+                  desc: "Send money, trade P2P, shop on marketplace, and track all transactions in real-time",
                   gradient: "bg-gradient-to-br from-success to-primary"
                 },
               ].map((item, index) => (

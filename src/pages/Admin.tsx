@@ -11,7 +11,7 @@ import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, 
 import { useToast } from '@/hooks/use-toast';
 import LoadingScreen from '@/components/LoadingScreen';
 import { AdminFeeSettings } from '@/components/AdminFeeSettings';
-import VirtualCardPollResults from '@/components/VirtualCardPollResults';
+
 
 interface BackendInfo {
   timestamp: string;
@@ -121,9 +121,6 @@ const Admin = () => {
             {/* Fee Settings Section */}
             <AdminFeeSettings />
 
-            {/* Virtual Card Poll Results */}
-            <VirtualCardPollResults />
-
             {/* Platform Management */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card>
@@ -139,6 +136,23 @@ const Admin = () => {
                 <CardContent>
                   <Button onClick={() => navigate('/admin/kyc')} className="w-full">
                     Manage KYC Verifications
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Store className="h-5 w-5" />
+                    Dispute Management
+                  </CardTitle>
+                  <CardDescription>
+                    Review and resolve P2P & Marketplace disputes
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate('/admin/disputes')} className="w-full">
+                    Manage Disputes
                   </Button>
                 </CardContent>
               </Card>

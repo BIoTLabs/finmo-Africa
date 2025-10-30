@@ -219,6 +219,54 @@ export type Database = {
         }
         Relationships: []
       }
+      disputes: {
+        Row: {
+          admin_notes: string | null
+          created_at: string
+          description: string
+          dispute_type: string
+          evidence_url: string | null
+          id: string
+          order_id: string
+          reason: string
+          resolution: string | null
+          resolved_at: string | null
+          resolved_by: string | null
+          status: string
+          user_id: string
+        }
+        Insert: {
+          admin_notes?: string | null
+          created_at?: string
+          description: string
+          dispute_type: string
+          evidence_url?: string | null
+          id?: string
+          order_id: string
+          reason: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id: string
+        }
+        Update: {
+          admin_notes?: string | null
+          created_at?: string
+          description?: string
+          dispute_type?: string
+          evidence_url?: string | null
+          id?: string
+          order_id?: string
+          reason?: string
+          resolution?: string | null
+          resolved_at?: string | null
+          resolved_by?: string | null
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       gas_fundings: {
         Row: {
           amount: number
@@ -646,6 +694,36 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      order_messages: {
+        Row: {
+          created_at: string
+          id: string
+          is_read: boolean
+          message: string
+          order_id: string
+          order_type: string
+          sender_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message: string
+          order_id: string
+          order_type: string
+          sender_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_read?: boolean
+          message?: string
+          order_id?: string
+          order_type?: string
+          sender_id?: string
+        }
+        Relationships: []
       }
       p2p_disputes: {
         Row: {
@@ -1393,6 +1471,39 @@ export type Database = {
           id?: string
           nft_token_id?: string | null
           user_id?: string
+        }
+        Relationships: []
+      }
+      user_ratings: {
+        Row: {
+          created_at: string
+          id: string
+          order_id: string
+          order_type: string
+          rated_by_user_id: string
+          rated_user_id: string
+          rating: number
+          review: string | null
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          order_id: string
+          order_type: string
+          rated_by_user_id: string
+          rated_user_id: string
+          rating: number
+          review?: string | null
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          order_id?: string
+          order_type?: string
+          rated_by_user_id?: string
+          rated_user_id?: string
+          rating?: number
+          review?: string | null
         }
         Relationships: []
       }

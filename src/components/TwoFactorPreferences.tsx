@@ -65,12 +65,6 @@ const TwoFactorPreferences = () => {
       title: "Payment Methods",
       description: "Require 2FA when adding/removing payment methods",
     },
-    {
-      key: "require_on_staking" as const,
-      icon: Coins,
-      title: "Staking",
-      description: "Require 2FA when staking or unstaking",
-    },
   ];
 
   return (

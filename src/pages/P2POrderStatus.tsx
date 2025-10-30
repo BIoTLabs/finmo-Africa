@@ -7,6 +7,9 @@ import { Badge } from "@/components/ui/badge";
 import { ArrowLeft, Clock, CheckCircle, AlertCircle, Timer, Copy } from "lucide-react";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
+import DisputeDialog from "@/components/DisputeDialog";
+import RatingDialog from "@/components/RatingDialog";
+import OrderChat from "@/components/OrderChat";
 
 const P2POrderStatus = () => {
   const { orderId } = useParams();
@@ -15,6 +18,7 @@ const P2POrderStatus = () => {
   const [loading, setLoading] = useState(true);
   const [timeRemaining, setTimeRemaining] = useState<number>(0);
   const [currentUser, setCurrentUser] = useState<any>(null);
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
 
   useEffect(() => {
     loadUser();
@@ -299,6 +303,30 @@ const P2POrderStatus = () => {
           <Button onClick={handleCompleteOrder} className="w-full" size="lg">
             Confirm & Release Crypto
           </Button>
+        )}
+
+        {/* Chat and Dispute */}
+        {order.status !== 'completed' && order.status !== 'cancelled' && (
+          <>
+            <OrderChat orderId={order.id} orderType="p2p" />
+            <DisputeDialog orderId={order.id} orderType="p2p_order" />
+          </>
+        )}
+
+        {/* Rating Dialog */}
+        {order.status === 'completed' && (
+          <>
+            <Button onClick={() => setShowRatingDialog(true)} className="w-full" variant="outline">
+              Rate Transaction
+            </Button>
+            <RatingDialog
+              open={showRatingDialog}
+              onOpenChange={setShowRatingDialog}
+              orderId={order.id}
+              orderType="p2p"
+              ratedUserId={isBuyer ? order.seller_id : order.buyer_id}
+            />
+          </>
         )}
 
         {(order.status === 'completed' || order.status === 'cancelled') && (

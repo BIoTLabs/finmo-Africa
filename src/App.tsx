@@ -43,12 +43,14 @@ import KYCVerification from "./pages/KYCVerification";
 import AccountStatement from "./pages/AccountStatement";
 import MyAds from "./pages/MyAds";
 import Staking from "./pages/Staking";
+import ComingSoon from "./pages/ComingSoon";
 import Rewards from "./pages/Rewards";
 import RewardsDetails from "./pages/RewardsDetails";
 import AdminRewardsBackfill from "./pages/AdminRewardsBackfill";
 import AdminKYC from "./pages/AdminKYC";
 import AdminListings from "./pages/AdminListings";
 import AdminMessaging from "./pages/AdminMessaging";
+import AdminDisputes from "./pages/AdminDisputes";
 
 const queryClient = new QueryClient();
 
@@ -80,13 +82,13 @@ const App = () => {
           <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
           <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
           <Route path="/p2p/create-listing" element={<ProtectedRoute><P2PCreateListing /></ProtectedRoute>} />
-          <Route path="/virtual-card" element={<ProtectedRoute><VirtualCard /></ProtectedRoute>} />
-          <Route path="/virtual-card/create" element={<ProtectedRoute><VirtualCardCreate /></ProtectedRoute>} />
-          <Route path="/virtual-card/:cardId/fund" element={<ProtectedRoute><VirtualCardFund /></ProtectedRoute>} />
+          <Route path="/virtual-card" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
+          <Route path="/virtual-card/create" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
+          <Route path="/virtual-card/:cardId/fund" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
           <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
           <Route path="/p2p/order/:listingId" element={<ProtectedRoute><P2POrderDetail /></ProtectedRoute>} />
           <Route path="/p2p/order-status/:orderId" element={<ProtectedRoute><P2POrderStatus /></ProtectedRoute>} />
-          <Route path="/virtual-card/:cardId/transactions" element={<ProtectedRoute><VirtualCardTransactions /></ProtectedRoute>} />
+          <Route path="/virtual-card/:cardId/transactions" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
             <Route path="/request-payment" element={<ProtectedRoute><RequestPayment /></ProtectedRoute>} />
             <Route path="/payment-history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
             <Route path="/pay/:id" element={<PaymentRequest />} />
@@ -100,13 +102,14 @@ const App = () => {
             <Route path="/kyc-verification" element={<ProtectedRoute><KYCVerification /></ProtectedRoute>} />
             <Route path="/account-statement" element={<ProtectedRoute><AccountStatement /></ProtectedRoute>} />
             <Route path="/my-ads" element={<ProtectedRoute><MyAds /></ProtectedRoute>} />
-            <Route path="/staking" element={<ProtectedRoute><Staking /></ProtectedRoute>} />
+            <Route path="/staking" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
             <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
             <Route path="/rewards/details" element={<ProtectedRoute><RewardsDetails /></ProtectedRoute>} />
             <Route path="/admin/rewards-backfill" element={<ProtectedRoute><AdminRewardsBackfill /></ProtectedRoute>} />
             <Route path="/admin/kyc" element={<ProtectedRoute><AdminKYC /></ProtectedRoute>} />
             <Route path="/admin/listings" element={<ProtectedRoute><AdminListings /></ProtectedRoute>} />
             <Route path="/admin/messaging" element={<ProtectedRoute><AdminMessaging /></ProtectedRoute>} />
+            <Route path="/admin/disputes" element={<ProtectedRoute><AdminDisputes /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

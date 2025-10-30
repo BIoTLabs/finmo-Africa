@@ -9,6 +9,9 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import MobileNav from "@/components/MobileNav";
+import DisputeDialog from "@/components/DisputeDialog";
+import RatingDialog from "@/components/RatingDialog";
+import OrderChat from "@/components/OrderChat";
 import { ArrowLeft, Truck, DollarSign } from "lucide-react";
 import { toast } from "sonner";
 
@@ -57,6 +60,7 @@ const MarketplaceOrderDetail = () => {
   const [bidAmount, setBidAmount] = useState("");
   const [estimatedTime, setEstimatedTime] = useState("");
   const [bidMessage, setBidMessage] = useState("");
+  const [showRatingDialog, setShowRatingDialog] = useState(false);
   const [submittingBid, setSubmittingBid] = useState(false);
 
   useEffect(() => {
@@ -369,6 +373,34 @@ const MarketplaceOrderDetail = () => {
               </Dialog>
             </CardContent>
           </Card>
+        )}
+
+        {/* Chat and Dispute for Active Orders */}
+        {order.status !== "delivered" && order.status !== "cancelled" && (
+          <>
+            <OrderChat orderId={order.id} orderType="marketplace" />
+            <DisputeDialog orderId={order.id} orderType="marketplace_order" />
+          </>
+        )}
+
+        {/* Rating after delivery */}
+        {order.buyer_confirmed_delivery && (
+          <>
+            <Button 
+              onClick={() => setShowRatingDialog(true)} 
+              className="w-full" 
+              variant="outline"
+            >
+              Rate Seller
+            </Button>
+            <RatingDialog
+              open={showRatingDialog}
+              onOpenChange={setShowRatingDialog}
+              orderId={order.id}
+              orderType="marketplace"
+              ratedUserId={order.seller_id}
+            />
+          </>
         )}
       </div>
 
