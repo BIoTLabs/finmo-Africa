@@ -219,6 +219,45 @@ export type Database = {
         }
         Relationships: []
       }
+      gas_fundings: {
+        Row: {
+          amount: number
+          chain_name: string
+          created_at: string | null
+          id: string
+          master_wallet_address: string
+          reason: string | null
+          token: string
+          tx_hash: string | null
+          user_id: string | null
+          user_wallet_address: string
+        }
+        Insert: {
+          amount: number
+          chain_name: string
+          created_at?: string | null
+          id?: string
+          master_wallet_address: string
+          reason?: string | null
+          token: string
+          tx_hash?: string | null
+          user_id?: string | null
+          user_wallet_address: string
+        }
+        Update: {
+          amount?: number
+          chain_name?: string
+          created_at?: string | null
+          id?: string
+          master_wallet_address?: string
+          reason?: string | null
+          token?: string
+          tx_hash?: string | null
+          user_id?: string | null
+          user_wallet_address?: string
+        }
+        Relationships: []
+      }
       kyc_verifications: {
         Row: {
           address: string
