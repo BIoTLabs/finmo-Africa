@@ -169,7 +169,16 @@ const Profile = () => {
   const handleInviteContact = async (contact: Contact) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
-      if (!user) return;
+      if (!user) {
+        toast.error("You must be logged in to send invitations");
+        return;
+      }
+
+      console.log("Inviting contact:", { 
+        contactName: contact.contact_name, 
+        contactPhone: contact.contact_phone,
+        userId: user.id 
+      });
 
       // Insert invitation record
       const { error: dbError } = await supabase
@@ -181,18 +190,22 @@ const Profile = () => {
         });
 
       if (dbError) {
+        console.error("Database error:", dbError);
         if (dbError.code === "23505") {
           toast.info("You've already invited this contact");
         } else {
+          toast.error(`Database error: ${dbError.message}`);
           throw dbError;
         }
         return;
       }
 
+      console.log("Invitation record created, sending SMS...");
+
       // Send SMS invitation
       const inviterName = displayName || profile?.phone_number || "A friend";
       
-      const { error: smsError } = await supabase.functions.invoke("send-invitation-sms", {
+      const { data: smsData, error: smsError } = await supabase.functions.invoke("send-invitation-sms", {
         body: {
           contactName: contact.contact_name,
           contactPhone: contact.contact_phone,
@@ -201,11 +214,17 @@ const Profile = () => {
       });
 
       if (smsError) {
-        console.error("Error sending SMS:", smsError);
+        console.error("SMS Error details:", {
+          message: smsError.message,
+          context: smsError.context,
+          status: smsError.status
+        });
+        
         toast.success(`Invitation saved for ${contact.contact_name}`, {
           description: "SMS delivery failed, but they'll see the invitation when they sign up"
         });
       } else {
+        console.log("SMS sent successfully:", smsData);
         toast.success(`Invitation sent to ${contact.contact_name}!`, {
           description: "They'll receive an SMS with a link to join FinMo"
         });
@@ -213,8 +232,16 @@ const Profile = () => {
 
       await loadProfileData();
     } catch (error: any) {
-      console.error("Error inviting contact:", error);
-      toast.error("We couldn't send the invitation. Please try again.");
+      console.error("Error inviting contact:", {
+        message: error?.message,
+        code: error?.code,
+        details: error?.details,
+        hint: error?.hint,
+        full: error
+      });
+      
+      const errorMessage = error?.message || "Unknown error occurred";
+      toast.error(`Failed to send invitation: ${errorMessage}`);
     }
   };
 
