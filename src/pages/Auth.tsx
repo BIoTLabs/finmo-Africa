@@ -117,7 +117,7 @@ const Auth = () => {
           }
 
           toast.success("Verification code sent to your phone");
-          navigate("/phone-verification", { 
+          navigate("/verify-phone", { 
             state: { 
               phoneNumber: fullPhone, 
               isLogin: true,
@@ -193,7 +193,7 @@ const Auth = () => {
         }
 
         toast.success("Verification code sent to your phone");
-        navigate("/phone-verification", { 
+        navigate("/verify-phone", { 
           state: { 
             phoneNumber: fullPhone, 
             email, 
