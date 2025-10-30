@@ -6,16 +6,11 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Smartphone, Lock, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft, Mail, Check, AlertCircle } from "lucide-react";
+import { Smartphone, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft, Mail, Check, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
-import TwoFactorVerify from "@/components/TwoFactorVerify";
-import { PhoneVerificationDialog } from "@/components/PhoneVerificationDialog";
-import { use2FA } from "@/hooks/use2FA";
-import { use2FAPreferences } from "@/hooks/use2FAPreferences";
 import { usePhoneValidation } from "@/hooks/usePhoneValidation";
-import { COUNTRY_PHONE_RULES } from "@/utils/phoneValidation";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -33,17 +28,9 @@ const Auth = () => {
   const [countryCode, setCountryCode] = useState("+234");
   const [phoneNumber, setPhoneNumber] = useState("");
   const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
-  const [show2FAVerify, setShow2FAVerify] = useState(false);
-  const [showPhoneVerification, setShowPhoneVerification] = useState(false);
-  const [pendingFactorId, setPendingFactorId] = useState<string | null>(null);
-  const [pending2FASession, setPending2FASession] = useState(false);
-  const [pendingSignupData, setPendingSignupData] = useState<{ phone: string; email: string; password: string } | null>(null);
-  const { challengeMFA, verifyChallenge } = use2FA();
-  const { checkIfRequired } = use2FAPreferences();
   const phoneValidation = usePhoneValidation(countryCode, phoneNumber);
 
   useEffect(() => {
@@ -86,16 +73,7 @@ const Auth = () => {
       
       if (event === 'SIGNED_OUT') {
         setChecking(false);
-        setShow2FAVerify(false);
-        setPendingFactorId(null);
-        setPending2FASession(false);
       } else if (session && event === 'SIGNED_IN') {
-        // If we're waiting for 2FA, don't navigate
-        if (pending2FASession) {
-          console.log("Signed in but waiting for 2FA verification");
-          return;
-        }
-        // Otherwise navigate to dashboard
         navigate("/dashboard", { replace: true });
       }
     });
@@ -110,8 +88,8 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      // Validate phone number for signup
-      if (!isLogin && !phoneValidation.isValid) {
+      // Validate phone number
+      if (!phoneValidation.isValid) {
         toast.error(phoneValidation.error || "Invalid phone number");
         setLoading(false);
         return;
@@ -120,71 +98,33 @@ const Auth = () => {
       const fullPhone = phoneValidation.normalized || `${countryCode}${phoneNumber}`;
       
       if (isLogin) {
-        // Validate email for login
-        if (!email || !email.includes('@')) {
-          toast.error("Please enter a valid email address");
+        // Login flow - send OTP to phone
+        console.log("Attempting login - sending OTP to:", fullPhone);
+        
+        const { data: otpData, error: otpError } = await supabase.functions.invoke('verify-phone-otp', {
+          body: { phoneNumber: fullPhone }
+        });
+
+        if (otpError || !otpData.success) {
+          console.error("OTP send error:", otpError);
+          toast.error(otpData?.error || "Failed to send verification code. Please check your phone number.");
           setLoading(false);
           return;
         }
 
-        console.log("Attempting login for:", email);
-        const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-          email: email,
-          password: password,
-        });
-
-        if (signInError) {
-          throw signInError;
-        }
-        
-        if (!signInData.session) {
-          throw new Error("Login failed - no session created");
-        }
-        
-        console.log("Login successful, checking 2FA requirements...");
-        
-        // Set pending state to prevent automatic navigation
-        setPending2FASession(true);
-        
-        // Check for 2FA after successful login
-        const { data: factors } = await supabase.auth.mfa.listFactors();
-        console.log("MFA factors:", factors);
-        
-        if (!factors || !factors.totp || factors.totp.length === 0) {
-          // User doesn't have 2FA set up - allow login without it
-          setPending2FASession(false);
-          toast.success("Welcome back!");
-          navigate("/dashboard");
-          return;
-        }
-        
-        const verifiedFactor = factors.totp.find(f => f.status === "verified");
-        
-        if (!verifiedFactor) {
-          // User has 2FA but it's not verified - allow login without it
-          setPending2FASession(false);
-          toast.success("Welcome back!");
-          navigate("/dashboard");
-          return;
-        }
-        
-        // User has verified 2FA - require verification
-        console.log("2FA is enabled, showing verification dialog");
-        setPendingFactorId(verifiedFactor.id);
-        setShow2FAVerify(true);
-        setLoading(false);
-        return; // Don't navigate yet - wait for 2FA verification
+        toast.success("Verification code sent to your phone");
+        navigate("/phone-verification", { state: { phoneNumber: fullPhone, isLogin: true } });
       } else {
         // Signup flow - validate email
         if (!email || !email.includes('@')) {
-          toast.error("Please enter a valid email address");
+          toast.error("Please enter a valid email address for account recovery");
           setLoading(false);
           return;
         }
 
         console.log("Starting signup - sending OTP to:", fullPhone);
         
-        // Step 1: Send OTP to phone
+        // Send OTP to phone
         const { data: otpData, error: otpError } = await supabase.functions.invoke('verify-phone-otp', {
           body: { phoneNumber: fullPhone }
         });
@@ -196,136 +136,17 @@ const Auth = () => {
           return;
         }
 
-        // Store signup data and show verification dialog
-        setPendingSignupData({ phone: fullPhone, email, password });
-        setShowPhoneVerification(true);
         toast.success("Verification code sent to your phone");
-        setLoading(false);
+        navigate("/phone-verification", { state: { phoneNumber: fullPhone, email, isLogin: false } });
       }
     } catch (error: any) {
       console.error("Auth error:", error);
-      toast.error("We couldn't sign you in. Please check your credentials and try again.");
+      toast.error(error.message || "Something went wrong. Please try again.");
     } finally {
       setLoading(false);
     }
   };
 
-  const handlePhoneVerify = async (otp: string): Promise<boolean> => {
-    if (!pendingSignupData) return false;
-
-    try {
-      // Verify OTP
-      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('confirm-phone-otp', {
-        body: { 
-          phoneNumber: pendingSignupData.phone,
-          otp 
-        }
-      });
-
-      if (verifyError || !verifyData.success) {
-        console.error("OTP verification error:", verifyError);
-        toast.error(verifyData?.error || "Invalid verification code");
-        return false;
-      }
-
-      console.log("Phone verified, creating account...");
-
-      // Create account with real email
-      const { data, error } = await supabase.auth.signUp({
-        email: pendingSignupData.email,
-        password: pendingSignupData.password,
-        options: {
-          data: {
-            phone_number: pendingSignupData.phone,
-            phone_verified_at: new Date().toISOString(),
-          },
-          emailRedirectTo: `${window.location.origin}/dashboard`
-        },
-      });
-
-      if (error) {
-        console.error("Signup error:", error);
-        toast.error(error.message);
-        return false;
-      }
-
-      if (data.user) {
-        console.log("Account created successfully:", data.user.id);
-        toast.success("Account created successfully!");
-        
-        // Auto sign in
-        const { error: signInError } = await supabase.auth.signInWithPassword({
-          email: pendingSignupData.email,
-          password: pendingSignupData.password,
-        });
-
-        if (signInError) {
-          console.error("Auto sign-in error:", signInError);
-          toast.error("Account created but failed to sign in. Please try logging in.");
-          setIsLogin(true);
-        } else {
-          setShowPhoneVerification(false);
-          navigate("/dashboard");
-        }
-        return true;
-      }
-
-      toast.error("Signup failed. Please try again.");
-      return false;
-    } catch (error: any) {
-      console.error("Verification error:", error);
-      toast.error(error.message || "Verification failed");
-      return false;
-    }
-  };
-
-  const handleResendOTP = async () => {
-    if (!pendingSignupData) return;
-
-    try {
-      const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
-        body: { phoneNumber: pendingSignupData.phone }
-      });
-
-      if (error || !data.success) {
-        toast.error(data?.error || "Failed to resend code");
-        return;
-      }
-
-      toast.success("Verification code resent");
-    } catch (error) {
-      console.error("Resend error:", error);
-      toast.error("Failed to resend code");
-    }
-  };
-
-  const handleCancelVerification = () => {
-    setShowPhoneVerification(false);
-    setPendingSignupData(null);
-    setLoading(false);
-  };
-
-  const handle2FAVerify = async (code: string): Promise<boolean> => {
-    if (!pendingFactorId) return false;
-    
-    const success = await verifyChallenge(pendingFactorId, code);
-    if (success) {
-      setPending2FASession(false);
-      setShow2FAVerify(false);
-      setPendingFactorId(null);
-      toast.success("Welcome back!");
-      navigate("/dashboard");
-    }
-    return success;
-  };
-
-  const handle2FACancel = async () => {
-    setShow2FAVerify(false);
-    setPendingFactorId(null);
-    setPending2FASession(false);
-    await supabase.auth.signOut();
-    toast.info("Login cancelled");
-  };
 
   if (checking) {
     return (
@@ -363,98 +184,85 @@ const Auth = () => {
 
           <CardContent className="space-y-4">
             <form onSubmit={handleSubmit} className="space-y-4">
-              {!isLogin && (
-                <div className="space-y-2">
-                  <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
-                    <Smartphone className="w-4 h-4" />
-                    Phone Number
-                  </Label>
-                  <div className="flex gap-2">
-                    <Select value={countryCode} onValueChange={setCountryCode}>
-                      <SelectTrigger className="w-28">
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {COUNTRY_CODES.map((c) => (
-                          <SelectItem key={c.code} value={c.code}>
-                            {c.flag} {c.code}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <div className="flex-1 space-y-1">
-                      <div className="relative">
-                        <Input
-                          id="phone"
-                          type="tel"
-                          inputMode="numeric"
-                          pattern="[0-9]*"
-                          placeholder={phoneValidation.rules.example.substring(countryCode.length)}
-                          value={phoneValidation.formatted}
-                          onChange={(e) => {
-                            const cleaned = e.target.value.replace(/\D/g, "");
-                            if (cleaned.length <= phoneValidation.rules.digits) {
-                              setPhoneNumber(cleaned);
-                            }
-                          }}
-                          maxLength={phoneValidation.rules.digits + Math.floor(phoneValidation.rules.digits / 3)}
-                          className={`pr-10 ${phoneValidation.isValid ? 'border-success' : phoneNumber && !phoneValidation.isValid ? 'border-destructive' : ''}`}
-                          required
-                        />
-                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
-                          {phoneValidation.isValid ? (
-                            <Check className="w-4 h-4 text-success" />
-                          ) : phoneNumber && !phoneValidation.isValid ? (
-                            <AlertCircle className="w-4 h-4 text-destructive" />
-                          ) : null}
-                        </div>
+              <div className="space-y-2">
+                <Label htmlFor="phone" className="flex items-center gap-2 text-sm font-medium">
+                  <Smartphone className="w-4 h-4" />
+                  Phone Number
+                </Label>
+                <div className="flex gap-2">
+                  <Select value={countryCode} onValueChange={setCountryCode}>
+                    <SelectTrigger className="w-28">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {COUNTRY_CODES.map((c) => (
+                        <SelectItem key={c.code} value={c.code}>
+                          {c.flag} {c.code}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  <div className="flex-1 space-y-1">
+                    <div className="relative">
+                      <Input
+                        id="phone"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        placeholder={phoneValidation.rules.example.substring(countryCode.length)}
+                        value={phoneValidation.formatted}
+                        onChange={(e) => {
+                          const cleaned = e.target.value.replace(/\D/g, "");
+                          if (cleaned.length <= phoneValidation.rules.digits) {
+                            setPhoneNumber(cleaned);
+                          }
+                        }}
+                        maxLength={phoneValidation.rules.digits + Math.floor(phoneValidation.rules.digits / 3)}
+                        className={`pr-10 ${phoneValidation.isValid ? 'border-success' : phoneNumber && !phoneValidation.isValid ? 'border-destructive' : ''}`}
+                        required
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {phoneValidation.isValid ? (
+                          <Check className="w-4 h-4 text-success" />
+                        ) : phoneNumber && !phoneValidation.isValid ? (
+                          <AlertCircle className="w-4 h-4 text-destructive" />
+                        ) : null}
                       </div>
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">
-                          Format: {phoneValidation.rules.format}
-                        </span>
-                        <span className={`font-medium ${phoneValidation.isValid ? 'text-success' : 'text-muted-foreground'}`}>
-                          {phoneValidation.progress}
-                        </span>
-                      </div>
-                      {phoneNumber && !phoneValidation.isValid && phoneValidation.error && (
-                        <p className="text-xs text-destructive">{phoneValidation.error}</p>
-                      )}
                     </div>
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-muted-foreground">
+                        Format: {phoneValidation.rules.format}
+                      </span>
+                      <span className={`font-medium ${phoneValidation.isValid ? 'text-success' : 'text-muted-foreground'}`}>
+                        {phoneValidation.progress}
+                      </span>
+                    </div>
+                    {phoneNumber && !phoneValidation.isValid && phoneValidation.error && (
+                      <p className="text-xs text-destructive">{phoneValidation.error}</p>
+                    )}
                   </div>
                 </div>
+              </div>
+
+              {!isLogin && (
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
+                    <Mail className="w-4 h-4" />
+                    Email Address (for recovery)
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="your.email@example.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    required
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Used for password reset and account recovery
+                  </p>
+                </div>
               )}
-
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2 text-sm font-medium">
-                  <Mail className="w-4 h-4" />
-                  Email Address
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="your.email@example.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                />
-              </div>
-
-              <div className="space-y-2">
-                <Label htmlFor="password" className="flex items-center gap-2 text-sm font-medium">
-                  <Lock className="w-4 h-4" />
-                  Password
-                </Label>
-                <Input
-                  id="password"
-                  type="password"
-                  placeholder="••••••••"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  minLength={6}
-                />
-              </div>
 
               <Button 
                 type="submit" 
@@ -562,20 +370,6 @@ const Auth = () => {
         <p className="text-center text-white/60 text-xs">
           Powered by blockchain technology • Secure & Fast
         </p>
-
-        <TwoFactorVerify
-          open={show2FAVerify}
-          onVerify={handle2FAVerify}
-          onCancel={handle2FACancel}
-        />
-        
-        <PhoneVerificationDialog
-          open={showPhoneVerification}
-          phoneNumber={pendingSignupData?.phone || ""}
-          onVerify={handlePhoneVerify}
-          onResend={handleResendOTP}
-          onCancel={handleCancelVerification}
-        />
       </div>
     </div>
   );

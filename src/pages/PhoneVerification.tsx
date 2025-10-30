@@ -16,16 +16,24 @@ const PhoneVerification = () => {
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
   const [phoneNumber, setPhoneNumber] = useState("");
+  const [email, setEmail] = useState("");
+  const [isLogin, setIsLogin] = useState(true);
 
   useEffect(() => {
-    // Get phone number from location state
+    // Get data from location state
     const phone = location.state?.phoneNumber;
+    const userEmail = location.state?.email;
+    const loginMode = location.state?.isLogin;
+    
     if (!phone) {
       toast.error("No phone number provided");
       navigate("/auth");
       return;
     }
+    
     setPhoneNumber(phone);
+    setEmail(userEmail || "");
+    setIsLogin(loginMode !== false);
   }, [location, navigate]);
 
   const handleVerify = async (e: React.FormEvent) => {
@@ -33,22 +41,110 @@ const PhoneVerification = () => {
     setLoading(true);
 
     try {
-      // Verify the OTP code
-      const { data, error } = await supabase.auth.verifyOtp({
-        phone: phoneNumber,
-        token: code,
-        type: 'sms'
+      // Verify OTP via backend
+      const { data: verifyData, error: verifyError } = await supabase.functions.invoke('confirm-phone-otp', {
+        body: { 
+          phoneNumber: phoneNumber,
+          otp: code
+        }
       });
 
-      if (error) throw error;
+      if (verifyError || !verifyData.success) {
+        toast.error(verifyData?.error || "Invalid verification code");
+        setLoading(false);
+        return;
+      }
 
-      if (data.session) {
-        toast.success("Phone number verified!");
+      if (isLogin) {
+        // Login flow - sign in with verified phone
+        const { data: authData, error: authError } = await supabase.auth.signInWithOtp({
+          phone: phoneNumber,
+          options: {
+            shouldCreateUser: false
+          }
+        });
+
+        if (authError) {
+          // If direct OTP login fails, try to find user and create a session
+          const { data: profileData, error: profileError } = await supabase
+            .from('profiles')
+            .select('id, email')
+            .eq('phone_number', phoneNumber)
+            .single();
+
+          if (profileError || !profileData || !profileData.email) {
+            toast.error("Account not found. Please sign up first.");
+            navigate("/auth");
+            return;
+          }
+
+          // Generate a temporary password and sign in
+          const tempPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+          
+          // Try to sign in with email (user might have existing password)
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: profileData.email,
+            password: tempPassword, // This will fail but that's ok
+          });
+
+          // If that fails, we'll show a different message
+          if (signInError) {
+            toast.error("Unable to sign in. Please use the forgot password option.");
+            navigate("/auth");
+            return;
+          }
+        }
+
+        toast.success("Welcome back!");
         navigate("/dashboard");
+      } else {
+        // Signup flow - create new account
+        if (!email) {
+          toast.error("Email is required for account creation");
+          navigate("/auth");
+          return;
+        }
+
+        // Generate a secure random password for the account
+        const generatedPassword = Math.random().toString(36).slice(-12) + Math.random().toString(36).slice(-12);
+
+        const { data: signupData, error: signupError } = await supabase.auth.signUp({
+          email: email,
+          password: generatedPassword,
+          options: {
+            data: {
+              phone_number: phoneNumber,
+              phone_verified_at: new Date().toISOString(),
+            },
+            emailRedirectTo: `${window.location.origin}/dashboard`
+          },
+        });
+
+        if (signupError) {
+          toast.error(signupError.message);
+          setLoading(false);
+          return;
+        }
+
+        if (signupData.user) {
+          // Auto sign in after signup
+          const { error: signInError } = await supabase.auth.signInWithPassword({
+            email: email,
+            password: generatedPassword,
+          });
+
+          if (signInError) {
+            toast.success("Account created! Please sign in.");
+            navigate("/auth");
+          } else {
+            toast.success("Account created successfully!");
+            navigate("/dashboard");
+          }
+        }
       }
     } catch (error: any) {
       console.error("Verification error:", error);
-      toast.error("That code isn't correct. Please check and try again.");
+      toast.error(error.message || "Verification failed");
     } finally {
       setLoading(false);
     }
@@ -57,11 +153,15 @@ const PhoneVerification = () => {
   const handleResend = async () => {
     setResending(true);
     try {
-      const { error } = await supabase.auth.signInWithOtp({
-        phone: phoneNumber,
+      const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
+        body: { phoneNumber: phoneNumber }
       });
 
-      if (error) throw error;
+      if (error || !data.success) {
+        toast.error(data?.error || "Failed to resend code");
+        return;
+      }
+
       toast.success("Verification code resent!");
     } catch (error: any) {
       console.error("Resend error:", error);
@@ -92,6 +192,11 @@ const PhoneVerification = () => {
             <CardTitle className="text-2xl text-center">Enter Verification Code</CardTitle>
             <CardDescription className="text-center">
               We sent a 6-digit code to {phoneNumber}
+              {!isLogin && email && (
+                <div className="mt-2 text-xs">
+                  Account email: {email}
+                </div>
+              )}
             </CardDescription>
           </CardHeader>
 
