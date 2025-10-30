@@ -190,9 +190,10 @@ serve(async (req) => {
           user_id: user.id,
           token: update.token,
           balance: update.balance,
+          chain_id: update.chainId,
           updated_at: new Date().toISOString(),
         }, {
-          onConflict: 'user_id,token',
+          onConflict: 'user_id,token,chain_id',
         });
 
       if (upsertError) {

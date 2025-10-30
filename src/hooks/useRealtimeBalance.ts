@@ -10,6 +10,22 @@ export interface WalletBalance {
   updated_at: string;
 }
 
+const aggregateBalances = (balances: WalletBalance[]): WalletBalance[] => {
+  const aggregated = balances.reduce((acc, balance) => {
+    const existing = acc.find(b => b.token === balance.token);
+    if (existing) {
+      existing.balance = Number(existing.balance) + Number(balance.balance);
+    } else {
+      acc.push({
+        ...balance,
+        balance: Number(balance.balance)
+      });
+    }
+    return acc;
+  }, [] as WalletBalance[]);
+  return aggregated;
+};
+
 export const useRealtimeBalance = (userId: string | null) => {
   const [balances, setBalances] = useState<WalletBalance[]>([]);
   const [loading, setLoading] = useState(true);
@@ -29,7 +45,7 @@ export const useRealtimeBalance = (userId: string | null) => {
       if (error) {
         console.error("Error loading balances:", error);
       } else {
-        setBalances(data || []);
+        setBalances(aggregateBalances(data || []));
       }
       setLoading(false);
 
@@ -48,13 +64,13 @@ export const useRealtimeBalance = (userId: string | null) => {
             console.log('Balance change received:', payload);
             
             if (payload.eventType === 'INSERT') {
-              setBalances(prev => [...prev, payload.new as WalletBalance]);
+              setBalances(prev => aggregateBalances([...prev, payload.new as WalletBalance]));
             } else if (payload.eventType === 'UPDATE') {
               setBalances(prev => 
-                prev.map(bal => bal.id === payload.new.id ? payload.new as WalletBalance : bal)
+                aggregateBalances(prev.map(bal => bal.id === payload.new.id ? payload.new as WalletBalance : bal))
               );
             } else if (payload.eventType === 'DELETE') {
-              setBalances(prev => prev.filter(bal => bal.id !== payload.old.id));
+              setBalances(prev => aggregateBalances(prev.filter(bal => bal.id !== payload.old.id)));
             }
           }
         )

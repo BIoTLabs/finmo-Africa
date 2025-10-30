@@ -72,7 +72,24 @@ const Dashboard = () => {
     }
   };
 
-  const totalUsdValue = balances.reduce((sum, b) => sum + Number(b.balance), 0);
+  // Aggregate balances by token across all chains for display
+  const aggregatedBalances = balances.reduce((acc, b) => {
+    const existing = acc.find(item => item.token === b.token);
+    if (existing) {
+      existing.balance += Number(b.balance);
+    } else {
+      acc.push({ 
+        token: b.token, 
+        balance: Number(b.balance),
+        id: b.id,
+        user_id: b.user_id,
+        updated_at: b.updated_at
+      });
+    }
+    return acc;
+  }, [] as typeof balances);
+
+  const totalUsdValue = aggregatedBalances.reduce((sum, b) => sum + b.balance, 0);
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
@@ -234,7 +251,7 @@ const Dashboard = () => {
       {/* Token List */}
       <div className="p-6 space-y-4">
         <h3 className="text-lg font-semibold">Your Assets</h3>
-        {balances.map((balance, index) => (
+        {aggregatedBalances.map((balance, index) => (
           <Card 
             key={balance.token} 
             className="shadow-finmo-sm hover:shadow-finmo-md transition-all hover-scale animate-fade-in"
