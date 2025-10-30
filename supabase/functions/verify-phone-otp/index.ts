@@ -1,4 +1,5 @@
 import { createClient } from 'https://esm.sh/@supabase/supabase-js@2';
+import { validateAndNormalizePhone } from '../_shared/phoneValidation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -25,17 +26,18 @@ Deno.serve(async (req) => {
       );
     }
 
-    // Normalize phone to E.164 format
-    let normalizedPhone = phoneNumber.replace(/[^\d+]/g, '');
-    if (!normalizedPhone.startsWith('+')) {
-      if (normalizedPhone.startsWith('0')) {
-        normalizedPhone = '+234' + normalizedPhone.substring(1);
-      } else if (normalizedPhone.startsWith('234')) {
-        normalizedPhone = '+' + normalizedPhone;
-      } else {
-        normalizedPhone = '+234' + normalizedPhone;
-      }
+    // Validate and normalize phone number
+    const validation = validateAndNormalizePhone(phoneNumber);
+    
+    if (!validation.valid) {
+      console.error('Phone validation failed:', validation.error);
+      return new Response(
+        JSON.stringify({ error: validation.error }),
+        { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
+
+    const normalizedPhone = validation.normalized!;
 
     const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
     const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;

@@ -1,4 +1,5 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2.45.0";
+import { validateAndNormalizePhone } from '../_shared/phoneValidation.ts';
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
@@ -39,7 +40,7 @@ Deno.serve(async (req) => {
     }
 
     const requestData: TransactionRequest = await req.json();
-    const { recipient_phone, recipient_wallet, amount, token, transaction_type } = requestData;
+    let { recipient_phone, recipient_wallet, amount, token, transaction_type } = requestData;
 
     // Validate amount
     if (typeof amount !== 'number' || !isFinite(amount)) {
@@ -60,12 +61,17 @@ Deno.serve(async (req) => {
       throw new Error(`Amount has too many decimal places (max ${maxDecimals})`);
     }
 
-    // Validate phone number if provided (E.164 format)
+    // Validate phone number if provided
     if (recipient_phone) {
-      const phoneRegex = /^\+[1-9]\d{1,14}$/;
-      if (!phoneRegex.test(recipient_phone)) {
-        throw new Error('Invalid phone number format. Use international format: +1234567890');
+      const validation = validateAndNormalizePhone(recipient_phone);
+      
+      if (!validation.valid) {
+        console.error('Phone validation failed:', validation.error);
+        throw new Error(validation.error || 'Invalid phone number format');
       }
+      
+      // Use normalized phone number
+      recipient_phone = validation.normalized!;
     }
 
     console.log('Processing transaction:', { 

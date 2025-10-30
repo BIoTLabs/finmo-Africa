@@ -6,7 +6,7 @@ import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { Smartphone, Lock, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft, Mail } from "lucide-react";
+import { Smartphone, Lock, ChevronDown, Zap, Users, CreditCard, ArrowRightLeft, Mail, Check, AlertCircle } from "lucide-react";
 import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
@@ -14,6 +14,8 @@ import TwoFactorVerify from "@/components/TwoFactorVerify";
 import { PhoneVerificationDialog } from "@/components/PhoneVerificationDialog";
 import { use2FA } from "@/hooks/use2FA";
 import { use2FAPreferences } from "@/hooks/use2FAPreferences";
+import { usePhoneValidation } from "@/hooks/usePhoneValidation";
+import { COUNTRY_PHONE_RULES } from "@/utils/phoneValidation";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -42,6 +44,7 @@ const Auth = () => {
   const [pendingSignupData, setPendingSignupData] = useState<{ phone: string; email: string; password: string } | null>(null);
   const { challengeMFA, verifyChallenge } = use2FA();
   const { checkIfRequired } = use2FAPreferences();
+  const phoneValidation = usePhoneValidation(countryCode, phoneNumber);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -107,7 +110,14 @@ const Auth = () => {
     setLoading(true);
 
     try {
-      const fullPhone = `${countryCode}${phoneNumber}`;
+      // Validate phone number for signup
+      if (!isLogin && !phoneValidation.isValid) {
+        toast.error(phoneValidation.error || "Invalid phone number");
+        setLoading(false);
+        return;
+      }
+
+      const fullPhone = phoneValidation.normalized || `${countryCode}${phoneNumber}`;
       
       if (isLogin) {
         // Validate email for login
@@ -372,15 +382,45 @@ const Auth = () => {
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input
-                      id="phone"
-                      type="tel"
-                      placeholder="8012345678"
-                      value={phoneNumber}
-                      onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ""))}
-                      className="flex-1"
-                      required
-                    />
+                    <div className="flex-1 space-y-1">
+                      <div className="relative">
+                        <Input
+                          id="phone"
+                          type="tel"
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          placeholder={phoneValidation.rules.example.substring(countryCode.length)}
+                          value={phoneValidation.formatted}
+                          onChange={(e) => {
+                            const cleaned = e.target.value.replace(/\D/g, "");
+                            if (cleaned.length <= phoneValidation.rules.digits) {
+                              setPhoneNumber(cleaned);
+                            }
+                          }}
+                          maxLength={phoneValidation.rules.digits + Math.floor(phoneValidation.rules.digits / 3)}
+                          className={`pr-10 ${phoneValidation.isValid ? 'border-success' : phoneNumber && !phoneValidation.isValid ? 'border-destructive' : ''}`}
+                          required
+                        />
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          {phoneValidation.isValid ? (
+                            <Check className="w-4 h-4 text-success" />
+                          ) : phoneNumber && !phoneValidation.isValid ? (
+                            <AlertCircle className="w-4 h-4 text-destructive" />
+                          ) : null}
+                        </div>
+                      </div>
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">
+                          Format: {phoneValidation.rules.format}
+                        </span>
+                        <span className={`font-medium ${phoneValidation.isValid ? 'text-success' : 'text-muted-foreground'}`}>
+                          {phoneValidation.progress}
+                        </span>
+                      </div>
+                      {phoneNumber && !phoneValidation.isValid && phoneValidation.error && (
+                        <p className="text-xs text-destructive">{phoneValidation.error}</p>
+                      )}
+                    </div>
                   </div>
                 </div>
               )}
@@ -419,7 +459,7 @@ const Auth = () => {
               <Button 
                 type="submit" 
                 className="w-full bg-gradient-primary hover:opacity-90 transition-opacity h-11 text-base font-semibold"
-                disabled={loading}
+                disabled={loading || (!isLogin && !phoneValidation.isValid)}
               >
                 {loading ? "Processing..." : (isLogin ? "Sign In" : "Create Account")}
               </Button>

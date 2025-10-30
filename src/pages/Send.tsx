@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { ArrowLeft, Send as SendIcon, Zap, ExternalLink, QrCode } from "lucide-react";
+import { ArrowLeft, Send as SendIcon, Zap, ExternalLink, QrCode, Check, AlertCircle } from "lucide-react";
+import { validateE164PhoneNumber, formatPhoneNumber, autoCorrectPhoneNumber, COUNTRY_PHONE_RULES } from "@/utils/phoneValidation";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -36,6 +37,18 @@ const Send = () => {
   const [profile, setProfile] = useState<any>(null);
   const [showScanner, setShowScanner] = useState(false);
   const [selectedContactName, setSelectedContactName] = useState(prefilledContact?.name || "");
+  const [phoneValidationError, setPhoneValidationError] = useState<string>("");
+
+  // Validate phone number whenever it changes
+  useEffect(() => {
+    if (transferType === "internal" && phoneNumber) {
+      const corrected = autoCorrectPhoneNumber(phoneNumber);
+      const validation = validateE164PhoneNumber(corrected);
+      setPhoneValidationError(validation.valid ? "" : validation.error || "Invalid phone number");
+    } else {
+      setPhoneValidationError("");
+    }
+  }, [phoneNumber, transferType]);
 
   useEffect(() => {
     checkAuth();
@@ -88,6 +101,16 @@ const Send = () => {
 
   const handleSend = async () => {
     if (!profile) return;
+
+    // Validate phone number for internal transfers
+    if (transferType === "internal") {
+      const corrected = autoCorrectPhoneNumber(phoneNumber);
+      const validation = validateE164PhoneNumber(corrected);
+      if (!validation.valid) {
+        toast.error(validation.error || "Invalid phone number");
+        return;
+      }
+    }
     
     // Wrap the entire send logic in 2FA verification
     await requireVerification("require_on_send", async () => {
@@ -117,9 +140,12 @@ const Send = () => {
         // Route to appropriate endpoint based on transfer type
         const endpoint = transferType === 'internal' ? 'process-transaction' : 'blockchain-withdraw';
         
+        // Normalize phone number before sending
+        const normalizedPhone = transferType === 'internal' ? autoCorrectPhoneNumber(phoneNumber) : undefined;
+        
         const { data, error } = await supabase.functions.invoke(endpoint, {
           body: {
-            recipient_phone: transferType === 'internal' ? phoneNumber : undefined,
+            recipient_phone: normalizedPhone,
             recipient_wallet: transferType === 'external' ? walletAddress : undefined,
             amount: parseFloat(amount),
             token: token,
@@ -225,20 +251,36 @@ const Send = () => {
                       </Button>
                     </div>
                   </div>
-                  <Input
-                    type="tel"
-                    placeholder="+234 801 234 5678"
-                    value={phoneNumber}
-                    onChange={(e) => {
-                      setPhoneNumber(e.target.value);
-                      setSelectedContactName("");
-                    }}
-                  />
-                  {selectedContactName && (
-                    <p className="text-sm text-muted-foreground">
-                      Sending to: <span className="font-semibold">{selectedContactName}</span>
-                    </p>
-                  )}
+                  <div className="space-y-1">
+                    <div className="relative">
+                      <Input
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="+234 801 234 5678"
+                        value={phoneNumber}
+                        onChange={(e) => {
+                          setPhoneNumber(e.target.value);
+                          setSelectedContactName("");
+                        }}
+                        className={`pr-10 ${!phoneValidationError && phoneNumber ? 'border-success' : phoneValidationError ? 'border-destructive' : ''}`}
+                      />
+                      <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                        {!phoneValidationError && phoneNumber ? (
+                          <Check className="w-4 h-4 text-success" />
+                        ) : phoneValidationError ? (
+                          <AlertCircle className="w-4 h-4 text-destructive" />
+                        ) : null}
+                      </div>
+                    </div>
+                    {phoneValidationError && (
+                      <p className="text-xs text-destructive">{phoneValidationError}</p>
+                    )}
+                    {selectedContactName && (
+                      <p className="text-sm text-muted-foreground">
+                        Sending to: <span className="font-semibold">{selectedContactName}</span>
+                      </p>
+                    )}
+                  </div>
                 </div>
               </TabsContent>
 
@@ -339,7 +381,7 @@ const Send = () => {
         {/* Send Button */}
         <Button
           onClick={handleSend}
-          disabled={!amount || loading || isVerifying || (transferType === "internal" ? !phoneNumber : !walletAddress)}
+          disabled={!amount || loading || isVerifying || (transferType === "internal" ? (!phoneNumber || !!phoneValidationError) : !walletAddress)}
           className="w-full h-14 text-lg bg-gradient-success hover:opacity-90"
         >
           {loading || isVerifying ? (

@@ -1,7 +1,8 @@
-import { Contacts } from '@capacitor-community/contacts';
-import { Capacitor } from '@capacitor/core';
-import { supabase } from '@/integrations/supabase/client';
-import { toast } from 'sonner';
+import { Capacitor } from "@capacitor/core";
+import { Contacts } from "@capacitor-community/contacts";
+import { supabase } from "@/integrations/supabase/client";
+import { toast } from "sonner";
+import { validateE164PhoneNumber, autoCorrectPhoneNumber } from "@/utils/phoneValidation";
 
 export interface PhoneContact {
   name: string;
@@ -151,37 +152,76 @@ export const syncPhoneContacts = async (): Promise<PhoneContact[]> => {
   }
 };
 
+// Save contacts to Supabase database with validation
 export const saveContactsToDatabase = async (contacts: PhoneContact[]): Promise<void> => {
-  try {
-    const { data: { user } } = await supabase.auth.getUser();
-    
-    if (!user) {
-      toast.error('You must be logged in to save contacts');
-      return;
+  const { data: { session } } = await supabase.auth.getSession();
+  
+  if (!session) {
+    throw new Error("User must be authenticated to save contacts");
+  }
+
+  console.log(`Attempting to save ${contacts.length} contacts to database`);
+  
+  // Filter and validate contacts
+  const validatedContacts: Array<{ name: string; phoneNumber: string; isValid: boolean; error?: string }> = [];
+  const invalidContacts: Array<{ name: string; phoneNumber: string; error: string }> = [];
+
+  contacts.forEach(contact => {
+    if (!contact.name || !contact.phoneNumber) {
+      return; // Skip empty entries
     }
 
-    // Insert contacts one by one, ignoring duplicates
-    const insertPromises = contacts.map(async (contact) => {
-      const { error } = await supabase
-        .from('contacts')
-        .upsert({
-          user_id: user.id,
-          contact_name: contact.name,
-          contact_phone: contact.phoneNumber,
-        }, {
-          onConflict: 'user_id,contact_phone',
-          ignoreDuplicates: true,
-        });
+    // Attempt auto-correction
+    const correctedPhone = autoCorrectPhoneNumber(contact.phoneNumber);
+    const validation = validateE164PhoneNumber(correctedPhone);
 
-      if (error && error.code !== '23505') { // Ignore unique violation errors
-        console.error('Error saving contact:', error);
-      }
+    if (validation.valid && validation.normalized) {
+      validatedContacts.push({
+        name: contact.name,
+        phoneNumber: validation.normalized,
+        isValid: true
+      });
+    } else {
+      invalidContacts.push({
+        name: contact.name,
+        phoneNumber: contact.phoneNumber,
+        error: validation.error || "Invalid format"
+      });
+    }
+  });
+
+  console.log(`Validated: ${validatedContacts.length} valid, ${invalidContacts.length} invalid contacts`);
+
+  if (invalidContacts.length > 0) {
+    console.warn("Invalid contacts skipped:", invalidContacts.slice(0, 5)); // Log first 5
+  }
+
+  if (validatedContacts.length === 0) {
+    if (invalidContacts.length > 0) {
+      throw new Error(`No valid contacts found. ${invalidContacts.length} contacts had invalid phone numbers.`);
+    }
+    console.log("No valid contacts to save");
+    return;
+  }
+
+  // Prepare contacts for insertion with normalized phone numbers
+  const contactsToInsert = validatedContacts.map(contact => ({
+    user_id: session.user.id,
+    contact_name: contact.name,
+    contact_phone: contact.phoneNumber,
+  }));
+
+  const { error } = await supabase
+    .from("contacts")
+    .upsert(contactsToInsert, { 
+      onConflict: "user_id,contact_phone",
+      ignoreDuplicates: true 
     });
 
-    await Promise.all(insertPromises);
-    toast.success(`Synced ${contacts.length} contacts successfully`);
-  } catch (error) {
-    console.error('Error saving contacts to database:', error);
-    toast.error('Failed to save contacts to database');
+  if (error) {
+    console.error("Database error:", error);
+    throw new Error("Failed to save contacts to database");
   }
+
+  console.log(`Successfully saved ${validatedContacts.length} contacts${invalidContacts.length > 0 ? ` (${invalidContacts.length} skipped due to invalid format)` : ""}`);
 };

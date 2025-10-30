@@ -1832,6 +1832,7 @@ export type Database = {
         }
         Returns: string
       }
+      validate_e164_phone: { Args: { phone_number: string }; Returns: boolean }
     }
     Enums: {
       app_role: "admin" | "moderator" | "user"
