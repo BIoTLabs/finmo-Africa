@@ -35,3 +35,6 @@ verify_jwt = false
 
 [functions.confirm-phone-otp]
 verify_jwt = false
+
+[functions.reset-password-phone]
+verify_jwt = false

@@ -41,7 +41,7 @@ const handler = async (req: Request): Promise<Response> => {
     }
 
     // Create the invitation message
-    const message = `Hi ${contactName}! ${inviterName} invited you to join FinMo - a secure digital wallet for instant transfers, P2P trading, and marketplace shopping. Download now: https://finmo.app`;
+    const message = `Hi ${contactName}! ${inviterName} invited you to join FinMo - a secure digital wallet for instant transfers, P2P trading, and marketplace shopping. Download now: https://finmo.africa`;
 
     // Send SMS via Twilio
     const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${TWILIO_ACCOUNT_SID}/Messages.json`;

@@ -73,7 +73,7 @@ Deno.serve(async (req) => {
     // Check attempt limit
     if (verification.attempts >= 5) {
       return new Response(
-        JSON.stringify({ error: 'Too many failed attempts. Please request a new code.' }),
+        JSON.stringify({ error: 'Maximum attempts reached (5/5). Please request a new code.' }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }

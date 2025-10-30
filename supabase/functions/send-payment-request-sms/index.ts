@@ -46,7 +46,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending payment request SMS");
 
-    const paymentUrl = `https://39f749dd-e983-4411-b0e9-48f73cf4294c.lovableproject.com/payment-request/${payment_request_id}`;
+    const paymentUrl = `https://finmo.africa/payment-request/${payment_request_id}`;
 
     const message = `${requester_name} has requested a payment of $${amount} ${token} via FinMo. Pay now: ${paymentUrl}`;
 
