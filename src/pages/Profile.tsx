@@ -166,6 +166,29 @@ const Profile = () => {
     }
   };
 
+  const normalizePhoneNumber = (phone: string): string => {
+    // Remove all non-digit characters except +
+    let cleaned = phone.replace(/[^\d+]/g, '');
+    
+    // If already has +, return as is
+    if (cleaned.startsWith('+')) {
+      return cleaned;
+    }
+    
+    // If starts with 0 (Nigerian format), replace with +234
+    if (cleaned.startsWith('0')) {
+      return '+234' + cleaned.substring(1);
+    }
+    
+    // If starts with 234, add +
+    if (cleaned.startsWith('234')) {
+      return '+' + cleaned;
+    }
+    
+    // Default: assume it's Nigerian and add +234
+    return '+234' + cleaned;
+  };
+
   const handleInviteContact = async (contact: Contact) => {
     try {
       const { data: { user } } = await supabase.auth.getUser();
@@ -174,18 +197,22 @@ const Profile = () => {
         return;
       }
 
+      // Normalize phone number to E.164 format
+      const normalizedPhone = normalizePhoneNumber(contact.contact_phone);
+
       console.log("Inviting contact:", { 
         contactName: contact.contact_name, 
-        contactPhone: contact.contact_phone,
+        originalPhone: contact.contact_phone,
+        normalizedPhone: normalizedPhone,
         userId: user.id 
       });
 
-      // Insert invitation record
+      // Insert invitation record with normalized phone
       const { error: dbError } = await supabase
         .from("contact_invitations")
         .insert({
           inviter_id: user.id,
-          contact_phone: contact.contact_phone,
+          contact_phone: normalizedPhone,
           contact_name: contact.contact_name,
         });
 
@@ -208,7 +235,7 @@ const Profile = () => {
       const { data: smsData, error: smsError } = await supabase.functions.invoke("send-invitation-sms", {
         body: {
           contactName: contact.contact_name,
-          contactPhone: contact.contact_phone,
+          contactPhone: normalizedPhone,
           inviterName: inviterName,
         },
       });
