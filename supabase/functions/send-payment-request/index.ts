@@ -101,6 +101,9 @@ const handler = async (req: Request): Promise<Response> => {
     `;
 
     // Send email via Resend API
+    console.log(`Attempting to send payment request email to: ${recipient_email}`);
+    console.log(`Amount: $${amount} ${token}, From: ${requester_name}`);
+
     const emailResponse = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: {
@@ -118,14 +121,19 @@ const handler = async (req: Request): Promise<Response> => {
     if (!emailResponse.ok) {
       const errorData = await emailResponse.json();
       console.error("Resend API error:", errorData);
+      console.error("Status code:", emailResponse.status);
       
-      // Check for common errors
+      // Check for common errors with helpful messages
       if (errorData.statusCode === 403 || errorData.message?.includes("verify")) {
-        throw new Error("Email domain not verified. Using onboarding@resend.dev for testing. For production, verify a domain at https://resend.com/domains");
+        throw new Error("Email domain not verified. In test mode, only verified email addresses can receive emails. Verify your domain at https://resend.com/domains or add recipient to verified emails.");
       }
       
       if (errorData.statusCode === 401) {
-        throw new Error("Invalid Resend API key. Please check RESEND_API_KEY secret.");
+        throw new Error("Invalid Resend API key. Please check RESEND_API_KEY secret in Lovable Cloud backend settings.");
+      }
+
+      if (errorData.message?.includes("not found")) {
+        throw new Error("Recipient email not verified in Resend test mode. Add email to verified list at https://resend.com/settings");
       }
       
       throw new Error(`Resend API error: ${errorData.message || JSON.stringify(errorData)}`);
@@ -133,16 +141,26 @@ const handler = async (req: Request): Promise<Response> => {
 
     const emailResult = await emailResponse.json();
 
-    console.log("Email sent successfully:", emailResult);
+    console.log("✓ Payment request email sent successfully!");
+    console.log("Email ID:", emailResult.id);
 
-    return new Response(JSON.stringify({ success: true, emailResponse: emailResult }), {
+    return new Response(JSON.stringify({ 
+      success: true, 
+      message: "Payment request email sent successfully",
+      emailId: emailResult.id 
+    }), {
       status: 200,
       headers: { "Content-Type": "application/json", ...corsHeaders },
     });
   } catch (error: any) {
     console.error("Error sending payment request email:", error);
+    console.error("Error details:", error.stack);
+    
     return new Response(
-      JSON.stringify({ error: error.message }),
+      JSON.stringify({ 
+        error: error.message,
+        hint: "Check edge function logs for more details"
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },

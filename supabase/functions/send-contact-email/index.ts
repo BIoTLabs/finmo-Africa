@@ -76,7 +76,11 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Email sent successfully:", emailResponse);
 
-    return new Response(JSON.stringify(emailResponse), {
+    return new Response(JSON.stringify({ 
+      success: true,
+      message: "Email sent successfully",
+      id: emailResponse.id 
+    }), {
       status: 200,
       headers: {
         "Content-Type": "application/json",
@@ -85,8 +89,22 @@ const handler = async (req: Request): Promise<Response> => {
     });
   } catch (error: any) {
     console.error("Error in send-contact-email function:", error);
+    
+    // Provide more specific error messages
+    let errorMessage = "Failed to send email";
+    if (error.message?.includes("verify")) {
+      errorMessage = "Email domain not verified. For production, verify a domain at resend.com/domains";
+    } else if (error.statusCode === 401) {
+      errorMessage = "Invalid email API key";
+    } else if (error.message) {
+      errorMessage = error.message;
+    }
+
     return new Response(
-      JSON.stringify({ error: error.message || "Failed to send email" }),
+      JSON.stringify({ 
+        error: errorMessage,
+        details: error.message 
+      }),
       {
         status: 500,
         headers: { "Content-Type": "application/json", ...corsHeaders },
