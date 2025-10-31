@@ -1066,7 +1066,7 @@ export type Database = {
           phone_number: string
           socials: Json | null
           updated_at: string
-          wallet_address: string
+          wallet_address: string | null
           wallet_private_key_encrypted: string | null
         }
         Insert: {
@@ -1083,7 +1083,7 @@ export type Database = {
           phone_number: string
           socials?: Json | null
           updated_at?: string
-          wallet_address: string
+          wallet_address?: string | null
           wallet_private_key_encrypted?: string | null
         }
         Update: {
@@ -1100,7 +1100,7 @@ export type Database = {
           phone_number?: string
           socials?: Json | null
           updated_at?: string
-          wallet_address?: string
+          wallet_address?: string | null
           wallet_private_key_encrypted?: string | null
         }
         Relationships: []
@@ -1513,21 +1513,21 @@ export type Database = {
           id: string
           phone_number: string
           user_id: string
-          wallet_address: string
+          wallet_address: string | null
         }
         Insert: {
           created_at?: string
           id?: string
           phone_number: string
           user_id: string
-          wallet_address: string
+          wallet_address?: string | null
         }
         Update: {
           created_at?: string
           id?: string
           phone_number?: string
           user_id?: string
-          wallet_address?: string
+          wallet_address?: string | null
         }
         Relationships: []
       }

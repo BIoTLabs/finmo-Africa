@@ -132,6 +132,18 @@ const PhoneVerification = () => {
             toast.success("Account created! Please sign in.");
             navigate("/auth");
           } else {
+            // Generate wallet after successful signup
+            try {
+              const { error: walletError } = await supabase.functions.invoke('generate-user-wallet');
+              if (walletError) {
+                console.error("Wallet generation error:", walletError);
+                // Don't block signup, wallet can be generated later
+              }
+            } catch (error) {
+              console.error("Wallet generation failed:", error);
+              // Don't block signup, wallet can be generated later
+            }
+            
             toast.success("Account created successfully!");
             navigate("/dashboard");
           }

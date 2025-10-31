@@ -69,6 +69,21 @@ const Dashboard = () => {
       toast.error("We couldn't load your wallet. Please refresh the page.");
     } else {
       setProfile(profileData);
+      
+      // Defensive check: Generate wallet if missing
+      if (profileData && !profileData.wallet_address) {
+        try {
+          const { error: walletError } = await supabase.functions.invoke('generate-user-wallet');
+          if (walletError) {
+            console.error("Wallet generation error:", walletError);
+          } else {
+            // Reload profile to get the new wallet address
+            loadUserData();
+          }
+        } catch (error) {
+          console.error("Wallet generation failed:", error);
+        }
+      }
     }
   };
 
