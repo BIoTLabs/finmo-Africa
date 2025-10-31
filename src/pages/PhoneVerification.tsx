@@ -59,31 +59,28 @@ const PhoneVerification = () => {
       }
 
       if (isLogin && useOTP) {
-        // OTP Login flow - get user email and sign in
-        console.log("OTP login - getting user email for:", phoneNumber);
+        // OTP Login flow - create session after phone verification
+        console.log("OTP login - creating session for:", phoneNumber);
 
-        // Get user's email via backend function (bypasses RLS)
-        const { data: emailData, error: emailError } = await supabase.functions.invoke('get-user-email-by-phone', {
+        const { data: loginData, error: loginError } = await supabase.functions.invoke('otp-login', {
           body: { phoneNumber: phoneNumber }
         });
 
-        if (emailError || !emailData.success) {
-          console.error("Email lookup error:", emailError);
-          toast.error(emailData?.error || "Account not found. Please try again.");
+        if (loginError || !loginData.success) {
+          console.error("OTP login error:", loginError);
+          toast.error(loginData?.error || "Unable to complete login. Please try password login.");
           navigate("/auth");
           return;
         }
 
-        // Sign in with magic link OTP
-        const { error: signInError } = await supabase.auth.signInWithOtp({
-          email: emailData.email,
-          options: {
-            shouldCreateUser: false,
-          }
+        // Set the session using the tokens
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: loginData.access_token,
+          refresh_token: loginData.refresh_token,
         });
 
-        if (signInError) {
-          console.error("Sign in error:", signInError);
+        if (sessionError) {
+          console.error("Session error:", sessionError);
           toast.error("Unable to complete login. Please try password login.");
           navigate("/auth");
           return;

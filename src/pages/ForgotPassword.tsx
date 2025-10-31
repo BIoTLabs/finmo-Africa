@@ -109,7 +109,7 @@ const ForgotPassword = () => {
 
     try {
       // Use edge function to reset password
-      const { error } = await supabase.functions.invoke('reset-password-phone', {
+      const { data: resetData, error } = await supabase.functions.invoke('reset-password-phone', {
         body: { 
           phoneNumber: verifiedPhone, 
           newPassword 
@@ -118,7 +118,27 @@ const ForgotPassword = () => {
 
       if (error) throw error;
 
-      toast.success("Password reset successfully!");
+      // If we got session tokens, sign in immediately
+      if (resetData.access_token && resetData.refresh_token) {
+        const { error: sessionError } = await supabase.auth.setSession({
+          access_token: resetData.access_token,
+          refresh_token: resetData.refresh_token,
+        });
+
+        if (!sessionError) {
+          toast.success("Password reset successfully! Logging you in...");
+          navigate("/dashboard");
+          return;
+        }
+      }
+
+      // If requiresDelay is true, inform user to wait
+      if (resetData.requiresDelay) {
+        toast.success("Password reset! Please wait 10 seconds before logging in.");
+      } else {
+        toast.success("Password reset successfully!");
+      }
+      
       navigate("/auth");
     } catch (error: any) {
       console.error("Password reset error:", error);
