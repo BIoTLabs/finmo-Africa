@@ -130,7 +130,7 @@ const Send = () => {
             .maybeSingle();
 
           if (!kycData || kycData.status !== 'approved') {
-            toast.error('Please complete KYC verification before making withdrawals');
+            toast.error('KYC verification required for withdrawals. Please complete identity verification to enable blockchain withdrawals.');
             navigate('/kyc-verification');
             setLoading(false);
             return;
@@ -178,7 +178,7 @@ const Send = () => {
         navigate("/dashboard");
       } catch (error: any) {
         console.error('Transaction error:', error);
-        toast.error("We couldn't send your money. Please check your balance and try again.");
+        toast.error(error.message || "Unable to complete transaction. Please verify you have sufficient balance and try again. If the issue persists, contact support.");
       } finally {
         setLoading(false);
       }

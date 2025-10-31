@@ -78,8 +78,7 @@ const handler = async (req: Request): Promise<Response> => {
 
     return new Response(JSON.stringify({ 
       success: true,
-      message: "Email sent successfully",
-      id: emailResponse.id 
+      message: "Email sent successfully"
     }), {
       status: 200,
       headers: {

@@ -35,7 +35,7 @@ const P2POrderDetail = () => {
       if (error) throw error;
       
       if (!data) {
-        toast.error("We couldn't find this listing. It may have been removed.");
+        toast.error("Listing not found or no longer available. It may have been removed by the seller or completed by another buyer.");
         navigate("/p2p");
         return;
       }
@@ -43,7 +43,7 @@ const P2POrderDetail = () => {
       setListing(data);
     } catch (error) {
       console.error("Error fetching listing:", error);
-      toast.error("We couldn't load this listing. Please try again.");
+      toast.error("Unable to load listing details. This may be a temporary network issue. Please refresh the page or try again in a moment.");
     }
   };
 
@@ -71,7 +71,7 @@ const P2POrderDetail = () => {
     }
 
     if (paymentMethods.length === 0) {
-      toast.error("Please add a payment method before creating an order.");
+      toast.error("Payment method required. To proceed with this order, please add a payment method in your account settings first.");
       navigate("/payment-methods");
       return;
     }
@@ -101,7 +101,7 @@ const P2POrderDetail = () => {
       navigate(`/p2p/order-status/${data.order_id}`);
     } catch (error: any) {
       console.error("Error creating order:", error);
-      toast.error("We couldn't create your order. Please try again.");
+      toast.error("Unable to create order. This may be due to insufficient balance or a network issue. Please verify your account balance and try again. If the problem persists, contact support.");
     } finally {
       setLoading(false);
     }

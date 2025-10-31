@@ -53,7 +53,7 @@ const PhoneVerification = () => {
       });
 
       if (verifyError || !verifyData.success) {
-        toast.error(verifyData?.error || "Invalid verification code");
+        toast.error(verifyData?.error || "Invalid verification code. Please check the code and try again, or request a new code.");
         setLoading(false);
         return;
       }
@@ -68,7 +68,7 @@ const PhoneVerification = () => {
 
         if (loginError || !loginData.success) {
           console.error("OTP login error:", loginError);
-          toast.error(loginData?.error || "Unable to complete login. Please try password login.");
+          toast.error(loginData?.error || "Unable to complete login. This may be due to a network issue. Please try password login or contact support.");
           navigate("/auth");
           return;
         }
@@ -81,7 +81,7 @@ const PhoneVerification = () => {
 
         if (sessionError) {
           console.error("Session error:", sessionError);
-          toast.error("Unable to complete login. Please try password login.");
+          toast.error("Unable to create your session. Please try password login or contact support if this persists.");
           navigate("/auth");
           return;
         }

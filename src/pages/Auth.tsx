@@ -111,7 +111,7 @@ const Auth = () => {
 
           if (otpError || !otpData.success) {
             console.error("OTP send error:", otpError);
-            toast.error(otpData?.error || "Failed to send verification code");
+            toast.error(otpData?.error || "Unable to send verification code. Please check your connection and try again.");
             setLoading(false);
             return;
           }
@@ -141,7 +141,7 @@ const Auth = () => {
 
           if (emailError || !emailData.success) {
             console.error("Email lookup error:", emailError);
-            toast.error(emailData?.error || "Account not found. Please check your phone number or sign up.");
+            toast.error(emailData?.error || "Account not found. Please verify your phone number is correct, or create a new account.");
             setLoading(false);
             return;
           }
@@ -160,9 +160,9 @@ const Auth = () => {
             console.error("Error message:", signInError.message);
             
             if (signInError.message.includes("Invalid login credentials") || signInError.message.includes("invalid_credentials")) {
-              toast.error("Invalid password. Try 'Forgot Password?' or use OTP login instead.");
+              toast.error("Incorrect password. Tip: Try 'Forgot Password?' or use the OTP Login option for easier access.");
             } else {
-              toast.error(signInError.message);
+              toast.error(signInError.message || "Unable to sign in. Please try again or use OTP login.");
             }
             setLoading(false);
             return;
@@ -194,12 +194,12 @@ const Auth = () => {
           body: { phoneNumber: fullPhone }
         });
 
-        if (otpError || !otpData.success) {
-          console.error("OTP send error:", otpError);
-          toast.error(otpData?.error || "Failed to send verification code");
-          setLoading(false);
-          return;
-        }
+          if (otpError || !otpData.success) {
+            console.error("OTP send error:", otpError);
+            toast.error(otpData?.error || "Unable to send verification code. Please check your connection and try again.");
+            setLoading(false);
+            return;
+          }
 
         toast.success("Verification code sent to your phone");
         navigate("/verify-phone", { 
@@ -214,7 +214,7 @@ const Auth = () => {
       }
     } catch (error: any) {
       console.error("Auth error:", error);
-      toast.error(error.message || "Something went wrong. Please try again.");
+      toast.error(error.message || "An unexpected error occurred. Please check your connection and try again. If the problem persists, contact support.");
     } finally {
       setLoading(false);
     }

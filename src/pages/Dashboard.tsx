@@ -66,7 +66,7 @@ const Dashboard = () => {
       .maybeSingle();
 
     if (error) {
-      toast.error("We couldn't load your wallet. Please refresh the page.");
+      toast.error("Unable to load your wallet data. This may be a temporary issue. Please refresh the page or contact support if the problem continues.");
     } else {
       setProfile(profileData);
       

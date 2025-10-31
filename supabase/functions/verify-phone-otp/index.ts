@@ -84,8 +84,17 @@ Deno.serve(async (req) => {
     }
 
     if (recentAttempts && recentAttempts.length >= 3) {
+      const oldestAttempt = recentAttempts.sort((a, b) => 
+        new Date(a.attempted_at).getTime() - new Date(b.attempted_at).getTime()
+      )[0];
+      const retryTime = new Date(new Date(oldestAttempt.attempted_at).getTime() + 60 * 60 * 1000);
+      const minutesLeft = Math.ceil((retryTime.getTime() - Date.now()) / (60 * 1000));
+      
       return new Response(
-        JSON.stringify({ error: 'Too many verification attempts. Please try again in an hour.' }),
+        JSON.stringify({ 
+          error: `Too many verification attempts. For security, you can only request 3 codes per hour. Please try again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`,
+          retryAfter: retryTime.toISOString()
+        }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -116,7 +125,9 @@ Deno.serve(async (req) => {
     if (insertError) {
       console.error('Error storing OTP:', insertError);
       return new Response(
-        JSON.stringify({ error: 'Failed to generate verification code' }),
+        JSON.stringify({ 
+          error: 'Unable to generate verification code due to a system error. This is usually temporary - please try again in a few moments. If the problem persists, contact support.' 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -135,7 +146,9 @@ Deno.serve(async (req) => {
     if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
       console.error('Twilio credentials not configured');
       return new Response(
-        JSON.stringify({ error: 'SMS service not configured' }),
+        JSON.stringify({ 
+          error: 'SMS service is currently unavailable. Our team has been notified and is working to restore service. Please try again later or contact support for assistance.' 
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -161,8 +174,18 @@ Deno.serve(async (req) => {
     if (!twilioResponse.ok) {
       const errorText = await twilioResponse.text();
       console.error('Twilio error:', errorText);
+      
+      let errorMessage = 'Unable to send SMS to your number. ';
+      if (twilioResponse.status === 400) {
+        errorMessage += 'Please verify your phone number is correct and includes the country code.';
+      } else if (twilioResponse.status === 429) {
+        errorMessage += 'Too many messages sent to this number. Please try again in 10 minutes.';
+      } else {
+        errorMessage += 'This may be due to network issues or an unsupported carrier. Please try again in a few minutes or contact support.';
+      }
+      
       return new Response(
-        JSON.stringify({ error: 'Failed to send verification code' }),
+        JSON.stringify({ error: errorMessage }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -182,7 +205,9 @@ Deno.serve(async (req) => {
   } catch (error) {
     console.error('Error in verify-phone-otp:', error);
     return new Response(
-      JSON.stringify({ error: 'Internal server error' }),
+      JSON.stringify({ 
+        error: 'An unexpected error occurred while processing your request. Please try again in a few moments. If the problem continues, contact our support team for assistance.' 
+      }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
