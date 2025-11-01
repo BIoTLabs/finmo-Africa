@@ -6,3 +6,8 @@
   RewriteCond %{REQUEST_FILENAME} !-d
   RewriteRule . /index.html [L]
 </IfModule>
+
+<IfModule mod_headers.c>
+  Header set Access-Control-Allow-Private-Network "true"
+  Header set Access-Control-Request-Private-Network "false"
+</IfModule>

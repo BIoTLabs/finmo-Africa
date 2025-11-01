@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { usePhoneValidation } from "@/hooks/usePhoneValidation";
+import { NetworkAccessDialog } from "@/components/NetworkAccessDialog";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -231,6 +232,7 @@ const Auth = () => {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-glow flex items-center justify-center p-4">
+      <NetworkAccessDialog />
       <div className="w-full max-w-md space-y-6 animate-fade-in">
         
         {/* Logo and Welcome */}

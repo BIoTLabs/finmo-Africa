@@ -4,6 +4,8 @@ import { crypto } from "https://deno.land/std@0.224.0/crypto/mod.ts";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Private-Network': 'true',
+  'Access-Control-Request-Private-Network': 'false',
 };
 
 // Simple encryption/decryption using AES-GCM

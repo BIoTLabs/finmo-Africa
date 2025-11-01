@@ -4,6 +4,8 @@ import { ethers } from "https://esm.sh/ethers@6.13.0";
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
+  'Access-Control-Allow-Private-Network': 'true',
+  'Access-Control-Request-Private-Network': 'false',
 };
 
 // Polygon Mumbai Testnet configuration
