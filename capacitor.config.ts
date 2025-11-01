@@ -5,7 +5,7 @@ const config: CapacitorConfig = {
   appName: 'memo-pay-africa',
   webDir: 'dist',
   server: {
-    url: 'https://39f749dd-e983-4411-b0e9-48f73cf4294c.lovableproject.com?forceHideBadge=true',
+    url: 'https://finmo.africa',
     cleartext: true
   },
   plugins: {
