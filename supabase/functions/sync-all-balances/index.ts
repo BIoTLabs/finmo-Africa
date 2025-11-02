@@ -8,8 +8,8 @@ const corsHeaders = {
   'Access-Control-Request-Private-Network': 'false',
 };
 
-const POLYGON_AMOY_RPC = "https://rpc-amoy.polygon.technology";
-const USDC_CONTRACT = "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582";
+const POLYGON_MAINNET_RPC = "https://polygon-rpc.com";
+const USDC_CONTRACT = "0x3c499c542cEF5E3811e1192ce70d8cC03d5c3359"; // USDC on Polygon mainnet
 
 // Minimal ERC20 ABI for balanceOf
 const ERC20_BALANCE_ABI = {
@@ -54,7 +54,7 @@ serve(async (req) => {
         const walletAddress = profile.wallet_address;
         
         // Fetch MATIC balance
-        const maticResponse = await fetch(POLYGON_AMOY_RPC, {
+        const maticResponse = await fetch(POLYGON_MAINNET_RPC, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -74,7 +74,7 @@ serve(async (req) => {
         const paddedAddress = walletAddress.slice(2).padStart(64, '0');
         const callData = balanceOfSelector + paddedAddress;
 
-        const usdcResponse = await fetch(POLYGON_AMOY_RPC, {
+        const usdcResponse = await fetch(POLYGON_MAINNET_RPC, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

@@ -12,6 +12,7 @@ import { useRealtimeBalance } from "@/hooks/useRealtimeBalance";
 import { useAutoBalanceSync } from "@/hooks/useAutoBalanceSync";
 import RealtimeStatus from "@/components/RealtimeStatus";
 import { RewardsNotification } from "@/components/RewardsNotification";
+import { MainnetBanner } from "@/components/MainnetBanner";
 import { NotificationBell } from "@/components/NotificationBell";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { useSessionManager } from "@/hooks/useSessionManager";
@@ -143,6 +144,7 @@ const Dashboard = () => {
     <div className="min-h-screen bg-background pb-20">
       <MobileNav />
       <RealtimeStatus connected={connected} />
+      <MainnetBanner />
       <RewardsNotification userId={userId} />
       {/* Header */}
       <div className="bg-gradient-primary text-primary-foreground p-4 sm:p-6 rounded-b-3xl shadow-finmo-lg">

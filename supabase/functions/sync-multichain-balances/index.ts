@@ -10,46 +10,28 @@ const corsHeaders = {
 
 const SUPPORTED_CHAINS = [
   {
-    chainId: 80002,
-    name: "Polygon Amoy Testnet",
-    rpcUrl: "https://rpc-amoy.polygon.technology",
+    chainId: 137,
+    name: "Polygon",
+    rpcUrl: "https://polygon-rpc.com",
     nativeSymbol: "MATIC",
   },
   {
-    chainId: 11155111,
-    name: "Ethereum Sepolia",
-    rpcUrl: "https://rpc.sepolia.org",
+    chainId: 1,
+    name: "Ethereum",
+    rpcUrl: "https://eth.llamarpc.com",
     nativeSymbol: "ETH",
   },
   {
-    chainId: 421614,
-    name: "Arbitrum Sepolia",
-    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+    chainId: 42161,
+    name: "Arbitrum One",
+    rpcUrl: "https://arb1.arbitrum.io/rpc",
     nativeSymbol: "ETH",
   },
   {
-    chainId: 84532,
-    name: "Base Sepolia",
-    rpcUrl: "https://sepolia.base.org",
+    chainId: 8453,
+    name: "Base",
+    rpcUrl: "https://mainnet.base.org",
     nativeSymbol: "ETH",
-  },
-  {
-    chainId: 11155420,
-    name: "Optimism Sepolia",
-    rpcUrl: "https://sepolia.optimism.io",
-    nativeSymbol: "ETH",
-  },
-  {
-    chainId: 534351,
-    name: "Scroll Sepolia",
-    rpcUrl: "https://sepolia-rpc.scroll.io",
-    nativeSymbol: "ETH",
-  },
-  {
-    chainId: 80001,
-    name: "Polygon Mumbai",
-    rpcUrl: "https://rpc-mumbai.maticvigil.com",
-    nativeSymbol: "MATIC",
   },
 ];
 

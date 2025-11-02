@@ -1,78 +1,45 @@
 import { ethers } from "ethers";
 
-// Supported testnet chains configuration
+// Supported mainnet chains configuration
 export const SUPPORTED_CHAINS = {
-  POLYGON_MUMBAI: {
-    chainId: 80001,
-    name: "Polygon Mumbai",
-    rpcUrl: "https://rpc-mumbai.maticvigil.com",
-    blockExplorer: "https://mumbai.polygonscan.com",
+  POLYGON: {
+    chainId: 137,
+    name: "Polygon",
+    rpcUrl: "https://polygon-rpc.com",
+    blockExplorer: "https://polygonscan.com",
     nativeCurrency: {
       name: "MATIC",
       symbol: "MATIC",
       decimals: 18,
     },
   },
-  POLYGON_AMOY: {
-    chainId: 80002,
-    name: "Polygon Amoy Testnet",
-    rpcUrl: "https://rpc-amoy.polygon.technology",
-    blockExplorer: "https://amoy.polygonscan.com",
-    nativeCurrency: {
-      name: "MATIC",
-      symbol: "MATIC",
-      decimals: 18,
-    },
-  },
-  ARBITRUM_SEPOLIA: {
-    chainId: 421614,
-    name: "Arbitrum Sepolia",
-    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
-    blockExplorer: "https://sepolia.arbiscan.io",
+  ETHEREUM: {
+    chainId: 1,
+    name: "Ethereum",
+    rpcUrl: "https://eth.llamarpc.com",
+    blockExplorer: "https://etherscan.io",
     nativeCurrency: {
       name: "ETH",
       symbol: "ETH",
       decimals: 18,
     },
   },
-  OPTIMISM_SEPOLIA: {
-    chainId: 11155420,
-    name: "Optimism Sepolia",
-    rpcUrl: "https://sepolia.optimism.io",
-    blockExplorer: "https://sepolia-optimism.etherscan.io",
+  ARBITRUM: {
+    chainId: 42161,
+    name: "Arbitrum One",
+    rpcUrl: "https://arb1.arbitrum.io/rpc",
+    blockExplorer: "https://arbiscan.io",
     nativeCurrency: {
       name: "ETH",
       symbol: "ETH",
       decimals: 18,
     },
   },
-  BASE_SEPOLIA: {
-    chainId: 84532,
-    name: "Base Sepolia",
-    rpcUrl: "https://sepolia.base.org",
-    blockExplorer: "https://sepolia.basescan.org",
-    nativeCurrency: {
-      name: "ETH",
-      symbol: "ETH",
-      decimals: 18,
-    },
-  },
-  SCROLL_SEPOLIA: {
-    chainId: 534351,
-    name: "Scroll Sepolia",
-    rpcUrl: "https://sepolia-rpc.scroll.io",
-    blockExplorer: "https://sepolia.scrollscan.com",
-    nativeCurrency: {
-      name: "ETH",
-      symbol: "ETH",
-      decimals: 18,
-    },
-  },
-  SEPOLIA: {
-    chainId: 11155111,
-    name: "Ethereum Sepolia",
-    rpcUrl: "https://rpc.sepolia.org",
-    blockExplorer: "https://sepolia.etherscan.io",
+  BASE: {
+    chainId: 8453,
+    name: "Base",
+    rpcUrl: "https://mainnet.base.org",
+    blockExplorer: "https://basescan.org",
     nativeCurrency: {
       name: "ETH",
       symbol: "ETH",
@@ -81,8 +48,8 @@ export const SUPPORTED_CHAINS = {
   },
 };
 
-// Default chain (Polygon Mumbai)
-export const DEFAULT_CHAIN = SUPPORTED_CHAINS.POLYGON_MUMBAI;
+// Default chain (Polygon mainnet)
+export const DEFAULT_CHAIN = SUPPORTED_CHAINS.POLYGON;
 
 // Minimal ERC20 ABI for token transfers
 export const ERC20_ABI = [

@@ -10,39 +10,24 @@ const corsHeaders = {
 
 // Chain configurations
 const SUPPORTED_CHAINS = {
-  80001: {
-    name: "Polygon Mumbai",
-    rpcUrl: "https://rpc-mumbai.maticvigil.com",
+  137: {
+    name: "Polygon",
+    rpcUrl: "https://polygon-rpc.com",
     nativeSymbol: "MATIC",
   },
-  80002: {
-    name: "Polygon Amoy Testnet",
-    rpcUrl: "https://rpc-amoy.polygon.technology",
-    nativeSymbol: "MATIC",
-  },
-  11155111: {
-    name: "Ethereum Sepolia",
-    rpcUrl: "https://rpc.sepolia.org",
+  1: {
+    name: "Ethereum",
+    rpcUrl: "https://eth.llamarpc.com",
     nativeSymbol: "ETH",
   },
-  421614: {
-    name: "Arbitrum Sepolia",
-    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+  42161: {
+    name: "Arbitrum One",
+    rpcUrl: "https://arb1.arbitrum.io/rpc",
     nativeSymbol: "ETH",
   },
-  84532: {
-    name: "Base Sepolia",
-    rpcUrl: "https://sepolia.base.org",
-    nativeSymbol: "ETH",
-  },
-  11155420: {
-    name: "Optimism Sepolia",
-    rpcUrl: "https://sepolia.optimism.io",
-    nativeSymbol: "ETH",
-  },
-  534351: {
-    name: "Scroll Sepolia",
-    rpcUrl: "https://sepolia-rpc.scroll.io",
+  8453: {
+    name: "Base",
+    rpcUrl: "https://mainnet.base.org",
     nativeSymbol: "ETH",
   },
 } as const;
@@ -99,8 +84,8 @@ Deno.serve(async (req) => {
     const requestData: WithdrawRequest = await req.json();
     const { recipient_wallet, amount, token, chain_id } = requestData;
 
-    // Default to Polygon Mumbai if no chain specified
-    const selectedChainId = chain_id || 80001;
+    // Default to Polygon mainnet if no chain specified
+    const selectedChainId = chain_id || 137;
     const chainConfig = SUPPORTED_CHAINS[selectedChainId as keyof typeof SUPPORTED_CHAINS];
     
     if (!chainConfig) {
