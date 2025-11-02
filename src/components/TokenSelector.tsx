@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { supabase } from "@/integrations/supabase/client";
+import { getTokenInfo } from "@/utils/tokenInfo";
 
 interface TokenSelectorProps {
   chainId: number;
@@ -54,16 +55,33 @@ export const TokenSelector = ({ chainId, value, onChange, label = "Token", class
       <Label>{label}</Label>
       <Select value={value} onValueChange={onChange}>
         <SelectTrigger>
-          <SelectValue />
+          <SelectValue>
+            {value && (
+              <div className="flex items-center gap-2">
+                <span>{getTokenInfo(value).icon}</span>
+                <span>{value}</span>
+              </div>
+            )}
+          </SelectValue>
         </SelectTrigger>
         <SelectContent>
-          {tokens.map((token) => (
-            <SelectItem key={token.token_symbol} value={token.token_symbol}>
-              {token.token_symbol}
-            </SelectItem>
-          ))}
+          {tokens.map((token) => {
+            const tokenInfo = getTokenInfo(token.token_symbol);
+            return (
+              <SelectItem key={token.token_symbol} value={token.token_symbol}>
+                <div className="flex items-center gap-2">
+                  <span>{tokenInfo.icon}</span>
+                  <span className="font-medium">{token.token_symbol}</span>
+                  <span className="text-xs text-muted-foreground">({tokenInfo.name})</span>
+                </div>
+              </SelectItem>
+            );
+          })}
         </SelectContent>
       </Select>
+      {tokens.length === 0 && !loading && (
+        <p className="text-xs text-muted-foreground">No tokens available on this network</p>
+      )}
     </div>
   );
 };

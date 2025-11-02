@@ -10,6 +10,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
 import { SUPPORTED_CHAINS } from "@/utils/blockchain";
+import { SupportedTokensList } from "@/components/SupportedTokensList";
 
 const Receive = () => {
   const navigate = useNavigate();
@@ -153,7 +154,7 @@ Type: finmo_wallet`;
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Your wallet supports {Object.keys(SUPPORTED_CHAINS).length} blockchain networks and multiple tokens including USDC, USDT, DAI, WBTC, WETH, LINK, BUSD, and native tokens
+              Your wallet supports {Object.keys(SUPPORTED_CHAINS).length} blockchain networks and all tokens including: USDC, USDT, DAI, WBTC, WETH, LINK, BUSD, UNI, AAVE, MKR, SHIB, APE, GRT, plus native tokens (MATIC, ETH)
             </p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
@@ -179,6 +180,9 @@ Type: finmo_wallet`;
             </div>
           </CardContent>
         </Card>
+
+        {/* Supported Tokens List */}
+        <SupportedTokensList />
       </div>
 
       {/* QR Code Dialog */}

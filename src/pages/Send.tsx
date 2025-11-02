@@ -4,7 +4,6 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { ArrowLeft, Send as SendIcon, Zap, ExternalLink, QrCode, Check, AlertCircle } from "lucide-react";
 import { validateE164PhoneNumber, formatPhoneNumber, autoCorrectPhoneNumber, COUNTRY_PHONE_RULES } from "@/utils/phoneValidation";
 import { Badge } from "@/components/ui/badge";
@@ -332,28 +331,29 @@ const Send = () => {
               <TokenSelector chainId={chainId} value={token} onChange={setToken} />
             )}
             
+            {transferType === "internal" && (
+              <TokenSelector 
+                chainId={chainId} 
+                value={token} 
+                onChange={setToken}
+                label="Token"
+              />
+            )}
+            
             <div className="space-y-2">
               <Label>Amount</Label>
-              <div className="flex gap-2">
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  className="flex-1 text-2xl font-semibold"
-                />
-                {transferType === "internal" && (
-                  <Select value={token} onValueChange={setToken}>
-                    <SelectTrigger className="w-32">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="USDC">USDC</SelectItem>
-                      <SelectItem value="MATIC">MATIC</SelectItem>
-                    </SelectContent>
-                  </Select>
-                )}
-              </div>
+              <Input
+                type="number"
+                placeholder="0.00"
+                value={amount}
+                onChange={(e) => setAmount(e.target.value)}
+                className="flex-1 text-2xl font-semibold"
+              />
+              {transferType === "internal" && (
+                <p className="text-xs text-muted-foreground">
+                  Sending {token} via instant FinMo transfer
+                </p>
+              )}
             </div>
 
             {/* Fee Information */}
