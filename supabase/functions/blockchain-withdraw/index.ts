@@ -8,9 +8,44 @@ const corsHeaders = {
   'Access-Control-Request-Private-Network': 'false',
 };
 
-// Polygon Mumbai Testnet configuration
-const POLYGON_MUMBAI_RPC = "https://rpc-mumbai.maticvigil.com";
-const USDC_CONTRACT = "0x0FA8781a83E46826621b3BC094Ea2A0212e71B23";
+// Chain configurations
+const SUPPORTED_CHAINS = {
+  80001: {
+    name: "Polygon Mumbai",
+    rpcUrl: "https://rpc-mumbai.maticvigil.com",
+    nativeSymbol: "MATIC",
+  },
+  80002: {
+    name: "Polygon Amoy Testnet",
+    rpcUrl: "https://rpc-amoy.polygon.technology",
+    nativeSymbol: "MATIC",
+  },
+  11155111: {
+    name: "Ethereum Sepolia",
+    rpcUrl: "https://rpc.sepolia.org",
+    nativeSymbol: "ETH",
+  },
+  421614: {
+    name: "Arbitrum Sepolia",
+    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+    nativeSymbol: "ETH",
+  },
+  84532: {
+    name: "Base Sepolia",
+    rpcUrl: "https://sepolia.base.org",
+    nativeSymbol: "ETH",
+  },
+  11155420: {
+    name: "Optimism Sepolia",
+    rpcUrl: "https://sepolia.optimism.io",
+    nativeSymbol: "ETH",
+  },
+  534351: {
+    name: "Scroll Sepolia",
+    rpcUrl: "https://sepolia-rpc.scroll.io",
+    nativeSymbol: "ETH",
+  },
+} as const;
 
 const ERC20_ABI = [
   "function transfer(address to, uint256 amount) returns (bool)",
@@ -22,6 +57,7 @@ interface WithdrawRequest {
   recipient_wallet: string;
   amount: number;
   token: string;
+  chain_id?: number;
 }
 
 Deno.serve(async (req) => {
@@ -61,7 +97,15 @@ Deno.serve(async (req) => {
     }
 
     const requestData: WithdrawRequest = await req.json();
-    const { recipient_wallet, amount, token } = requestData;
+    const { recipient_wallet, amount, token, chain_id } = requestData;
+
+    // Default to Polygon Mumbai if no chain specified
+    const selectedChainId = chain_id || 80001;
+    const chainConfig = SUPPORTED_CHAINS[selectedChainId as keyof typeof SUPPORTED_CHAINS];
+    
+    if (!chainConfig) {
+      throw new Error(`Unsupported chain ID: ${selectedChainId}`);
+    }
 
     // Validate amount
     if (typeof amount !== 'number' || !isFinite(amount)) {
@@ -96,6 +140,8 @@ Deno.serve(async (req) => {
 
     console.log('Processing blockchain withdrawal:', { user: user.id, token });
 
+    console.log(`Withdrawal request: ${amount} ${token} on chain ${selectedChainId}`);
+
     // Get user profile and balance
     const { data: senderProfile, error: profileError } = await supabase
       .from('profiles')
@@ -107,16 +153,19 @@ Deno.serve(async (req) => {
       throw new Error('User profile not found');
     }
 
-    const { data: balance, error: balanceError } = await supabase
+    // Get aggregated balance across all chains for this token
+    const { data: balances, error: balanceError } = await supabase
       .from('wallet_balances')
       .select('balance')
       .eq('user_id', user.id)
-      .eq('token', token)
-      .single();
+      .eq('token', token);
 
-    if (balanceError || !balance) {
+    if (balanceError || !balances || balances.length === 0) {
       throw new Error('Balance not found');
     }
+
+    // Sum up balances across all chains
+    const totalBalance = balances.reduce((sum, b) => sum + Number(b.balance), 0);
 
     // Get withdrawal fee from admin settings
     const { data: feeSettings } = await supabase
@@ -128,8 +177,8 @@ Deno.serve(async (req) => {
     const withdrawalFee = feeSettings?.setting_value?.[token] || 0;
     const totalAmount = amount + withdrawalFee;
 
-    if (Number(balance.balance) < totalAmount) {
-      throw new Error(`Insufficient balance. Required: ${totalAmount} ${token} (including ${withdrawalFee} ${token} fee)`);
+    if (totalBalance < totalAmount) {
+      throw new Error(`Insufficient balance. Required: ${totalAmount} ${token} (including ${withdrawalFee} ${token} fee), Available: ${totalBalance} ${token}`);
     }
 
     // Get master wallet private key (should be set as secret)
@@ -139,47 +188,81 @@ Deno.serve(async (req) => {
     }
 
     // Connect to blockchain
-    const provider = new ethers.JsonRpcProvider(POLYGON_MUMBAI_RPC);
+    const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
     const masterWallet = new ethers.Wallet(masterWalletKey, provider);
 
     let txHash: string;
 
-    if (token === 'USDC') {
-      // Transfer USDC token
-      const contract = new ethers.Contract(USDC_CONTRACT, ERC20_ABI, masterWallet);
-      const decimals = await contract.decimals();
-      const amountInWei = ethers.parseUnits(amount.toString(), decimals);
+    // Check if token is native (MATIC or ETH)
+    const isNativeToken = token === chainConfig.nativeSymbol;
 
-      console.log('Sending USDC transaction...');
-      const tx = await contract.transfer(recipient_wallet, amountInWei);
-      await tx.wait();
-      txHash = tx.hash;
-      console.log('USDC transaction confirmed:', txHash);
-
-    } else if (token === 'MATIC') {
-      // Transfer native MATIC
+    if (isNativeToken) {
+      // Transfer native token
       const amountInWei = ethers.parseEther(amount.toString());
       
-      console.log('Sending MATIC transaction...');
+      console.log(`Sending ${token} transaction on ${chainConfig.name}...`);
       const tx = await masterWallet.sendTransaction({
         to: recipient_wallet,
         value: amountInWei,
       });
       await tx.wait();
       txHash = tx.hash;
-      console.log('MATIC transaction confirmed:', txHash);
+      console.log(`${token} transaction confirmed:`, txHash);
 
     } else {
-      throw new Error('Unsupported token');
+      // Transfer ERC20 token - get contract address from database
+      const { data: tokenConfig, error: tokenError } = await supabase
+        .from('chain_tokens')
+        .select('contract_address, decimals')
+        .eq('token_symbol', token)
+        .eq('chain_id', selectedChainId)
+        .eq('is_active', true)
+        .single();
+
+      if (tokenError || !tokenConfig) {
+        throw new Error(`Token ${token} not supported on chain ${selectedChainId}`);
+      }
+
+      const contract = new ethers.Contract(
+        tokenConfig.contract_address,
+        ERC20_ABI,
+        masterWallet
+      );
+      const amountInWei = ethers.parseUnits(amount.toString(), tokenConfig.decimals);
+
+      console.log(`Sending ${token} transaction on ${chainConfig.name}...`);
+      const tx = await contract.transfer(recipient_wallet, amountInWei);
+      await tx.wait();
+      txHash = tx.hash;
+      console.log(`${token} transaction confirmed:`, txHash);
     }
 
-    // Update user balance (deduct amount + fee)
-    const newBalance = Number(balance.balance) - totalAmount;
-    await supabase
-      .from('wallet_balances')
-      .update({ balance: newBalance })
-      .eq('user_id', user.id)
-      .eq('token', token);
+    // Update user balance (deduct amount + fee) - find first non-zero balance and deduct from it
+    const balanceWithFunds = balances.find(b => Number(b.balance) >= totalAmount);
+    
+    if (balanceWithFunds) {
+      const newBalance = Number(balanceWithFunds.balance) - totalAmount;
+      await supabase
+        .from('wallet_balances')
+        .update({ balance: newBalance })
+        .eq('user_id', user.id)
+        .eq('token', token)
+        .eq('balance', balanceWithFunds.balance);
+    } else {
+      // Deduct proportionally from all balances if no single balance has enough
+      for (const bal of balances) {
+        if (Number(bal.balance) > 0) {
+          const newBalance = Math.max(0, Number(bal.balance) - totalAmount);
+          await supabase
+            .from('wallet_balances')
+            .update({ balance: newBalance })
+            .eq('user_id', user.id)
+            .eq('token', token)
+            .eq('balance', bal.balance);
+          break; // Only deduct from first available
+        }
+      }
+    }
 
     // Create transaction record
     const { data: transaction, error: txError } = await supabase
@@ -194,6 +277,8 @@ Deno.serve(async (req) => {
         transaction_type: 'external',
         status: 'completed',
         transaction_hash: txHash,
+        chain_id: selectedChainId,
+        chain_name: chainConfig.name,
         withdrawal_fee: withdrawalFee,
       })
       .select()
@@ -210,7 +295,7 @@ Deno.serve(async (req) => {
         success: true,
         transaction,
         txHash,
-        explorerUrl: `https://mumbai.polygonscan.com/tx/${txHash}`,
+        chain: chainConfig.name,
         message: 'Withdrawal successful! Transaction confirmed on blockchain.',
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

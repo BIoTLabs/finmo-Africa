@@ -14,14 +14,42 @@ const SUPPORTED_CHAINS = [
     name: "Polygon Amoy Testnet",
     rpcUrl: "https://rpc-amoy.polygon.technology",
     nativeSymbol: "MATIC",
-    usdcContract: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
   },
   {
     chainId: 11155111,
     name: "Ethereum Sepolia",
     rpcUrl: "https://rpc.sepolia.org",
     nativeSymbol: "ETH",
-    usdcContract: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  },
+  {
+    chainId: 421614,
+    name: "Arbitrum Sepolia",
+    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 84532,
+    name: "Base Sepolia",
+    rpcUrl: "https://sepolia.base.org",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 11155420,
+    name: "Optimism Sepolia",
+    rpcUrl: "https://sepolia.optimism.io",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 534351,
+    name: "Scroll Sepolia",
+    rpcUrl: "https://sepolia-rpc.scroll.io",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 80001,
+    name: "Polygon Mumbai",
+    rpcUrl: "https://rpc-mumbai.maticvigil.com",
+    nativeSymbol: "MATIC",
   },
 ];
 
@@ -67,6 +95,19 @@ serve(async (req) => {
     const walletAddress = profile.wallet_address;
     console.log(`Syncing multichain balances for wallet: ${walletAddress}`);
 
+    // Fetch all active tokens from database
+    const { data: allTokens, error: tokensError } = await supabaseClient
+      .from('chain_tokens')
+      .select('*')
+      .eq('is_active', true);
+
+    if (tokensError) {
+      console.error('Error fetching chain tokens:', tokensError);
+      throw tokensError;
+    }
+
+    console.log(`Syncing ${allTokens?.length || 0} active tokens across ${SUPPORTED_CHAINS.length} chains`);
+
     const balanceUpdates = [];
 
     for (const chain of SUPPORTED_CHAINS) {
@@ -91,33 +132,42 @@ serve(async (req) => {
 
         console.log(`${chain.nativeSymbol} balance on ${chain.name}: ${nativeBalance}`);
 
-        // Fetch USDC balance
-        const balanceOfData = ERC20_BALANCE_ABI.inputs[0].type === 'address'
-          ? walletAddress.toLowerCase().replace('0x', '').padStart(64, '0')
-          : '';
+        // Fetch all ERC20 token balances for this chain
+        const chainTokens = allTokens?.filter(t => t.chain_id === chain.chainId) || [];
+        const tokenBalances: Record<string, number> = {};
 
-        const usdcBalanceResponse = await fetch(chain.rpcUrl, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            jsonrpc: '2.0',
-            method: 'eth_call',
-            params: [
-              {
-                to: chain.usdcContract,
-                data: `0x70a08231${balanceOfData}`,
-              },
-              'latest',
-            ],
-            id: 2,
-          }),
-        });
+        for (const tokenConfig of chainTokens) {
+          try {
+            const balanceOfData = walletAddress.toLowerCase().replace('0x', '').padStart(64, '0');
+            
+            const tokenBalanceResponse = await fetch(chain.rpcUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({
+                jsonrpc: '2.0',
+                method: 'eth_call',
+                params: [
+                  {
+                    to: tokenConfig.contract_address,
+                    data: `0x70a08231${balanceOfData}`,
+                  },
+                  'latest',
+                ],
+                id: 2,
+              }),
+            });
 
-        const usdcBalanceData = await usdcBalanceResponse.json();
-        const usdcBalanceRaw = BigInt(usdcBalanceData.result || '0x0');
-        const usdcBalance = Number(usdcBalanceRaw) / 1e6; // USDC has 6 decimals
+            const tokenBalanceData = await tokenBalanceResponse.json();
+            const tokenBalanceRaw = BigInt(tokenBalanceData.result || '0x0');
+            const tokenBalance = Number(tokenBalanceRaw) / Math.pow(10, tokenConfig.decimals);
 
-        console.log(`USDC balance on ${chain.name}: ${usdcBalance}`);
+            tokenBalances[tokenConfig.token_symbol] = tokenBalance;
+            console.log(`${tokenConfig.token_symbol} balance on ${chain.name}: ${tokenBalance}`);
+          } catch (tokenError) {
+            console.error(`Error fetching ${tokenConfig.token_symbol} balance:`, tokenError);
+            tokenBalances[tokenConfig.token_symbol] = 0;
+          }
+        }
 
         // Get internal transactions for this chain
         const { data: transactions } = await supabaseClient
@@ -127,8 +177,12 @@ serve(async (req) => {
           .or(`sender_wallet.eq.${walletAddress},recipient_wallet.eq.${walletAddress}`);
 
         // Calculate database balance from all completed transactions
-        let dbNativeBalance = 0;
-        let dbUsdcBalance = 0;
+        const dbBalances: Record<string, number> = { [chain.nativeSymbol]: 0 };
+        
+        // Initialize all token balances to 0
+        for (const tokenConfig of chainTokens) {
+          dbBalances[tokenConfig.token_symbol] = 0;
+        }
 
         transactions?.forEach((tx: any) => {
           if (tx.status !== 'completed') return;
@@ -137,48 +191,42 @@ serve(async (req) => {
           const isRecipient = tx.recipient_id === user.id;
           const isSender = tx.sender_id === user.id;
 
-          if (tx.token === chain.nativeSymbol) {
-            if (isRecipient) {
-              dbNativeBalance += amount;
-            } else if (isSender) {
-              dbNativeBalance -= amount;
-              if (tx.withdrawal_fee) {
-                dbNativeBalance -= parseFloat(tx.withdrawal_fee);
-              }
-            }
-          } else if (tx.token === 'USDC') {
-            if (isRecipient) {
-              dbUsdcBalance += amount;
-            } else if (isSender) {
-              dbUsdcBalance -= amount;
-              if (tx.withdrawal_fee) {
-                dbUsdcBalance -= parseFloat(tx.withdrawal_fee);
-              }
+          if (!dbBalances.hasOwnProperty(tx.token)) {
+            dbBalances[tx.token] = 0;
+          }
+
+          if (isRecipient) {
+            dbBalances[tx.token] += amount;
+          } else if (isSender) {
+            dbBalances[tx.token] -= amount;
+            if (tx.withdrawal_fee) {
+              dbBalances[tx.token] -= parseFloat(tx.withdrawal_fee);
             }
           }
         });
 
         // Final balances are ONLY from database transactions
         // Blockchain balances are for reference/verification only
-        const finalNativeBalance = Math.max(0, dbNativeBalance);
-        const finalUsdcBalance = Math.max(0, dbUsdcBalance);
+        console.log(`${chain.name} - DB balances:`, dbBalances);
+        console.log(`${chain.name} - Blockchain balances: ${chain.nativeSymbol}=${nativeBalance}, Tokens:`, tokenBalances);
 
-        console.log(`${chain.name} - DB Native: ${dbNativeBalance}, DB USDC: ${dbUsdcBalance}`);
-        console.log(`${chain.name} - Blockchain Native: ${nativeBalance}, Blockchain USDC: ${usdcBalance}`);
-
+        // Add native token balance
         balanceUpdates.push({
           token: chain.nativeSymbol,
-          balance: finalNativeBalance,
+          balance: Math.max(0, dbBalances[chain.nativeSymbol] || 0),
           chainId: chain.chainId,
           chainName: chain.name,
         });
 
-        balanceUpdates.push({
-          token: 'USDC',
-          balance: finalUsdcBalance,
-          chainId: chain.chainId,
-          chainName: chain.name,
-        });
+        // Add all ERC20 token balances
+        for (const tokenSymbol in tokenBalances) {
+          balanceUpdates.push({
+            token: tokenSymbol,
+            balance: Math.max(0, dbBalances[tokenSymbol] || 0),
+            chainId: chain.chainId,
+            chainName: chain.name,
+          });
+        }
       } catch (chainError) {
         console.error(`Error syncing ${chain.name}:`, chainError);
       }

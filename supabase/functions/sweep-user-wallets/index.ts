@@ -15,14 +15,42 @@ const SUPPORTED_CHAINS = [
     name: "Polygon Amoy Testnet",
     rpcUrl: "https://rpc-amoy.polygon.technology",
     nativeSymbol: "MATIC",
-    usdcContract: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
   },
   {
     chainId: 11155111,
     name: "Ethereum Sepolia",
     rpcUrl: "https://rpc.sepolia.org",
     nativeSymbol: "ETH",
-    usdcContract: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  },
+  {
+    chainId: 421614,
+    name: "Arbitrum Sepolia",
+    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 84532,
+    name: "Base Sepolia",
+    rpcUrl: "https://sepolia.base.org",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 11155420,
+    name: "Optimism Sepolia",
+    rpcUrl: "https://sepolia.optimism.io",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 534351,
+    name: "Scroll Sepolia",
+    rpcUrl: "https://sepolia-rpc.scroll.io",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 80001,
+    name: "Polygon Mumbai",
+    rpcUrl: "https://rpc-mumbai.maticvigil.com",
+    nativeSymbol: "MATIC",
   },
 ];
 
@@ -131,6 +159,19 @@ serve(async (req) => {
 
     console.log(`Found ${profiles?.length || 0} user wallets to check`);
 
+    // Fetch all active tokens from database
+    const { data: allTokens, error: tokensError } = await supabaseClient
+      .from('chain_tokens')
+      .select('*')
+      .eq('is_active', true);
+
+    if (tokensError) {
+      console.error('Error fetching chain tokens:', tokensError);
+      throw tokensError;
+    }
+
+    console.log(`Will sweep ${allTokens?.length || 0} active tokens across ${SUPPORTED_CHAINS.length} chains`);
+
     const sweepResults = [];
 
     for (const profile of profiles || []) {
@@ -232,81 +273,100 @@ serve(async (req) => {
             }
           }
 
-          // Check USDC balance
-          try {
-            const usdcContract = new ethers.Contract(chain.usdcContract, ERC20_ABI, provider);
-            const usdcBalance = await usdcContract.balanceOf(profile.wallet_address);
-            const usdcBalanceFormatted = parseFloat(ethers.formatUnits(usdcBalance, 6));
+          // Check all ERC20 token balances for this chain
+          const chainTokens = allTokens?.filter(t => t.chain_id === chain.chainId) || [];
+          
+          for (const tokenConfig of chainTokens) {
+            try {
+              const tokenContract = new ethers.Contract(
+                tokenConfig.contract_address,
+                ERC20_ABI,
+                provider
+              );
+              
+              const balance = await tokenContract.balanceOf(profile.wallet_address);
+              const formattedBalance = parseFloat(
+                ethers.formatUnits(balance, tokenConfig.decimals)
+              );
 
-            if (usdcBalanceFormatted > 0.01) {
-              console.log(`Sweeping ${usdcBalanceFormatted} USDC from ${profile.wallet_address}`);
+              // Set minimum based on token (WBTC has 8 decimals, others 18/6)
+              const minSweep = tokenConfig.decimals === 8 ? 0.0001 : 0.01;
 
-              const usdcContractWithSigner = new ethers.Contract(chain.usdcContract, ERC20_ABI, userWallet);
-              const tx = await usdcContractWithSigner.transfer(masterWalletAddress, usdcBalance);
-              await tx.wait();
+              if (formattedBalance > minSweep) {
+                console.log(`Sweeping ${formattedBalance} ${tokenConfig.token_symbol} from ${profile.wallet_address}`);
 
-              // Record sweep
-              await supabaseClient.from('wallet_sweeps').insert({
-                user_id: profile.id,
-                user_wallet_address: profile.wallet_address,
-                master_wallet_address: masterWalletAddress,
-                token: 'USDC',
-                amount: usdcBalanceFormatted,
-                sweep_tx_hash: tx.hash,
-                status: 'completed',
-                completed_at: new Date().toISOString(),
-              });
+                const tokenContractWithSigner = new ethers.Contract(
+                  tokenConfig.contract_address,
+                  ERC20_ABI,
+                  userWallet
+                );
+                const tx = await tokenContractWithSigner.transfer(masterWalletAddress, balance);
+                await tx.wait();
 
-              // Update user balance - INCREMENT, don't set
-              const { data: currentUsdcBalance } = await supabaseClient
-                .from('wallet_balances')
-                .select('balance')
-                .eq('user_id', profile.id)
-                .eq('token', 'USDC')
-                .single();
+                // Record sweep
+                await supabaseClient.from('wallet_sweeps').insert({
+                  user_id: profile.id,
+                  user_wallet_address: profile.wallet_address,
+                  master_wallet_address: masterWalletAddress,
+                  token: tokenConfig.token_symbol,
+                  amount: formattedBalance,
+                  sweep_tx_hash: tx.hash,
+                  status: 'completed',
+                  completed_at: new Date().toISOString(),
+                });
 
-              const newUsdcBalance = (currentUsdcBalance?.balance || 0) + usdcBalanceFormatted;
+                // Update user balance - INCREMENT, don't set
+                const { data: currentBalance } = await supabaseClient
+                  .from('wallet_balances')
+                  .select('balance')
+                  .eq('user_id', profile.id)
+                  .eq('token', tokenConfig.token_symbol)
+                  .single();
 
-              await supabaseClient.from('wallet_balances').upsert({
-                user_id: profile.id,
-                token: 'USDC',
-                balance: newUsdcBalance,
-                updated_at: new Date().toISOString(),
-              }, {
-                onConflict: 'user_id,token',
-              });
+                const newBalance = (currentBalance?.balance || 0) + formattedBalance;
 
-              // Create deposit transaction record
-              const { error: usdcTxError } = await supabaseClient.from('transactions').insert({
-                sender_id: profile.id,
-                recipient_id: profile.id,
-                sender_wallet: profile.wallet_address,
-                recipient_wallet: masterWalletAddress,
-                amount: usdcBalanceFormatted,
-                token: 'USDC',
-                transaction_type: 'deposit',
-                transaction_hash: tx.hash,
-                chain_id: chain.chainId,
-                chain_name: chain.name,
-                status: 'completed',
-              });
+                await supabaseClient.from('wallet_balances').upsert({
+                  user_id: profile.id,
+                  token: tokenConfig.token_symbol,
+                  balance: newBalance,
+                  chain_id: chain.chainId,
+                  updated_at: new Date().toISOString(),
+                }, {
+                  onConflict: 'user_id,token,chain_id',
+                });
 
-              if (usdcTxError) {
-                console.error('Failed to create USDC deposit transaction:', usdcTxError);
+                // Create deposit transaction record
+                const { error: txError } = await supabaseClient.from('transactions').insert({
+                  sender_id: profile.id,
+                  recipient_id: profile.id,
+                  sender_wallet: profile.wallet_address,
+                  recipient_wallet: masterWalletAddress,
+                  amount: formattedBalance,
+                  token: tokenConfig.token_symbol,
+                  transaction_type: 'deposit',
+                  transaction_hash: tx.hash,
+                  chain_id: chain.chainId,
+                  chain_name: chain.name,
+                  status: 'completed',
+                });
+
+                if (txError) {
+                  console.error(`Failed to create ${tokenConfig.token_symbol} deposit transaction:`, txError);
+                }
+
+                sweepResults.push({
+                  user_id: profile.id,
+                  chain: chain.name,
+                  token: tokenConfig.token_symbol,
+                  amount: formattedBalance,
+                  tx_hash: tx.hash,
+                });
+
+                console.log(`${tokenConfig.token_symbol} sweep completed: ${tx.hash}`);
               }
-
-              sweepResults.push({
-                user_id: profile.id,
-                chain: chain.name,
-                token: 'USDC',
-                amount: usdcBalanceFormatted,
-                tx_hash: tx.hash,
-              });
-
-              console.log(`USDC sweep completed: ${tx.hash}`);
+            } catch (tokenError) {
+              console.error(`Failed to sweep ${tokenConfig.token_symbol} from ${profile.wallet_address}:`, tokenError);
             }
-          } catch (usdcError) {
-            console.error(`Failed to sweep USDC from ${profile.wallet_address}:`, usdcError);
           }
         }
       } catch (userError) {

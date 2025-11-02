@@ -153,7 +153,7 @@ Type: finmo_wallet`;
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Your wallet supports {Object.keys(SUPPORTED_CHAINS).length} blockchain networks
+              Your wallet supports {Object.keys(SUPPORTED_CHAINS).length} blockchain networks and multiple tokens including USDC, USDT, DAI, WBTC, WETH, LINK, BUSD, and native tokens
             </p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">

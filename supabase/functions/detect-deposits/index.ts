@@ -15,14 +15,42 @@ const SUPPORTED_CHAINS = [
     name: "Polygon Amoy Testnet",
     rpcUrl: "https://rpc-amoy.polygon.technology",
     nativeSymbol: "MATIC",
-    usdcContract: "0x41E94Eb019C0762f9Bfcf9Fb1E58725BfB0e7582",
   },
   {
     chainId: 11155111,
     name: "Ethereum Sepolia",
     rpcUrl: "https://rpc.sepolia.org",
     nativeSymbol: "ETH",
-    usdcContract: "0x1c7D4B196Cb0C7B01d743Fbc6116a902379C7238",
+  },
+  {
+    chainId: 421614,
+    name: "Arbitrum Sepolia",
+    rpcUrl: "https://sepolia-rollup.arbitrum.io/rpc",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 84532,
+    name: "Base Sepolia",
+    rpcUrl: "https://sepolia.base.org",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 11155420,
+    name: "Optimism Sepolia",
+    rpcUrl: "https://sepolia.optimism.io",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 534351,
+    name: "Scroll Sepolia",
+    rpcUrl: "https://sepolia-rpc.scroll.io",
+    nativeSymbol: "ETH",
+  },
+  {
+    chainId: 80001,
+    name: "Polygon Mumbai",
+    rpcUrl: "https://rpc-mumbai.maticvigil.com",
+    nativeSymbol: "MATIC",
   },
 ];
 
@@ -94,6 +122,19 @@ serve(async (req) => {
 
     const depositsFound = [];
 
+    // Fetch all active tokens from database
+    const { data: allTokens, error: tokensError } = await supabaseClient
+      .from('chain_tokens')
+      .select('*')
+      .eq('is_active', true);
+
+    if (tokensError) {
+      console.error('Error fetching chain tokens:', tokensError);
+      throw tokensError;
+    }
+
+    console.log(`Checking deposits for ${allTokens?.length || 0} active tokens across ${SUPPORTED_CHAINS.length} chains`);
+
     for (const profile of profiles || []) {
       for (const chain of SUPPORTED_CHAINS) {
         try {
@@ -115,21 +156,39 @@ serve(async (req) => {
             console.log(`Found ${nativeBalanceEth} ${chain.nativeSymbol} in ${profile.wallet_address}`);
           }
 
-          // Check USDC balance
-          const usdcContract = new ethers.Contract(chain.usdcContract, ERC20_ABI, provider);
-          const usdcBalance = await usdcContract.balanceOf(profile.wallet_address);
-          const usdcBalanceFormatted = parseFloat(ethers.formatUnits(usdcBalance, 6));
+          // Check all ERC20 tokens for this chain
+          const chainTokens = allTokens?.filter(t => t.chain_id === chain.chainId) || [];
+          
+          for (const tokenConfig of chainTokens) {
+            try {
+              const tokenContract = new ethers.Contract(
+                tokenConfig.contract_address,
+                ERC20_ABI,
+                provider
+              );
+              
+              const balance = await tokenContract.balanceOf(profile.wallet_address);
+              const formattedBalance = parseFloat(
+                ethers.formatUnits(balance, tokenConfig.decimals)
+              );
 
-          if (usdcBalanceFormatted > 0.01) { // Minimum 0.01 USDC
-            depositsFound.push({
-              user_id: profile.id,
-              wallet_address: profile.wallet_address,
-              chain: chain.name,
-              token: 'USDC',
-              balance: usdcBalanceFormatted,
-            });
+              // Set minimum based on token (WBTC has 8 decimals, others 18/6)
+              const minDeposit = tokenConfig.decimals === 8 ? 0.0001 : 0.01;
 
-            console.log(`Found ${usdcBalanceFormatted} USDC in ${profile.wallet_address}`);
+              if (formattedBalance >= minDeposit) {
+                depositsFound.push({
+                  user_id: profile.id,
+                  wallet_address: profile.wallet_address,
+                  chain: chain.name,
+                  token: tokenConfig.token_symbol,
+                  balance: formattedBalance,
+                });
+
+                console.log(`Found ${formattedBalance} ${tokenConfig.token_symbol} in ${profile.wallet_address} on ${chain.name}`);
+              }
+            } catch (tokenError) {
+              console.error(`Error checking ${tokenConfig.token_symbol} on ${chain.name}:`, tokenError);
+            }
           }
         } catch (chainError) {
           console.error(`Error checking ${chain.name} for ${profile.wallet_address}:`, chainError);
@@ -152,9 +211,11 @@ serve(async (req) => {
       const masterWallet = new ethers.Wallet(masterPrivateKey);
       const walletsToFund = [];
 
-      // Check each USDC deposit to see if wallet needs gas
+      // Check each ERC20 token deposit to see if wallet needs gas
       for (const deposit of depositsFound) {
-        if (deposit.token === 'USDC' && deposit.balance >= 1.0) {
+        // Fund gas for any ERC20 token deposit (not native tokens)
+        const isERC20Token = deposit.token !== 'MATIC' && deposit.token !== 'ETH';
+        if (isERC20Token && deposit.balance >= 1.0) {
           try {
             // Check recent gas fundings for this wallet (abuse prevention)
             const { data: recentFundings } = await supabaseClient

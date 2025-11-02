@@ -15,6 +15,7 @@ import { RewardsNotification } from "@/components/RewardsNotification";
 import { NotificationBell } from "@/components/NotificationBell";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { useSessionManager } from "@/hooks/useSessionManager";
+import { getTokenInfo } from "@/utils/tokenInfo";
 
 interface WalletBalance {
   token: string;
@@ -266,35 +267,48 @@ const Dashboard = () => {
       {/* Token List */}
       <div className="p-6 space-y-4">
         <h3 className="text-lg font-semibold">Your Assets</h3>
-        {aggregatedBalances.map((balance, index) => (
-          <Card 
-            key={balance.token} 
-            className="shadow-finmo-sm hover:shadow-finmo-md transition-all hover-scale animate-fade-in"
-            style={{ animationDelay: `${index * 0.1}s` }}
-          >
-            <CardContent className="p-4">
-              <div className="flex justify-between items-center">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-primary-foreground font-semibold">
-                    {balance.token[0]}
-                  </div>
-                  <div>
-                    <p className="font-semibold">{balance.token}</p>
-                    <p className="text-sm text-muted-foreground">{balance.token === 'USDC' ? 'USD Coin' : 'Polygon'}</p>
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="font-semibold">
-                    {balanceVisible ? Number(balance.balance).toFixed(2) : "••••"}
-                  </p>
-                  <p className="text-sm text-muted-foreground">
-                    {balanceVisible ? `$${Number(balance.balance).toFixed(2)}` : "••••"}
-                  </p>
-                </div>
-              </div>
+        {aggregatedBalances.length === 0 ? (
+          <Card className="shadow-finmo-sm">
+            <CardContent className="p-8 text-center text-muted-foreground">
+              <Coins className="w-12 h-12 mx-auto mb-3 opacity-50" />
+              <p>No assets yet</p>
+              <p className="text-xs mt-2">Deposit crypto to get started</p>
             </CardContent>
           </Card>
-        ))}
+        ) : (
+          aggregatedBalances.map((balance, index) => {
+            const tokenInfo = getTokenInfo(balance.token);
+            return (
+              <Card 
+                key={balance.token} 
+                className="shadow-finmo-sm hover:shadow-finmo-md transition-all hover-scale animate-fade-in"
+                style={{ animationDelay: `${index * 0.1}s` }}
+              >
+                <CardContent className="p-4">
+                  <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 bg-gradient-primary rounded-full flex items-center justify-center text-primary-foreground text-xl">
+                        {tokenInfo.icon}
+                      </div>
+                      <div>
+                        <p className="font-semibold">{balance.token}</p>
+                        <p className="text-sm text-muted-foreground">{tokenInfo.name}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-semibold">
+                        {balanceVisible ? Number(balance.balance).toFixed(balance.token === 'WBTC' ? 4 : 2) : "••••"}
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        {balanceVisible ? `$${Number(balance.balance).toFixed(2)}` : "••••"}
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            );
+          })
+        )}
       </div>
 
       {/* Recent Transactions */}
