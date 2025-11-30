@@ -20,9 +20,11 @@ const PhoneVerification = () => {
   const [email, setEmail] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [useOTP, setUseOTP] = useState(false);
-  const [deliveryMethod, setDeliveryMethod] = useState<'sms' | 'voice'>('sms');
+  const [deliveryMethod, setDeliveryMethod] = useState<'sms' | 'voice' | 'email'>('sms');
   const [callingPhone, setCallingPhone] = useState(false);
   const [callCooldown, setCallCooldown] = useState(0);
+  const [sendingEmail, setSendingEmail] = useState(false);
+  const [emailCooldown, setEmailCooldown] = useState(0);
 
   useEffect(() => {
     // Get data from location state
@@ -43,13 +45,20 @@ const PhoneVerification = () => {
     setUseOTP(otpMode === true);
   }, [location, navigate]);
 
-  // Cooldown timer effect
+  // Cooldown timer effects
   useEffect(() => {
     if (callCooldown > 0) {
       const timer = setTimeout(() => setCallCooldown(callCooldown - 1), 1000);
       return () => clearTimeout(timer);
     }
   }, [callCooldown]);
+
+  useEffect(() => {
+    if (emailCooldown > 0) {
+      const timer = setTimeout(() => setEmailCooldown(emailCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [emailCooldown]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -234,6 +243,46 @@ const PhoneVerification = () => {
     }
   };
 
+  const handleEmailMe = async () => {
+    if (!email) {
+      toast.error("Email address not available. Please use SMS or voice call.");
+      return;
+    }
+
+    if (emailCooldown > 0) {
+      toast.error(`Please wait ${emailCooldown} seconds before requesting another email`);
+      return;
+    }
+
+    setSendingEmail(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
+        body: { 
+          phoneNumber: phoneNumber,
+          deliveryMethod: 'email',
+          email: email,
+          isLogin: isLogin
+        }
+      });
+
+      if (error || !data.success) {
+        const errorData = extractOTPError(data, error);
+        const errorMessage = getOTPErrorMessage(errorData);
+        toast.error(errorMessage, { duration: errorData.errorCode === 'RATE_LIMITED' ? 6000 : 4000 });
+        return;
+      }
+
+      setDeliveryMethod('email');
+      setEmailCooldown(60); // 60 second cooldown
+      toast.success("Verification code sent to your email!");
+    } catch (error: any) {
+      console.error("Email send error:", error);
+      toast.error("We couldn't send the email. Please try SMS or voice call.");
+    } finally {
+      setSendingEmail(false);
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-primary via-primary/90 to-primary-glow flex items-center justify-center p-4">
       <div className="w-full max-w-md space-y-6 animate-fade-in">
@@ -254,7 +303,14 @@ const PhoneVerification = () => {
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center">Enter Verification Code</CardTitle>
             <CardDescription className="text-center">
-              {deliveryMethod === 'voice' ? (
+              {deliveryMethod === 'email' ? (
+                <>
+                  📧 We sent a code to {email}
+                  <div className="mt-1 text-xs">
+                    Check your inbox and spam folder for your 6-digit code
+                  </div>
+                </>
+              ) : deliveryMethod === 'voice' ? (
                 <>
                   📞 We're calling {phoneNumber} with your code.
                   <div className="mt-1 text-xs">
@@ -266,7 +322,7 @@ const PhoneVerification = () => {
               ) : (
                 <>We sent a 6-digit code to {phoneNumber}</>
               )}
-              {!isLogin && email && (
+              {!isLogin && email && deliveryMethod !== 'email' && (
                 <div className="mt-2 text-xs">
                   Account email: {email}
                 </div>
@@ -337,6 +393,39 @@ const PhoneVerification = () => {
                     </>
                   )}
                 </Button>
+
+                {email && (
+                  <>
+                    <div className="relative">
+                      <div className="absolute inset-0 flex items-center">
+                        <span className="w-full border-t" />
+                      </div>
+                      <div className="relative flex justify-center text-xs uppercase">
+                        <span className="bg-background px-2 text-muted-foreground">
+                          Or
+                        </span>
+                      </div>
+                    </div>
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      className="w-full"
+                      onClick={handleEmailMe}
+                      disabled={sendingEmail || emailCooldown > 0}
+                    >
+                      {sendingEmail ? (
+                        "Sending..."
+                      ) : emailCooldown > 0 ? (
+                        `Wait ${emailCooldown}s`
+                      ) : (
+                        <>
+                          📧 Email me instead
+                        </>
+                      )}
+                    </Button>
+                  </>
+                )}
 
                 <Button
                   type="button"

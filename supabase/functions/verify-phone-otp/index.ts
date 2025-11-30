@@ -12,7 +12,8 @@ interface VerifyPhoneRequest {
   phoneNumber: string;
   ipAddress?: string;
   isLogin?: boolean;
-  deliveryMethod?: 'sms' | 'voice';
+  deliveryMethod?: 'sms' | 'voice' | 'email';
+  email?: string; // Required for email delivery
 }
 
 Deno.serve(async (req) => {
@@ -21,7 +22,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phoneNumber, ipAddress, isLogin, deliveryMethod = 'sms' } = await req.json() as VerifyPhoneRequest;
+    const { phoneNumber, ipAddress, isLogin, deliveryMethod = 'sms', email } = await req.json() as VerifyPhoneRequest;
 
     if (!phoneNumber) {
       return new Response(
@@ -155,6 +156,59 @@ Deno.serve(async (req) => {
       phone_number: normalizedPhone,
       ip_address: ipAddress,
     });
+
+    // Handle email delivery method separately
+    if (deliveryMethod === 'email') {
+      if (!email) {
+        return new Response(
+          JSON.stringify({ 
+            error: 'Email address is required for email delivery',
+            errorCode: 'INVALID_REQUEST'
+          }),
+          { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Call send-email-otp function
+      const supabaseUrl = Deno.env.get('SUPABASE_URL')!;
+      const supabaseKey = Deno.env.get('SUPABASE_SERVICE_ROLE_KEY')!;
+      
+      const emailResponse = await fetch(`${supabaseUrl}/functions/v1/send-email-otp`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${supabaseKey}`,
+        },
+        body: JSON.stringify({
+          email,
+          otp,
+          expiresInMinutes: 10,
+        }),
+      });
+
+      if (!emailResponse.ok) {
+        const errorData = await emailResponse.json();
+        console.error('Email OTP send failed:', errorData);
+        return new Response(
+          JSON.stringify({ 
+            error: errorData.error || 'Failed to send verification email',
+            errorCode: errorData.errorCode || 'EMAIL_SEND_FAILED'
+          }),
+          { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      console.log('Email OTP sent successfully');
+      return new Response(
+        JSON.stringify({ 
+          success: true, 
+          message: 'Verification code sent to email',
+          phoneNumber: normalizedPhone,
+          deliveryMethod: 'email'
+        }),
+        { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Send OTP via Twilio (SMS or Voice based on deliveryMethod)
     const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
