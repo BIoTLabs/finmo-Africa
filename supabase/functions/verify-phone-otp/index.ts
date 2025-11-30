@@ -25,7 +25,10 @@ Deno.serve(async (req) => {
 
     if (!phoneNumber) {
       return new Response(
-        JSON.stringify({ error: 'Phone number is required' }),
+        JSON.stringify({ 
+          error: 'Phone number is required',
+          errorCode: 'INVALID_PHONE'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -36,7 +39,10 @@ Deno.serve(async (req) => {
     if (!validation.valid) {
       console.error('Phone validation failed:', validation.error);
       return new Response(
-        JSON.stringify({ error: validation.error }),
+        JSON.stringify({ 
+          error: validation.error,
+          errorCode: 'INVALID_PHONE'
+        }),
         { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -58,7 +64,10 @@ Deno.serve(async (req) => {
       if (profileError) {
         console.error('Error checking user existence:', profileError);
         return new Response(
-          JSON.stringify({ error: 'Error validating account' }),
+          JSON.stringify({ 
+            error: 'Error validating account',
+            errorCode: 'SYSTEM_ERROR'
+          }),
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -66,7 +75,10 @@ Deno.serve(async (req) => {
       if (!profileData) {
         console.log(`Login attempt for non-existent phone: ${normalizedPhone}`);
         return new Response(
-          JSON.stringify({ error: 'Account not found. Please check your phone number or sign up.' }),
+          JSON.stringify({ 
+            error: 'Account not found. Please check your phone number or sign up.',
+            errorCode: 'ACCOUNT_NOT_FOUND'
+          }),
           { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
@@ -96,6 +108,8 @@ Deno.serve(async (req) => {
       return new Response(
         JSON.stringify({ 
           error: `Too many verification attempts. For security, you can only request 3 codes per hour. Please try again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`,
+          errorCode: 'RATE_LIMITED',
+          minutesLeft,
           retryAfter: retryTime.toISOString()
         }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
@@ -129,7 +143,8 @@ Deno.serve(async (req) => {
       console.error('Error storing OTP:', insertError);
       return new Response(
         JSON.stringify({ 
-          error: 'Unable to generate verification code due to a system error. This is usually temporary - please try again in a few moments. If the problem persists, contact support.' 
+          error: 'Unable to generate verification code due to a system error. This is usually temporary - please try again in a few moments. If the problem persists, contact support.',
+          errorCode: 'SYSTEM_ERROR'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -151,7 +166,8 @@ Deno.serve(async (req) => {
       const serviceType = deliveryMethod === 'voice' ? 'Voice call' : 'SMS';
       return new Response(
         JSON.stringify({ 
-          error: `${serviceType} service is currently unavailable. Our team has been notified and is working to restore service. Please try again later or contact support for assistance.` 
+          error: `${serviceType} service is currently unavailable. Our team has been notified and is working to restore service. Please try again later or contact support for assistance.`,
+          errorCode: 'SERVICE_UNAVAILABLE'
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -212,16 +228,24 @@ Deno.serve(async (req) => {
       
       const serviceType = deliveryMethod === 'voice' ? 'call' : 'SMS';
       let errorMessage = `Unable to ${deliveryMethod === 'voice' ? 'place a call' : 'send SMS'} to your number. `;
+      let errorCode = 'TWILIO_ERROR';
+      
       if (twilioResponse.status === 400) {
         errorMessage += 'Please verify your phone number is correct and includes the country code.';
+        errorCode = 'INVALID_PHONE';
       } else if (twilioResponse.status === 429) {
         errorMessage += `Too many ${serviceType}s sent to this number. Please try again in 10 minutes.`;
+        errorCode = 'RATE_LIMITED';
       } else {
         errorMessage += 'This may be due to network issues or an unsupported carrier. Please try the other delivery method or contact support.';
+        errorCode = 'CARRIER_BLOCKED';
       }
       
       return new Response(
-        JSON.stringify({ error: errorMessage }),
+        JSON.stringify({ 
+          error: errorMessage,
+          errorCode
+        }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
@@ -244,7 +268,8 @@ Deno.serve(async (req) => {
     console.error('Error in verify-phone-otp:', error);
     return new Response(
       JSON.stringify({ 
-        error: 'An unexpected error occurred while processing your request. Please try again in a few moments. If the problem continues, contact our support team for assistance.' 
+        error: 'An unexpected error occurred while processing your request. Please try again in a few moments. If the problem continues, contact our support team for assistance.',
+        errorCode: 'SYSTEM_ERROR'
       }),
       { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );

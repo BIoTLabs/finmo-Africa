@@ -12,6 +12,7 @@ import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { usePhoneValidation } from "@/hooks/usePhoneValidation";
 import { NetworkAccessDialog } from "@/components/NetworkAccessDialog";
+import { extractOTPError, getOTPErrorMessage } from "@/utils/errorMessages";
 
 // African country codes
 const COUNTRY_CODES = [
@@ -112,7 +113,9 @@ const Auth = () => {
 
           if (otpError || !otpData.success) {
             console.error("OTP send error:", otpError);
-            toast.error(otpData?.error || "Unable to send verification code. Please check your connection and try again.");
+            const errorData = extractOTPError(otpData, otpError);
+            const errorMessage = getOTPErrorMessage(errorData);
+            toast.error(errorMessage, { duration: errorData.errorCode === 'RATE_LIMITED' ? 6000 : 4000 });
             setLoading(false);
             return;
           }
@@ -197,7 +200,9 @@ const Auth = () => {
 
           if (otpError || !otpData.success) {
             console.error("OTP send error:", otpError);
-            toast.error(otpData?.error || "Unable to send verification code. Please check your connection and try again.");
+            const errorData = extractOTPError(otpData, otpError);
+            const errorMessage = getOTPErrorMessage(errorData);
+            toast.error(errorMessage, { duration: errorData.errorCode === 'RATE_LIMITED' ? 6000 : 4000 });
             setLoading(false);
             return;
           }
