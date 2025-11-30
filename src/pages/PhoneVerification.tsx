@@ -19,6 +19,9 @@ const PhoneVerification = () => {
   const [email, setEmail] = useState("");
   const [isLogin, setIsLogin] = useState(true);
   const [useOTP, setUseOTP] = useState(false);
+  const [deliveryMethod, setDeliveryMethod] = useState<'sms' | 'voice'>('sms');
+  const [callingPhone, setCallingPhone] = useState(false);
+  const [callCooldown, setCallCooldown] = useState(0);
 
   useEffect(() => {
     // Get data from location state
@@ -38,6 +41,14 @@ const PhoneVerification = () => {
     setIsLogin(loginMode !== false);
     setUseOTP(otpMode === true);
   }, [location, navigate]);
+
+  // Cooldown timer effect
+  useEffect(() => {
+    if (callCooldown > 0) {
+      const timer = setTimeout(() => setCallCooldown(callCooldown - 1), 1000);
+      return () => clearTimeout(timer);
+    }
+  }, [callCooldown]);
 
   const handleVerify = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -165,7 +176,10 @@ const PhoneVerification = () => {
     setResending(true);
     try {
       const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
-        body: { phoneNumber: phoneNumber }
+        body: { 
+          phoneNumber: phoneNumber,
+          deliveryMethod: 'sms'
+        }
       });
 
       if (error || !data.success) {
@@ -173,12 +187,45 @@ const PhoneVerification = () => {
         return;
       }
 
-      toast.success("Verification code resent!");
+      setDeliveryMethod('sms');
+      toast.success("Verification code resent via SMS!");
     } catch (error: any) {
       console.error("Resend error:", error);
       toast.error("We couldn't send a new code. Please wait a moment and try again.");
     } finally {
       setResending(false);
+    }
+  };
+
+  const handleCallMe = async () => {
+    if (callCooldown > 0) {
+      toast.error(`Please wait ${callCooldown} seconds before requesting another call`);
+      return;
+    }
+
+    setCallingPhone(true);
+    try {
+      const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
+        body: { 
+          phoneNumber: phoneNumber,
+          deliveryMethod: 'voice',
+          isLogin: isLogin
+        }
+      });
+
+      if (error || !data.success) {
+        toast.error(data?.error || "Failed to place voice call");
+        return;
+      }
+
+      setDeliveryMethod('voice');
+      setCallCooldown(60); // 60 second cooldown
+      toast.success("Calling your phone now with the verification code!");
+    } catch (error: any) {
+      console.error("Voice call error:", error);
+      toast.error("We couldn't place the call. Please try SMS or wait a moment and try again.");
+    } finally {
+      setCallingPhone(false);
     }
   };
 
@@ -202,7 +249,14 @@ const PhoneVerification = () => {
           <CardHeader className="space-y-1 pb-4">
             <CardTitle className="text-2xl text-center">Enter Verification Code</CardTitle>
             <CardDescription className="text-center">
-              {isLogin && useOTP ? (
+              {deliveryMethod === 'voice' ? (
+                <>
+                  📞 We're calling {phoneNumber} with your code.
+                  <div className="mt-1 text-xs">
+                    Please answer the call and listen for your 6-digit code
+                  </div>
+                </>
+              ) : isLogin && useOTP ? (
                 <>We sent a 6-digit code to {phoneNumber} to verify your login</>
               ) : (
                 <>We sent a 6-digit code to {phoneNumber}</>
@@ -247,7 +301,36 @@ const PhoneVerification = () => {
                   onClick={handleResend}
                   disabled={resending}
                 >
-                  {resending ? "Sending..." : "Resend Code"}
+                  {resending ? "Sending..." : "Resend SMS Code"}
+                </Button>
+
+                <div className="relative">
+                  <div className="absolute inset-0 flex items-center">
+                    <span className="w-full border-t" />
+                  </div>
+                  <div className="relative flex justify-center text-xs uppercase">
+                    <span className="bg-background px-2 text-muted-foreground">
+                      Didn't receive the SMS?
+                    </span>
+                  </div>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="w-full"
+                  onClick={handleCallMe}
+                  disabled={callingPhone || callCooldown > 0}
+                >
+                  {callingPhone ? (
+                    "Calling..."
+                  ) : callCooldown > 0 ? (
+                    `Wait ${callCooldown}s`
+                  ) : (
+                    <>
+                      📞 Call me instead
+                    </>
+                  )}
                 </Button>
 
                 <Button

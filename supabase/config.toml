@@ -38,3 +38,6 @@ verify_jwt = false
 
 [functions.reset-password-phone]
 verify_jwt = false
+
+[functions.send-voice-otp]
+verify_jwt = false

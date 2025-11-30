@@ -8,11 +8,10 @@ const corsHeaders = {
   'Access-Control-Request-Private-Network': 'false',
 };
 
-interface VerifyPhoneRequest {
+interface VoiceOTPRequest {
   phoneNumber: string;
   ipAddress?: string;
   isLogin?: boolean;
-  deliveryMethod?: 'sms' | 'voice';
 }
 
 Deno.serve(async (req) => {
@@ -21,7 +20,7 @@ Deno.serve(async (req) => {
   }
 
   try {
-    const { phoneNumber, ipAddress, isLogin, deliveryMethod = 'sms' } = await req.json() as VerifyPhoneRequest;
+    const { phoneNumber, ipAddress, isLogin } = await req.json() as VoiceOTPRequest;
 
     if (!phoneNumber) {
       return new Response(
@@ -71,10 +70,10 @@ Deno.serve(async (req) => {
         );
       }
 
-      console.log(`OTP login validation passed for: ${normalizedPhone}`);
+      console.log(`Voice OTP login validation passed for: ${normalizedPhone}`);
     }
 
-    // Check rate limiting - max 3 attempts per hour
+    // Check rate limiting - max 3 attempts per hour (shared with SMS)
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
     const { data: recentAttempts, error: attemptsError } = await supabase
       .from('verification_attempts')
@@ -104,7 +103,7 @@ Deno.serve(async (req) => {
 
     // Generate 6-digit OTP
     const otp = Math.floor(100000 + Math.random() * 900000).toString();
-    console.log(`OTP generated and will be sent via ${deliveryMethod.toUpperCase()}`);
+    console.log('OTP generated and will be sent via voice call');
 
     // Hash OTP using Web Crypto API
     const encoder = new TextEncoder();
@@ -141,29 +140,24 @@ Deno.serve(async (req) => {
       ip_address: ipAddress,
     });
 
-    // Send OTP via Twilio (SMS or Voice based on deliveryMethod)
+    // Make voice call via Twilio
     const twilioAccountSid = Deno.env.get('TWILIO_ACCOUNT_SID');
     const twilioAuthToken = Deno.env.get('TWILIO_AUTH_TOKEN');
     const twilioPhoneNumber = Deno.env.get('TWILIO_PHONE_NUMBER');
 
     if (!twilioAccountSid || !twilioAuthToken || !twilioPhoneNumber) {
       console.error('Twilio credentials not configured');
-      const serviceType = deliveryMethod === 'voice' ? 'Voice call' : 'SMS';
       return new Response(
         JSON.stringify({ 
-          error: `${serviceType} service is currently unavailable. Our team has been notified and is working to restore service. Please try again later or contact support for assistance.` 
+          error: 'Voice call service is currently unavailable. Our team has been notified and is working to restore service. Please try again later or contact support for assistance.' 
         }),
         { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
 
-    const twilioAuth = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
-    let twilioResponse: Response;
-
-    if (deliveryMethod === 'voice') {
-      // Voice call with TwiML
-      const otpDigits = otp.split('').join('. ');
-      const twiml = `<?xml version="1.0" encoding="UTF-8"?>
+    // Create TwiML with spoken OTP
+    const otpDigits = otp.split('').join('. ');
+    const twiml = `<?xml version="1.0" encoding="UTF-8"?>
 <Response>
   <Say voice="Polly.Joanna" language="en-US">Hello! This is FinMo calling with your verification code.</Say>
   <Pause length="1"/>
@@ -173,51 +167,34 @@ Deno.serve(async (req) => {
   <Pause length="1"/>
   <Say voice="Polly.Joanna" language="en-US">This code expires in 10 minutes. Thank you for using FinMo. Goodbye.</Say>
 </Response>`;
+    
+    const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Calls.json`;
+    const twilioAuth = btoa(`${twilioAccountSid}:${twilioAuthToken}`);
 
-      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Calls.json`;
-      twilioResponse = await fetch(twilioUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${twilioAuth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          To: normalizedPhone,
-          From: twilioPhoneNumber,
-          Twiml: twiml,
-        }),
-      });
-    } else {
-      // SMS message
-      const message = `Your FinMo verification code is: ${otp}. Valid for 10 minutes. Do not share this code.`;
-      const twilioUrl = `https://api.twilio.com/2010-04-01/Accounts/${twilioAccountSid}/Messages.json`;
-      
-      twilioResponse = await fetch(twilioUrl, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Basic ${twilioAuth}`,
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: new URLSearchParams({
-          To: normalizedPhone,
-          From: twilioPhoneNumber,
-          Body: message,
-        }),
-      });
-    }
+    const twilioResponse = await fetch(twilioUrl, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Basic ${twilioAuth}`,
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+      body: new URLSearchParams({
+        To: normalizedPhone,
+        From: twilioPhoneNumber,
+        Twiml: twiml,
+      }),
+    });
 
     if (!twilioResponse.ok) {
       const errorText = await twilioResponse.text();
-      console.error('Twilio error:', errorText);
+      console.error('Twilio voice call error:', errorText);
       
-      const serviceType = deliveryMethod === 'voice' ? 'call' : 'SMS';
-      let errorMessage = `Unable to ${deliveryMethod === 'voice' ? 'place a call' : 'send SMS'} to your number. `;
+      let errorMessage = 'Unable to place a call to your number. ';
       if (twilioResponse.status === 400) {
         errorMessage += 'Please verify your phone number is correct and includes the country code.';
       } else if (twilioResponse.status === 429) {
-        errorMessage += `Too many ${serviceType}s sent to this number. Please try again in 10 minutes.`;
+        errorMessage += 'Too many calls to this number. Please try again in 10 minutes.';
       } else {
-        errorMessage += 'This may be due to network issues or an unsupported carrier. Please try the other delivery method or contact support.';
+        errorMessage += 'This may be due to network issues or an unsupported carrier. Please try the SMS option or contact support.';
       }
       
       return new Response(
@@ -227,21 +204,20 @@ Deno.serve(async (req) => {
     }
 
     const twilioData = await twilioResponse.json();
-    const messageType = deliveryMethod === 'voice' ? 'Voice call initiated' : 'OTP sent via SMS';
-    console.log(`${messageType} successfully:`, twilioData.sid);
+    console.log('Voice OTP call initiated successfully:', twilioData.sid);
 
     return new Response(
       JSON.stringify({ 
         success: true, 
-        message: deliveryMethod === 'voice' ? 'Voice call initiated' : 'Verification code sent',
+        message: 'Voice call initiated',
         phoneNumber: normalizedPhone,
-        deliveryMethod 
+        callSid: twilioData.sid
       }),
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
 
   } catch (error) {
-    console.error('Error in verify-phone-otp:', error);
+    console.error('Error in send-voice-otp:', error);
     return new Response(
       JSON.stringify({ 
         error: 'An unexpected error occurred while processing your request. Please try again in a few moments. If the problem continues, contact our support team for assistance.' 
