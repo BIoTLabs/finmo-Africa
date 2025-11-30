@@ -41,3 +41,6 @@ verify_jwt = false
 
 [functions.send-voice-otp]
 verify_jwt = false
+
+[functions.send-email-otp]
+verify_jwt = false
