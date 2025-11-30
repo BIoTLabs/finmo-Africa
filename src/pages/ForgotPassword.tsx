@@ -10,6 +10,7 @@ import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
 import { PhoneVerificationDialog } from "@/components/PhoneVerificationDialog";
+import { extractOTPError, getOTPErrorMessage } from "@/utils/errorMessages";
 
 const ForgotPassword = () => {
   const navigate = useNavigate();
@@ -57,11 +58,17 @@ const ForgotPassword = () => {
 
     try {
       // Send OTP to phone
-      const { error } = await supabase.functions.invoke('verify-phone-otp', {
+      const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
         body: { phoneNumber }
       });
 
-      if (error) throw error;
+      if (error || !data.success) {
+        const errorData = extractOTPError(data, error);
+        const errorMessage = getOTPErrorMessage(errorData);
+        toast.error(errorMessage, { duration: errorData.errorCode === 'RATE_LIMITED' ? 6000 : 4000 });
+        setLoading(false);
+        return;
+      }
 
       setShowPhoneVerification(true);
       toast.success("Verification code sent to your phone!");
@@ -150,11 +157,16 @@ const ForgotPassword = () => {
 
   const handleResendOTP = async () => {
     try {
-      const { error } = await supabase.functions.invoke('verify-phone-otp', {
+      const { data, error } = await supabase.functions.invoke('verify-phone-otp', {
         body: { phoneNumber }
       });
 
-      if (error) throw error;
+      if (error || !data.success) {
+        const errorData = extractOTPError(data, error);
+        const errorMessage = getOTPErrorMessage(errorData);
+        toast.error(errorMessage, { duration: errorData.errorCode === 'RATE_LIMITED' ? 6000 : 4000 });
+        return;
+      }
       toast.success("Verification code resent!");
     } catch (error: any) {
       toast.error(error.message || "Failed to resend code");

@@ -8,6 +8,7 @@ import { ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { supabase } from "@/integrations/supabase/client";
+import { extractOTPError, getOTPErrorMessage } from "@/utils/errorMessages";
 
 const PhoneVerification = () => {
   const navigate = useNavigate();
@@ -183,7 +184,9 @@ const PhoneVerification = () => {
       });
 
       if (error || !data.success) {
-        toast.error(data?.error || "Failed to resend code");
+        const errorData = extractOTPError(data, error);
+        const errorMessage = getOTPErrorMessage(errorData);
+        toast.error(errorMessage, { duration: errorData.errorCode === 'RATE_LIMITED' ? 6000 : 4000 });
         return;
       }
 
@@ -214,7 +217,9 @@ const PhoneVerification = () => {
       });
 
       if (error || !data.success) {
-        toast.error(data?.error || "Failed to place voice call");
+        const errorData = extractOTPError(data, error);
+        const errorMessage = getOTPErrorMessage(errorData);
+        toast.error(errorMessage, { duration: errorData.errorCode === 'RATE_LIMITED' ? 6000 : 4000 });
         return;
       }
 
