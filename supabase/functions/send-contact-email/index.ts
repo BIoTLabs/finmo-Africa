@@ -10,6 +10,18 @@ const corsHeaders = {
   "Access-Control-Request-Private-Network": "false",
 };
 
+/**
+ * Escapes HTML special characters to prevent XSS attacks
+ */
+function escapeHtml(str: string): string {
+  return str
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 interface ContactEmailRequest {
   name: string;
   email: string;
@@ -58,20 +70,25 @@ const handler = async (req: Request): Promise<Response> => {
 
     console.log("Sending contact email from:", name, email);
 
+    // Escape user input to prevent XSS attacks
+    const safeName = escapeHtml(name);
+    const safeEmail = escapeHtml(email);
+    const safeMessage = escapeHtml(message).replace(/\n/g, "<br>");
+
     // Note: Resend test mode only allows sending to verified email (wtowergates@gmail.com)
     // To send to other recipients, verify a domain at resend.com/domains
     const emailResponse = await resend.emails.send({
       from: "FinMo Contact <onboarding@resend.dev>",
       to: ["wtowergates@gmail.com"], // Using verified email for testing
       reply_to: email,
-      subject: `Contact Form: Message from ${name}`,
+      subject: `Contact Form: Message from ${safeName}`,
       html: `
         <h2>New Contact Form Submission</h2>
-        <p><strong>From:</strong> ${name}</p>
-        <p><strong>Email:</strong> ${email}</p>
+        <p><strong>From:</strong> ${safeName}</p>
+        <p><strong>Email:</strong> ${safeEmail}</p>
         <hr />
         <h3>Message:</h3>
-        <p>${message.replace(/\n/g, "<br>")}</p>
+        <p>${safeMessage}</p>
       `,
     });
 
