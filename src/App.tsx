@@ -51,6 +51,7 @@ import AdminKYC from "./pages/AdminKYC";
 import AdminListings from "./pages/AdminListings";
 import AdminMessaging from "./pages/AdminMessaging";
 import AdminDisputes from "./pages/AdminDisputes";
+import DeleteAccount from "./pages/DeleteAccount";
 
 const queryClient = new QueryClient();
 
@@ -70,6 +71,7 @@ const App = () => {
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify-phone" element={<PhoneVerification />} />
           <Route path="/phone-verification" element={<PhoneVerification />} />
+          <Route path="/delete-account" element={<DeleteAccount />} />
           <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
           <Route path="/explorer" element={<ProtectedRoute><Explorer /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />

@@ -4,7 +4,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff, CreditCard, ChevronRight, FileText, ShieldCheck, Store } from "lucide-react";
+import { ArrowLeft, Fingerprint, Shield, Copy, LogOut, Eye, EyeOff, CreditCard, ChevronRight, FileText, ShieldCheck, Store, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
@@ -13,6 +13,7 @@ import TwoFactorPreferences from "@/components/TwoFactorPreferences";
 import { use2FA } from "@/hooks/use2FA";
 import { ThemeSwitcher } from "@/components/ThemeSwitcher";
 import { use2FAGuard } from "@/hooks/use2FAGuard";
+import { DeleteAccountDialog } from "@/components/DeleteAccountDialog";
 
 const Settings = () => {
   const navigate = useNavigate();
@@ -22,6 +23,7 @@ const Settings = () => {
   const [show2FASetup, setShow2FASetup] = useState(false);
   const [addressVisible, setAddressVisible] = useState(false);
   const [profile, setProfile] = useState<any>(null);
+  const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const { unenrollMFA } = use2FA();
   const { requireVerification, TwoFactorDialog } = use2FAGuard();
 
@@ -131,6 +133,12 @@ const Settings = () => {
   const handle2FASuccess = () => {
     setTwoFactorEnabled(true);
     setShow2FASetup(false);
+  };
+
+  const handleDeleteSuccess = async () => {
+    setShowDeleteDialog(false);
+    await supabase.auth.signOut();
+    navigate("/auth");
   };
 
   if (!profile) return null;
@@ -364,12 +372,50 @@ const Settings = () => {
           <LogOut className="w-4 h-4 mr-2" />
           Logout
         </Button>
+
+        {/* Danger Zone */}
+        <div className="space-y-4 pt-6 border-t border-destructive/20">
+          <h2 className="text-lg font-semibold text-destructive">Danger Zone</h2>
+          
+          <Card className="border-destructive/50 shadow-finmo-md">
+            <CardContent className="p-4">
+              <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                  <div className="w-10 h-10 bg-destructive/10 rounded-full flex items-center justify-center flex-shrink-0">
+                    <Trash2 className="w-5 h-5 text-destructive" />
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-semibold text-destructive-foreground">Delete My Account</p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Permanently delete your account and all data. This action cannot be undone.
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="destructive"
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="w-full"
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Delete Account
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
       </div>
 
       <TwoFactorSetup
         open={show2FASetup}
         onOpenChange={setShow2FASetup}
         onSuccess={handle2FASuccess}
+      />
+
+      <DeleteAccountDialog
+        open={showDeleteDialog}
+        onOpenChange={setShowDeleteDialog}
+        onSuccess={handleDeleteSuccess}
+        phoneNumber={profile.phone_number}
       />
 
       <TwoFactorDialog />
