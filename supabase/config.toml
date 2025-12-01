@@ -1,5 +1,8 @@
 project_id = "khqsseqrmanpcbeyvkdp"
 
+[functions.phone-password-login]
+verify_jwt = false
+
 [functions.detect-deposits]
 verify_jwt = true
 

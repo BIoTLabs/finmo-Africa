@@ -87,20 +87,31 @@ Deno.serve(async (req) => {
       console.log(`OTP login validation passed for: ${normalizedPhone}`);
     }
 
-    // Check rate limiting - max 3 attempts per hour
+    // Enhanced rate limiting - check both phone and IP
     const oneHourAgo = new Date(Date.now() - 60 * 60 * 1000).toISOString();
-    const { data: recentAttempts, error: attemptsError } = await supabase
+    const fifteenMinutesAgo = new Date(Date.now() - 15 * 60 * 1000).toISOString();
+    
+    // Check phone-based rate limiting (2 per hour)
+    const { data: phoneAttempts, error: phoneAttemptsError } = await supabase
       .from('verification_attempts')
       .select('*')
       .eq('phone_number', normalizedPhone)
       .gte('attempted_at', oneHourAgo);
 
-    if (attemptsError) {
-      console.error('Error checking rate limit:', attemptsError);
+    if (phoneAttemptsError) {
+      console.error('Error checking phone rate limit:', phoneAttemptsError);
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'Unable to process request. Please try again.',
+          errorCode: 'SYSTEM_ERROR'
+        }),
+        { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
     }
 
-    if (recentAttempts && recentAttempts.length >= 3) {
-      const oldestAttempt = recentAttempts.sort((a, b) => 
+    if (phoneAttempts && phoneAttempts.length >= 2) {
+      const oldestAttempt = phoneAttempts.sort((a: any, b: any) => 
         new Date(a.attempted_at).getTime() - new Date(b.attempted_at).getTime()
       )[0];
       const retryTime = new Date(new Date(oldestAttempt.attempted_at).getTime() + 60 * 60 * 1000);
@@ -108,13 +119,57 @@ Deno.serve(async (req) => {
       
       return new Response(
         JSON.stringify({ 
-          error: `Too many verification attempts. For security, you can only request 3 codes per hour. Please try again in ${minutesLeft} minute${minutesLeft !== 1 ? 's' : ''}.`,
+          error: `Too many verification requests for this phone number. Please wait ${minutesLeft} minutes before trying again.`,
           errorCode: 'RATE_LIMITED',
           minutesLeft,
           retryAfter: retryTime.toISOString()
         }),
         { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
+    }
+
+    // Check IP-based rate limiting (5 per 15 minutes) if IP provided
+    if (ipAddress) {
+      const { data: ipAttempts, error: ipAttemptsError } = await supabase
+        .from('verification_attempts')
+        .select('*')
+        .eq('ip_address', ipAddress)
+        .gte('attempted_at', fifteenMinutesAgo);
+
+      if (ipAttemptsError) {
+        console.error('Error checking IP rate limit:', ipAttemptsError);
+      } else if (ipAttempts && ipAttempts.length >= 5) {
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'Too many verification requests from your network. Please wait 15 minutes before trying again.',
+            errorCode: 'RATE_LIMITED_IP'
+          }),
+          { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+
+      // Check for suspicious activity: same IP, multiple different phones
+      const { data: suspiciousActivity } = await supabase
+        .from('verification_attempts')
+        .select('phone_number')
+        .eq('ip_address', ipAddress)
+        .gte('attempted_at', fifteenMinutesAgo);
+
+      if (suspiciousActivity && suspiciousActivity.length >= 3) {
+        const uniquePhones = new Set(suspiciousActivity.map((a: any) => a.phone_number));
+        if (uniquePhones.size >= 3) {
+          console.warn(`Suspicious activity detected from IP ${ipAddress}: ${uniquePhones.size} different phones`);
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'Unusual activity detected. Please try again later or contact support.',
+              errorCode: 'SUSPICIOUS_ACTIVITY'
+            }),
+            { status: 429, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      }
     }
 
     // Generate 6-digit OTP

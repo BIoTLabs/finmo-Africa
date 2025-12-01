@@ -129,7 +129,7 @@ const Auth = () => {
             } 
           });
         } else {
-          // Login with password - use backend to get email
+          // Login with password - use secure phone-password login endpoint
           if (!password || password.length < 6) {
             toast.error("Please enter your password");
             setLoading(false);
@@ -138,41 +138,40 @@ const Auth = () => {
 
           console.log("Attempting password login with phone:", fullPhone);
           
-          // Get user's email via backend function (bypasses RLS)
-          const { data: emailData, error: emailError } = await supabase.functions.invoke('get-user-email-by-phone', {
-            body: { phoneNumber: fullPhone }
-          });
-
-          if (emailError || !emailData.success) {
-            console.error("Email lookup error:", emailError);
-            toast.error(emailData?.error || "Account not found. Please verify your phone number is correct, or create a new account.");
-            setLoading(false);
-            return;
-          }
-
-          console.log("Found email for phone, attempting sign in with:", emailData.email);
-
-          // Sign in with email and password
-          const { data: signInData, error: signInError } = await supabase.auth.signInWithPassword({
-            email: emailData.email,
-            password: password,
-          });
-
-          if (signInError) {
-            console.error("Sign in error:", signInError);
-            console.error("Error code:", signInError.status);
-            console.error("Error message:", signInError.message);
-            
-            if (signInError.message.includes("Invalid login credentials") || signInError.message.includes("invalid_credentials")) {
-              toast.error("Incorrect password. Tip: Try 'Forgot Password?' or use the OTP Login option for easier access.");
-            } else {
-              toast.error(signInError.message || "Unable to sign in. Please try again or use OTP login.");
+          // Use secure server-side login that doesn't expose email/userId
+          const { data: loginData, error: loginError } = await supabase.functions.invoke(
+            'phone-password-login',
+            {
+              body: { 
+                phoneNumber: fullPhone,
+                password: password,
+                ipAddress: window.location.hostname
+              }
             }
+          );
+
+          if (loginError || !loginData?.success) {
+            console.error("Login error:", loginError);
+            const errorMessage = loginData?.message || "Invalid phone number or password";
+            toast.error(errorMessage);
             setLoading(false);
             return;
           }
 
-          if (signInData.session) {
+          // Set the session from the response
+          if (loginData.session) {
+            const { error: sessionError } = await supabase.auth.setSession({
+              access_token: loginData.session.access_token,
+              refresh_token: loginData.session.refresh_token,
+            });
+
+            if (sessionError) {
+              console.error("Session error:", sessionError);
+              toast.error("Session error. Please try again.");
+              setLoading(false);
+              return;
+            }
+
             toast.success("Welcome back!");
             navigate("/dashboard");
           }
