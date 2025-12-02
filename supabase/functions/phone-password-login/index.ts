@@ -111,6 +111,54 @@ serve(async (req) => {
       );
     }
 
+    // Check if account is suspended
+    const { data: suspensionCheck } = await supabase
+      .from('profiles')
+      .select('is_suspended, suspension_reason, suspension_expires_at')
+      .eq('id', userRegistry.user_id)
+      .single();
+
+    if (suspensionCheck?.is_suspended) {
+      // Check if temporary suspension has expired
+      if (suspensionCheck.suspension_expires_at) {
+        const expiryDate = new Date(suspensionCheck.suspension_expires_at);
+        if (expiryDate < new Date()) {
+          // Suspension expired, auto-unsuspend
+          await supabase
+            .from('profiles')
+            .update({
+              is_suspended: false,
+              suspended_at: null,
+              suspended_by: null,
+              suspension_reason: null,
+              suspension_expires_at: null
+            })
+            .eq('id', userRegistry.user_id);
+        } else {
+          // Still suspended
+          return new Response(
+            JSON.stringify({ 
+              success: false, 
+              error: 'ACCOUNT_SUSPENDED',
+              message: `Account suspended: ${suspensionCheck.suspension_reason || 'Contact support for details'}`,
+              expires_at: suspensionCheck.suspension_expires_at
+            }),
+            { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+          );
+        }
+      } else {
+        // Permanent suspension
+        return new Response(
+          JSON.stringify({ 
+            success: false, 
+            error: 'ACCOUNT_SUSPENDED',
+            message: `Account suspended: ${suspensionCheck.suspension_reason || 'Contact support for details'}`
+          }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+    }
+
     // Authenticate with Supabase Auth using email + password
     // Create admin client for sign in
     const adminAuthClient = createClient(supabaseUrl, supabaseKey, {

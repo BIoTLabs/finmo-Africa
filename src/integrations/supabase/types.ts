@@ -14,6 +14,42 @@ export type Database = {
   }
   public: {
     Tables: {
+      admin_audit_logs: {
+        Row: {
+          action_type: string
+          admin_id: string
+          created_at: string
+          id: string
+          ip_address: string | null
+          metadata: Json | null
+          target_user_id: string | null
+          target_user_phone: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          action_type: string
+          admin_id: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          target_user_id?: string | null
+          target_user_phone?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          action_type?: string
+          admin_id?: string
+          created_at?: string
+          id?: string
+          ip_address?: string | null
+          metadata?: Json | null
+          target_user_id?: string | null
+          target_user_phone?: string | null
+          user_agent?: string | null
+        }
+        Relationships: []
+      }
       admin_settings: {
         Row: {
           id: string
@@ -1063,8 +1099,13 @@ export type Database = {
           email: string | null
           encryption_key_version: string | null
           id: string
+          is_suspended: boolean | null
           phone_number: string
           socials: Json | null
+          suspended_at: string | null
+          suspended_by: string | null
+          suspension_expires_at: string | null
+          suspension_reason: string | null
           updated_at: string
           wallet_address: string | null
           wallet_private_key_encrypted: string | null
@@ -1080,8 +1121,13 @@ export type Database = {
           email?: string | null
           encryption_key_version?: string | null
           id: string
+          is_suspended?: boolean | null
           phone_number: string
           socials?: Json | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_expires_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string
           wallet_address?: string | null
           wallet_private_key_encrypted?: string | null
@@ -1097,8 +1143,13 @@ export type Database = {
           email?: string | null
           encryption_key_version?: string | null
           id?: string
+          is_suspended?: boolean | null
           phone_number?: string
           socials?: Json | null
+          suspended_at?: string | null
+          suspended_by?: string | null
+          suspension_expires_at?: string | null
+          suspension_reason?: string | null
           updated_at?: string
           wallet_address?: string | null
           wallet_private_key_encrypted?: string | null
