@@ -53,6 +53,8 @@ import AdminMessaging from "./pages/AdminMessaging";
 import AdminDisputes from "./pages/AdminDisputes";
 import DeleteAccount from "./pages/DeleteAccount";
 import AdminUserDeletion from "./pages/AdminUserDeletion";
+import AdminUserManagement from "./pages/AdminUserManagement";
+import AdminAuditLogs from "./pages/AdminAuditLogs";
 
 const queryClient = new QueryClient();
 
@@ -115,6 +117,8 @@ const App = () => {
             <Route path="/admin/messaging" element={<ProtectedRoute><AdminMessaging /></ProtectedRoute>} />
             <Route path="/admin/disputes" element={<ProtectedRoute><AdminDisputes /></ProtectedRoute>} />
             <Route path="/admin/user-deletion" element={<ProtectedRoute><AdminUserDeletion /></ProtectedRoute>} />
+            <Route path="/admin/user-management" element={<ProtectedRoute><AdminUserManagement /></ProtectedRoute>} />
+            <Route path="/admin/audit-logs" element={<ProtectedRoute><AdminAuditLogs /></ProtectedRoute>} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

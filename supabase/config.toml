@@ -50,3 +50,12 @@ verify_jwt = false
 
 [functions.send-email-otp]
 verify_jwt = false
+
+[functions.admin-suspend-user]
+verify_jwt = true
+
+[functions.admin-unsuspend-user]
+verify_jwt = true
+
+[functions.admin-bulk-user-operations]
+verify_jwt = true

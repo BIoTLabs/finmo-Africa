@@ -344,6 +344,30 @@ Deno.serve(async (req) => {
 
     console.log(`Successfully deleted user ${userId}. Completed steps:`, deletionSteps);
 
+    // Create audit log entry
+    const auditAuthHeader = req.headers.get('Authorization');
+    if (auditAuthHeader) {
+      const auditToken = auditAuthHeader.replace('Bearer ', '');
+      const { data: { user: adminUser } } = await supabaseClient.auth.getUser(auditToken);
+      
+      if (adminUser) {
+        await supabaseClient.from('admin_audit_logs').insert({
+          admin_id: adminUser.id,
+          action_type: force ? 'user_deleted_forced' : 'user_deleted',
+          target_user_id: userId,
+          target_user_phone: profile.phone_number || null,
+          metadata: {
+            dependencies,
+            force_delete: force,
+            display_name: profile.display_name,
+            deletion_steps: deletionSteps
+          },
+          ip_address: null,
+          user_agent: null
+        });
+      }
+    }
+
     return new Response(
       JSON.stringify({
         success: true,

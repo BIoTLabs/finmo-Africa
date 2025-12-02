@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell, UserX } from 'lucide-react';
+import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell, UserCog, ClipboardList } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LoadingScreen from '@/components/LoadingScreen';
 import { AdminFeeSettings } from '@/components/AdminFeeSettings';
@@ -194,16 +194,33 @@ const Admin = () => {
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
-                    <UserX className="h-5 w-5" />
-                    User Deletion
+                    <UserCog className="h-5 w-5" />
+                    User Management
                   </CardTitle>
                   <CardDescription>
-                    Safely delete user accounts with dependency checking
+                    Manage users: suspend, unsuspend, delete, bulk operations
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <Button onClick={() => navigate('/admin/user-deletion')} className="w-full" variant="destructive">
-                    Delete User Accounts
+                  <Button onClick={() => navigate('/admin/user-management')} className="w-full">
+                    Manage User Accounts
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <ClipboardList className="h-5 w-5" />
+                    Audit Logs
+                  </CardTitle>
+                  <CardDescription>
+                    View complete history of administrative actions
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate('/admin/audit-logs')} className="w-full" variant="outline">
+                    View Audit Logs
                   </Button>
                 </CardContent>
               </Card>
