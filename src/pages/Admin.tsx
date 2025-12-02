@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell } from 'lucide-react';
+import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell, UserX } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LoadingScreen from '@/components/LoadingScreen';
 import { AdminFeeSettings } from '@/components/AdminFeeSettings';
@@ -187,6 +187,23 @@ const Admin = () => {
                 <CardContent>
                   <Button onClick={() => navigate('/admin/messaging')} className="w-full">
                     Manage Notifications
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserX className="h-5 w-5" />
+                    User Deletion
+                  </CardTitle>
+                  <CardDescription>
+                    Safely delete user accounts with dependency checking
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate('/admin/user-deletion')} className="w-full" variant="destructive">
+                    Delete User Accounts
                   </Button>
                 </CardContent>
               </Card>
