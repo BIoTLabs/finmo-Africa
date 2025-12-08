@@ -1834,6 +1834,7 @@ export type Database = {
           sandbox_enabled: boolean | null
           status: string | null
           updated_at: string | null
+          user_id: string | null
           webhook_secret: string | null
           webhook_url: string | null
         }
@@ -1854,6 +1855,7 @@ export type Database = {
           sandbox_enabled?: boolean | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
           webhook_secret?: string | null
           webhook_url?: string | null
         }
@@ -1874,6 +1876,7 @@ export type Database = {
           sandbox_enabled?: boolean | null
           status?: string | null
           updated_at?: string | null
+          user_id?: string | null
           webhook_secret?: string | null
           webhook_url?: string | null
         }
@@ -3000,6 +3003,7 @@ export type Database = {
       }
       generate_api_key: { Args: never; Returns: string }
       generate_wallet_address: { Args: never; Returns: string }
+      get_partner_id_for_user: { Args: { _user_id: string }; Returns: string }
       get_partner_usage_stats: { Args: { _partner_id: string }; Returns: Json }
       get_payment_request_public_info: {
         Args: { _request_id: string }

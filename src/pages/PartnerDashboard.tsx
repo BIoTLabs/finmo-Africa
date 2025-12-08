@@ -7,7 +7,7 @@ import { Progress } from "@/components/ui/progress";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   ArrowLeft, Copy, Check, ExternalLink, Key, BarChart3, 
-  CreditCard, Clock, AlertCircle, RefreshCw, Wallet
+  CreditCard, Clock, AlertCircle, RefreshCw, Wallet, LogIn
 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { useToast } from "@/hooks/use-toast";
@@ -57,60 +57,92 @@ export default function PartnerDashboard() {
   const [payments, setPayments] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [copied, setCopied] = useState<string | null>(null);
+  const [user, setUser] = useState<any>(null);
+  const [authChecked, setAuthChecked] = useState(false);
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // For demo purposes - in production, this would come from partner auth
-  const partnerId = new URLSearchParams(window.location.search).get('partner_id');
-
+  // Check authentication and get partner data from authenticated user
   useEffect(() => {
-    if (partnerId) {
-      fetchPartnerData();
-    } else {
+    const checkAuth = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      
+      if (session?.user) {
+        setUser(session.user);
+        await fetchPartnerData(session.user.id);
+      }
+      
+      setAuthChecked(true);
       setLoading(false);
-    }
-  }, [partnerId]);
+    };
+    
+    checkAuth();
+    
+    const { data: { subscription: authSub } } = supabase.auth.onAuthStateChange(
+      async (event, session) => {
+        if (session?.user) {
+          setUser(session.user);
+          if (authChecked) {
+            await fetchPartnerData(session.user.id);
+          }
+        } else {
+          setUser(null);
+          setPartner(null);
+        }
+      }
+    );
 
-  const fetchPartnerData = async () => {
+    return () => authSub.unsubscribe();
+  }, []);
+
+  const fetchPartnerData = async (userId: string) => {
     try {
-      // Fetch partner info
+      setLoading(true);
+      
+      // Fetch partner info linked to this user
       const { data: partnerData, error: partnerError } = await supabase
         .from('partners')
         .select('*')
-        .eq('id', partnerId)
+        .eq('user_id', userId)
         .single();
 
-      if (partnerError) throw partnerError;
+      if (partnerError || !partnerData) {
+        // No partner account linked to this user
+        setPartner(null);
+        setLoading(false);
+        return;
+      }
+      
       setPartner(partnerData);
 
-      // Fetch subscription
+      // Fetch subscription using RLS (user can only see their own)
       const { data: subData } = await supabase
         .from('partner_subscriptions')
         .select(`
           *,
           tier:subscription_tiers(*)
         `)
-        .eq('partner_id', partnerId)
+        .eq('partner_id', partnerData.id)
         .single();
 
       if (subData) {
         setSubscription(subData as any);
       }
 
-      // Fetch API keys
+      // Fetch API keys using RLS
       const { data: keysData } = await supabase
         .from('partner_api_keys')
         .select('*')
-        .eq('partner_id', partnerId)
+        .eq('partner_id', partnerData.id)
         .order('created_at', { ascending: false });
 
       setApiKeys(keysData || []);
 
-      // Fetch payments
+      // Fetch payments using RLS
       const { data: paymentsData } = await supabase
         .from('subscription_payments')
         .select('*')
-        .eq('partner_id', partnerId)
+        .eq('partner_id', partnerData.id)
         .order('created_at', { ascending: false })
         .limit(10);
 
@@ -118,7 +150,7 @@ export default function PartnerDashboard() {
 
       // Fetch usage stats
       const { data: usageData } = await supabase
-        .rpc('get_partner_usage_stats', { _partner_id: partnerId });
+        .rpc('get_partner_usage_stats', { _partner_id: partnerData.id });
 
       if (usageData && typeof usageData === 'object') {
         setUsage(usageData as unknown as UsageStats);
@@ -175,19 +207,48 @@ export default function PartnerDashboard() {
     );
   }
 
-  if (!partnerId || !partner) {
+  // Not authenticated - show login prompt
+  if (!user) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
         <Card className="max-w-md">
           <CardHeader>
             <CardTitle>Partner Dashboard</CardTitle>
             <CardDescription>
-              Access your partner dashboard by logging in or using your partner link.
+              Please log in to access your partner dashboard.
             </CardDescription>
           </CardHeader>
-          <CardContent>
-            <Button onClick={() => navigate('/partner/register')}>
+          <CardContent className="space-y-4">
+            <Button onClick={() => navigate('/auth')} className="w-full">
+              <LogIn className="h-4 w-4 mr-2" />
+              Log In
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/partner/register')} className="w-full">
               Register as Partner
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Authenticated but no partner account
+  if (!partner) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Card className="max-w-md">
+          <CardHeader>
+            <CardTitle>No Partner Account</CardTitle>
+            <CardDescription>
+              You don't have a partner account linked to your user. Register to become a partner.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <Button onClick={() => navigate('/partner/register')} className="w-full">
+              Register as Partner
+            </Button>
+            <Button variant="outline" onClick={() => navigate('/')} className="w-full">
+              Back to Home
             </Button>
           </CardContent>
         </Card>
@@ -211,7 +272,7 @@ export default function PartnerDashboard() {
           </div>
           <div className="flex items-center gap-4">
             {getStatusBadge(partner.status)}
-            <Button variant="outline" size="sm" onClick={fetchPartnerData}>
+            <Button variant="outline" size="sm" onClick={() => user && fetchPartnerData(user.id)}>
               <RefreshCw className="h-4 w-4 mr-2" />
               Refresh
             </Button>
@@ -465,7 +526,11 @@ export default function PartnerDashboard() {
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Monthly Cost</span>
-                        <span className="font-medium">${subscription.tier.monthly_fee_usdt} USDT/USDC</span>
+                        <span className="font-medium">
+                          {subscription.tier.monthly_fee_usdt === 0 
+                            ? 'Free' 
+                            : `$${subscription.tier.monthly_fee_usdt} USDT/USDC`}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span className="text-muted-foreground">Current Period</span>
@@ -475,7 +540,12 @@ export default function PartnerDashboard() {
                       </div>
                     </div>
                   ) : (
-                    <p className="text-muted-foreground">No active subscription</p>
+                    <div className="text-center py-6">
+                      <p className="text-muted-foreground mb-4">No active subscription</p>
+                      <Button onClick={() => navigate('/partner/pricing')}>
+                        View Plans
+                      </Button>
+                    </div>
                   )}
                 </CardContent>
               </Card>
@@ -486,24 +556,32 @@ export default function PartnerDashboard() {
                   <CardHeader>
                     <CardTitle>Payment Wallet</CardTitle>
                     <CardDescription>
-                      Send USDT or USDC to this address for subscription payments
+                      Send USDT or USDC to this address to pay for your subscription.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="p-4 bg-muted rounded-lg font-mono text-sm break-all">
-                      {subscription.payment_wallet_address}
+                    <div className="space-y-4">
+                      <div className="flex items-center gap-2 p-3 bg-muted rounded-lg">
+                        <Wallet className="h-5 w-5 text-muted-foreground shrink-0" />
+                        <span className="font-mono text-sm break-all">
+                          {subscription.payment_wallet_address}
+                        </span>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          className="shrink-0"
+                          onClick={() => copyToClipboard(subscription.payment_wallet_address, 'Wallet address')}
+                        >
+                          {copied === 'Wallet address' ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+                        </Button>
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        <Badge variant="outline">Polygon (Recommended)</Badge>
+                        <Badge variant="outline">Ethereum</Badge>
+                        <Badge variant="outline">Arbitrum</Badge>
+                        <Badge variant="outline">Base</Badge>
+                      </div>
                     </div>
-                    <Button 
-                      variant="outline" 
-                      className="w-full mt-4"
-                      onClick={() => copyToClipboard(subscription.payment_wallet_address, 'Payment wallet')}
-                    >
-                      {copied === 'Payment wallet' ? <Check className="h-4 w-4 mr-2" /> : <Copy className="h-4 w-4 mr-2" />}
-                      Copy Address
-                    </Button>
-                    <p className="text-xs text-muted-foreground mt-4 text-center">
-                      Polygon network recommended for lowest fees
-                    </p>
                   </CardContent>
                 </Card>
               )}
@@ -516,25 +594,32 @@ export default function PartnerDashboard() {
               </CardHeader>
               <CardContent>
                 {payments.length === 0 ? (
-                  <p className="text-muted-foreground">No payments yet</p>
+                  <p className="text-muted-foreground">No payments yet.</p>
                 ) : (
                   <div className="space-y-4">
                     {payments.map((payment) => (
                       <div key={payment.id} className="flex items-center justify-between p-4 border border-border rounded-lg">
-                        <div className="flex items-center gap-4">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <CreditCard className="h-5 w-5 text-primary" />
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="h-4 w-4 text-muted-foreground" />
+                            <span className="font-medium">${payment.amount} {payment.token}</span>
+                            <Badge variant={payment.status === 'confirmed' ? "default" : "secondary"}>
+                              {payment.status}
+                            </Badge>
                           </div>
-                          <div>
-                            <p className="font-medium">${payment.amount} {payment.token}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {formatDate(payment.created_at)} • {payment.chain_name}
-                            </p>
-                          </div>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {formatDate(payment.created_at)} • {payment.chain_name || `Chain ${payment.chain_id}`}
+                          </p>
                         </div>
-                        <Badge variant={payment.status === 'confirmed' ? 'default' : 'secondary'}>
-                          {payment.status}
-                        </Badge>
+                        {payment.tx_hash && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => window.open(`https://polygonscan.com/tx/${payment.tx_hash}`, '_blank')}
+                          >
+                            <ExternalLink className="h-4 w-4" />
+                          </Button>
+                        )}
                       </div>
                     ))}
                   </div>
