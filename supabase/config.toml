@@ -74,3 +74,9 @@ verify_jwt = false
 
 [functions.partner-webhooks]
 verify_jwt = false
+
+[functions.partner-payins]
+verify_jwt = false
+
+[functions.partner-payouts]
+verify_jwt = false

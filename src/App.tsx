@@ -56,6 +56,7 @@ import AdminUserDeletion from "./pages/AdminUserDeletion";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminPartnerManagement from "./pages/AdminPartnerManagement";
+import ApiDocs from "./pages/ApiDocs";
 
 const queryClient = new QueryClient();
 
