@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -8,7 +8,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
-import { Building2, Mail, Phone, Globe, Briefcase, Users, ArrowLeft, CheckCircle } from "lucide-react";
+import { Building2, Mail, Phone, Globe, Briefcase, Users, ArrowLeft, CheckCircle, Loader2 } from "lucide-react";
+import type { User } from "@supabase/supabase-js";
 
 const businessTypes = [
   { value: "fintech", label: "Fintech / Payment Provider" },
@@ -44,6 +45,8 @@ const volumeRanges = [
 
 export default function PartnerRegister() {
   const navigate = useNavigate();
+  const [user, setUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [formData, setFormData] = useState({
@@ -57,8 +60,39 @@ export default function PartnerRegister() {
     use_case: "",
   });
 
+  // Check authentication on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+      setIsLoading(false);
+      
+      if (!user) {
+        toast.error("Please log in to register as a partner");
+        navigate("/auth", { state: { returnTo: "/partner/register" } });
+      }
+    };
+    
+    checkAuth();
+    
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      setUser(session?.user ?? null);
+      if (!session?.user) {
+        navigate("/auth", { state: { returnTo: "/partner/register" } });
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    
+    if (!user) {
+      toast.error("Please log in to register as a partner");
+      navigate("/auth", { state: { returnTo: "/partner/register" } });
+      return;
+    }
     
     if (!formData.company_name || !formData.business_type || !formData.contact_email) {
       toast.error("Please fill in all required fields");
@@ -69,6 +103,7 @@ export default function PartnerRegister() {
 
     try {
       const { error } = await supabase.from("partners").insert({
+        user_id: user.id,
         company_name: formData.company_name,
         business_type: formData.business_type,
         country_code: formData.country_code || null,
@@ -130,6 +165,14 @@ export default function PartnerRegister() {
             </div>
           </CardContent>
         </Card>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
