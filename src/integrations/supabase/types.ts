@@ -74,6 +74,57 @@ export type Database = {
         }
         Relationships: []
       }
+      api_usage_logs: {
+        Row: {
+          api_key_id: string | null
+          created_at: string | null
+          endpoint: string
+          id: string
+          method: string
+          partner_id: string
+          request_date: string
+          response_status: number | null
+          response_time_ms: number | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          method: string
+          partner_id: string
+          request_date?: string
+          response_status?: number | null
+          response_time_ms?: number | null
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          method?: string
+          partner_id?: string
+          request_date?: string
+          response_status?: number | null
+          response_time_ms?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "api_usage_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "partner_api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "api_usage_logs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       card_transactions: {
         Row: {
           amount: number
@@ -1456,6 +1507,66 @@ export type Database = {
           },
         ]
       }
+      partner_subscriptions: {
+        Row: {
+          amount_due: number
+          amount_paid: number
+          auto_renew: boolean | null
+          created_at: string | null
+          current_period_end: string
+          current_period_start: string
+          id: string
+          partner_id: string
+          payment_wallet_address: string
+          status: string
+          tier_id: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount_due?: number
+          amount_paid?: number
+          auto_renew?: boolean | null
+          created_at?: string | null
+          current_period_end: string
+          current_period_start: string
+          id?: string
+          partner_id: string
+          payment_wallet_address: string
+          status?: string
+          tier_id: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount_due?: number
+          amount_paid?: number
+          auto_renew?: boolean | null
+          created_at?: string | null
+          current_period_end?: string
+          current_period_start?: string
+          id?: string
+          partner_id?: string
+          payment_wallet_address?: string
+          status?: string
+          tier_id?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_subscriptions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: true
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_subscriptions_tier_id_fkey"
+            columns: ["tier_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_transactions: {
         Row: {
           amount: number
@@ -1716,6 +1827,7 @@ export type Database = {
           contact_phone: string | null
           country_code: string | null
           created_at: string | null
+          current_tier_id: string | null
           id: string
           metadata: Json | null
           production_enabled: boolean | null
@@ -1735,6 +1847,7 @@ export type Database = {
           contact_phone?: string | null
           country_code?: string | null
           created_at?: string | null
+          current_tier_id?: string | null
           id?: string
           metadata?: Json | null
           production_enabled?: boolean | null
@@ -1754,6 +1867,7 @@ export type Database = {
           contact_phone?: string | null
           country_code?: string | null
           created_at?: string | null
+          current_tier_id?: string | null
           id?: string
           metadata?: Json | null
           production_enabled?: boolean | null
@@ -1763,7 +1877,15 @@ export type Database = {
           webhook_secret?: string | null
           webhook_url?: string | null
         }
-        Relationships: []
+        Relationships: [
+          {
+            foreignKeyName: "partners_current_tier_id_fkey"
+            columns: ["current_tier_id"]
+            isOneToOne: false
+            referencedRelation: "subscription_tiers"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       payment_methods: {
         Row: {
@@ -2092,6 +2214,129 @@ export type Database = {
           updated_at?: string
           user_id?: string
           withdrawn_at?: string | null
+        }
+        Relationships: []
+      }
+      subscription_payments: {
+        Row: {
+          amount: number
+          chain_id: number
+          chain_name: string | null
+          confirmed_at: string | null
+          created_at: string | null
+          expires_at: string
+          from_wallet_address: string | null
+          id: string
+          partner_id: string
+          period_end: string
+          period_start: string
+          status: string
+          subscription_id: string
+          to_wallet_address: string
+          token: string
+          tx_hash: string | null
+        }
+        Insert: {
+          amount: number
+          chain_id: number
+          chain_name?: string | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          expires_at: string
+          from_wallet_address?: string | null
+          id?: string
+          partner_id: string
+          period_end: string
+          period_start: string
+          status?: string
+          subscription_id: string
+          to_wallet_address: string
+          token: string
+          tx_hash?: string | null
+        }
+        Update: {
+          amount?: number
+          chain_id?: number
+          chain_name?: string | null
+          confirmed_at?: string | null
+          created_at?: string | null
+          expires_at?: string
+          from_wallet_address?: string | null
+          id?: string
+          partner_id?: string
+          period_end?: string
+          period_start?: string
+          status?: string
+          subscription_id?: string
+          to_wallet_address?: string
+          token?: string
+          tx_hash?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "subscription_payments_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "subscription_payments_subscription_id_fkey"
+            columns: ["subscription_id"]
+            isOneToOne: false
+            referencedRelation: "partner_subscriptions"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      subscription_tiers: {
+        Row: {
+          created_at: string | null
+          daily_api_limit: number | null
+          display_name: string
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          max_api_keys: number
+          monthly_api_limit: number | null
+          monthly_fee_usdt: number
+          name: string
+          production_access: boolean
+          rate_limit_per_minute: number
+          sort_order: number | null
+          transaction_fees: Json | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_api_limit?: number | null
+          display_name: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          max_api_keys?: number
+          monthly_api_limit?: number | null
+          monthly_fee_usdt?: number
+          name: string
+          production_access?: boolean
+          rate_limit_per_minute?: number
+          sort_order?: number | null
+          transaction_fees?: Json | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_api_limit?: number | null
+          display_name?: string
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          max_api_keys?: number
+          monthly_api_limit?: number | null
+          monthly_fee_usdt?: number
+          name?: string
+          production_access?: boolean
+          rate_limit_per_minute?: number
+          sort_order?: number | null
+          transaction_fees?: Json | null
         }
         Relationships: []
       }
@@ -2736,6 +2981,14 @@ export type Database = {
         Returns: boolean
       }
       can_insert_profile_for_new_user: { Args: never; Returns: boolean }
+      check_api_usage_limit: {
+        Args: {
+          _daily_limit: number
+          _monthly_limit: number
+          _partner_id: string
+        }
+        Returns: Json
+      }
       check_rate_limit: {
         Args: {
           _action_type: string
@@ -2747,6 +3000,7 @@ export type Database = {
       }
       generate_api_key: { Args: never; Returns: string }
       generate_wallet_address: { Args: never; Returns: string }
+      get_partner_usage_stats: { Args: { _partner_id: string }; Returns: Json }
       get_payment_request_public_info: {
         Args: { _request_id: string }
         Returns: {
