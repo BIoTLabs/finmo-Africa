@@ -58,6 +58,8 @@ import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminPartnerManagement from "./pages/AdminPartnerManagement";
 import ApiDocs from "./pages/ApiDocs";
+import PartnerPricing from "./pages/PartnerPricing";
+import PartnerDashboard from "./pages/PartnerDashboard";
 
 const queryClient = new QueryClient();
 
@@ -125,6 +127,8 @@ const App = () => {
             <Route path="/admin/partners" element={<ProtectedRoute><AdminPartnerManagement /></ProtectedRoute>} />
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
+            <Route path="/partner/pricing" element={<PartnerPricing />} />
+            <Route path="/partner/dashboard" element={<PartnerDashboard />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

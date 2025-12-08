@@ -89,3 +89,6 @@ verify_jwt = false
 
 [functions.partner-kyc]
 verify_jwt = false
+
+[functions.partner-subscription]
+verify_jwt = false
