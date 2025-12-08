@@ -114,6 +114,24 @@ serve(async (req) => {
       );
     }
 
+    // IP Whitelisting check
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0]?.trim() || 
+                     req.headers.get('cf-connecting-ip') || 
+                     req.headers.get('x-real-ip');
+    
+    const ipWhitelistCheck = await checkIpWhitelist(supabase, apiKeyData.id, clientIp);
+    if (!ipWhitelistCheck.allowed) {
+      await logApiRequest(supabase, apiKeyData.partner_id, apiKeyData.id, req, 403, startTime, 'IP not whitelisted');
+      return new Response(
+        JSON.stringify({ 
+          success: false, 
+          error: 'IP address not whitelisted',
+          client_ip: clientIp
+        }),
+        { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+      );
+    }
+
     // Check rate limiting
     const rateLimitCheck = await checkRateLimit(supabase, apiKeyData.id, apiKeyData.rate_limit_per_minute);
     if (!rateLimitCheck.allowed) {
@@ -177,6 +195,42 @@ async function checkRateLimit(
   }
 
   return { allowed: true };
+}
+
+async function checkIpWhitelist(
+  supabase: any,
+  apiKeyId: string,
+  clientIp: string | null
+): Promise<{ allowed: boolean }> {
+  // First check if any whitelist entries exist for this API key
+  const { data: whitelistEntries, error } = await supabase
+    .from('partner_ip_whitelist')
+    .select('ip_address')
+    .eq('api_key_id', apiKeyId)
+    .eq('is_active', true);
+
+  // If no whitelist entries exist, allow all IPs (whitelist not enabled)
+  if (error || !whitelistEntries || whitelistEntries.length === 0) {
+    return { allowed: true };
+  }
+
+  // If whitelist exists but no client IP, deny
+  if (!clientIp) {
+    console.log('IP whitelist enabled but no client IP detected');
+    return { allowed: false };
+  }
+
+  // Check if client IP is in whitelist
+  const isWhitelisted = whitelistEntries.some((entry: any) => {
+    // Handle both exact IP and CIDR notation
+    const whitelistedIp = entry.ip_address;
+    if (whitelistedIp === clientIp) return true;
+    // For CIDR, we'd need more complex logic - for now just exact match
+    return false;
+  });
+
+  console.log(`IP whitelist check: ${clientIp} - ${isWhitelisted ? 'allowed' : 'denied'}`);
+  return { allowed: isWhitelisted };
 }
 
 async function logApiRequest(

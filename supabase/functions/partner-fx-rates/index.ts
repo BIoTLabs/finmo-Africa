@@ -52,7 +52,7 @@ serve(async (req) => {
       );
     }
 
-    const { scopes } = authResult;
+    const { partnerId, scopes } = authResult;
     const url = new URL(req.url);
     const pathParts = url.pathname.split('/').filter(Boolean);
 
@@ -82,6 +82,22 @@ serve(async (req) => {
     if (req.method === 'GET' && pathParts.length === 2 && pathParts[1] === 'pairs') {
       // GET /partner-fx-rates/pairs - List supported pairs
       return getSupportedPairs();
+    }
+
+    if (req.method === 'POST' && pathParts.length === 2 && pathParts[1] === 'quote') {
+      // POST /partner-fx-rates/quote - Lock a quote for 30 seconds
+      if (!scopes.includes('fx:read')) {
+        return new Response(
+          JSON.stringify({ success: false, error: 'Missing scope: fx:read' }),
+          { status: 403, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+        );
+      }
+      return await createLockedQuote(req, supabase, partnerId);
+    }
+
+    if (req.method === 'GET' && pathParts.length === 3 && pathParts[1] === 'quote') {
+      // GET /partner-fx-rates/quote/:id - Get locked quote status
+      return await getLockedQuote(supabase, partnerId, pathParts[2]);
     }
 
     return new Response(
@@ -285,6 +301,145 @@ function getSupportedPairs() {
         fiat_currencies: fiatCurrencies,
         total_pairs: pairs.length,
         pairs
+      }
+    }),
+    { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+async function createLockedQuote(req: Request, supabase: any, partnerId: string) {
+  const body = await req.json();
+  const { from, to, amount, lock_seconds = 30 } = body;
+
+  if (!from || !to || !amount) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'from, to, and amount are required' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const fromCurrency = from.toUpperCase();
+  const toCurrency = to.toUpperCase();
+  const amountNum = parseFloat(amount);
+
+  if (isNaN(amountNum) || amountNum <= 0) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Invalid amount' }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  // Calculate rate
+  let fromUsd: number;
+  let toUsd: number;
+
+  if (fromCurrency === 'USD') {
+    fromUsd = 1;
+  } else if (CRYPTO_TO_USD[fromCurrency]) {
+    fromUsd = CRYPTO_TO_USD[fromCurrency];
+  } else if (USD_TO_FIAT[fromCurrency]) {
+    fromUsd = 1 / USD_TO_FIAT[fromCurrency];
+  } else {
+    return new Response(
+      JSON.stringify({ success: false, error: `Unsupported currency: ${fromCurrency}` }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  if (toCurrency === 'USD') {
+    toUsd = 1;
+  } else if (CRYPTO_TO_USD[toCurrency]) {
+    toUsd = 1 / CRYPTO_TO_USD[toCurrency];
+  } else if (USD_TO_FIAT[toCurrency]) {
+    toUsd = USD_TO_FIAT[toCurrency];
+  } else {
+    return new Response(
+      JSON.stringify({ success: false, error: `Unsupported currency: ${toCurrency}` }),
+      { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const rate = fromUsd * toUsd;
+  const spread = 0.005;
+  const convertedAmount = amountNum * rate * (1 - spread);
+  const lockDuration = Math.min(Math.max(lock_seconds, 10), 300); // 10s to 5min
+  const expiresAt = new Date(Date.now() + lockDuration * 1000).toISOString();
+
+  // Store the quote
+  const { data: quote, error } = await supabase
+    .from('partner_fx_quotes')
+    .insert({
+      partner_id: partnerId,
+      from_currency: fromCurrency,
+      to_currency: toCurrency,
+      amount: amountNum,
+      rate,
+      converted_amount: convertedAmount,
+      expires_at: expiresAt
+    })
+    .select()
+    .single();
+
+  if (error) {
+    console.error('Failed to create quote:', error);
+    return new Response(
+      JSON.stringify({ success: false, error: 'Failed to create quote' }),
+      { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        quote_id: quote.id,
+        from_currency: fromCurrency,
+        to_currency: toCurrency,
+        amount: amountNum,
+        rate,
+        spread_percentage: spread * 100,
+        converted_amount: convertedAmount,
+        expires_at: expiresAt,
+        valid_for_seconds: lockDuration
+      }
+    }),
+    { status: 201, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+  );
+}
+
+async function getLockedQuote(supabase: any, partnerId: string, quoteId: string) {
+  const { data: quote, error } = await supabase
+    .from('partner_fx_quotes')
+    .select('*')
+    .eq('id', quoteId)
+    .eq('partner_id', partnerId)
+    .single();
+
+  if (error || !quote) {
+    return new Response(
+      JSON.stringify({ success: false, error: 'Quote not found' }),
+      { status: 404, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
+    );
+  }
+
+  const isExpired = new Date(quote.expires_at) < new Date();
+  const isUsed = quote.is_used;
+
+  return new Response(
+    JSON.stringify({
+      success: true,
+      data: {
+        quote_id: quote.id,
+        from_currency: quote.from_currency,
+        to_currency: quote.to_currency,
+        amount: quote.amount,
+        rate: quote.rate,
+        converted_amount: quote.converted_amount,
+        expires_at: quote.expires_at,
+        is_expired: isExpired,
+        is_used: isUsed,
+        status: isUsed ? 'used' : (isExpired ? 'expired' : 'active'),
+        used_at: quote.used_at
       }
     }),
     { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }

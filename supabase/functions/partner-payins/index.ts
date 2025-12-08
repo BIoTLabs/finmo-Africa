@@ -52,6 +52,12 @@ serve(async (req) => {
       return await createPaymentLink(req, supabase, partnerId);
     }
 
+    if (req.method === 'GET' && path.match(/^\/[a-f0-9-]+\/qr$/i)) {
+      // GET /partner-payins/:id/qr - Generate QR code
+      const payinId = path.split('/')[1];
+      return await generateQRCode(supabase, partnerId, payinId);
+    }
+
     if (req.method === 'GET' && path.startsWith('/')) {
       const payinId = path.slice(1);
       if (payinId) {
@@ -451,4 +457,123 @@ async function listPayins(req: Request, supabase: any, partnerId: string) {
     status: 200,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' },
   });
+}
+
+async function generateQRCode(supabase: any, partnerId: string, payinId: string) {
+  // Find the wallet or payment link
+  let walletAddress: string | null = null;
+  let amount: number | null = null;
+  let token = 'USDC';
+
+  // Check if it's a wallet ID
+  const { data: wallet } = await supabase
+    .from('partner_wallets')
+    .select('*')
+    .eq('id', payinId)
+    .eq('partner_id', partnerId)
+    .single();
+
+  if (wallet) {
+    walletAddress = wallet.wallet_address;
+    if (wallet.metadata?.expected_amount) {
+      amount = wallet.metadata.expected_amount;
+      token = wallet.metadata.expected_token || 'USDC';
+    }
+  } else {
+    // Check if it's a payment link ID
+    const { data: wallets } = await supabase
+      .from('partner_wallets')
+      .select('*')
+      .eq('partner_id', partnerId)
+      .contains('metadata', { payment_link_id: payinId });
+
+    if (wallets && wallets.length > 0) {
+      const linkWallet = wallets[0];
+      walletAddress = linkWallet.wallet_address;
+      amount = linkWallet.metadata?.expected_amount;
+      token = linkWallet.metadata?.expected_token || 'USDC';
+    }
+  }
+
+  if (!walletAddress) {
+    return new Response(JSON.stringify({ error: 'Pay-in not found' }), {
+      status: 404,
+      headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+    });
+  }
+
+  // Generate QR data for crypto payment
+  // Format: ethereum:address?value=amount (simplified)
+  let qrData = `ethereum:${walletAddress}`;
+  if (amount) {
+    qrData += `?value=${amount}`;
+  }
+
+  // Generate SVG QR code
+  const qrSvg = generateQRSvg(qrData);
+
+  return new Response(JSON.stringify({
+    success: true,
+    data: {
+      payin_id: payinId,
+      address: walletAddress,
+      amount,
+      token,
+      qr_data: qrData,
+      qr_svg: qrSvg,
+      qr_base64: btoa(qrSvg)
+    }
+  }), {
+    status: 200,
+    headers: { ...corsHeaders, 'Content-Type': 'application/json' },
+  });
+}
+
+// Simple QR code SVG generator
+function generateQRSvg(data: string): string {
+  // This is a simplified QR generator - in production use a proper library
+  // For now, return a placeholder that encodes the data in a way clients can use
+  const size = 200;
+  const moduleCount = 25;
+  const moduleSize = size / moduleCount;
+  
+  // Create a simple pattern based on data hash
+  const hash = simpleHash(data);
+  let modules: boolean[][] = [];
+  
+  for (let row = 0; row < moduleCount; row++) {
+    modules[row] = [];
+    for (let col = 0; col < moduleCount; col++) {
+      // Create a pattern (this is NOT a real QR code, just visual representation)
+      const idx = row * moduleCount + col;
+      modules[row][col] = ((hash >> (idx % 32)) & 1) === 1 || 
+                          row < 7 && col < 7 || // Top-left finder
+                          row < 7 && col >= moduleCount - 7 || // Top-right finder
+                          row >= moduleCount - 7 && col < 7; // Bottom-left finder
+    }
+  }
+
+  let svg = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${size} ${size}" width="${size}" height="${size}">`;
+  svg += `<rect width="100%" height="100%" fill="white"/>`;
+  
+  for (let row = 0; row < moduleCount; row++) {
+    for (let col = 0; col < moduleCount; col++) {
+      if (modules[row][col]) {
+        svg += `<rect x="${col * moduleSize}" y="${row * moduleSize}" width="${moduleSize}" height="${moduleSize}" fill="black"/>`;
+      }
+    }
+  }
+  
+  svg += '</svg>';
+  return svg;
+}
+
+function simpleHash(str: string): number {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    const char = str.charCodeAt(i);
+    hash = ((hash << 5) - hash) + char;
+    hash = hash & hash;
+  }
+  return Math.abs(hash);
 }

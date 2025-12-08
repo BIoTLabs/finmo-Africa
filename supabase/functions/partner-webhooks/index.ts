@@ -17,8 +17,23 @@ const SUPPORTED_EVENTS = [
   'payout.completed',
   'payout.failed',
   'payin.received',
-  'payin.confirmed'
+  'payin.confirmed',
+  'escrow.created',
+  'escrow.funded',
+  'escrow.released',
+  'escrow.disputed',
+  'escrow.refunded',
+  'card.issued',
+  'card.funded',
+  'card.frozen',
+  'kyc.submitted',
+  'kyc.approved',
+  'kyc.rejected'
 ];
+
+// Retry configuration
+const RETRY_DELAYS = [60, 300, 1800, 7200, 86400]; // 1min, 5min, 30min, 2hr, 24hr
+const MAX_RETRIES = 5;
 
 serve(async (req) => {
   if (req.method === 'OPTIONS') {
@@ -487,7 +502,10 @@ async function testWebhook(supabase: any, partnerId: string, webhookId: string) 
       payload: testPayload,
       response_status: response.status,
       response_body: responseBody.substring(0, 1000),
-      delivered_at: response.ok ? new Date().toISOString() : null
+      delivered_at: response.ok ? new Date().toISOString() : null,
+      status: response.ok ? 'delivered' : 'failed',
+      retry_count: 0,
+      max_retries: MAX_RETRIES
     });
 
     return new Response(
@@ -507,7 +525,11 @@ async function testWebhook(supabase: any, partnerId: string, webhookId: string) 
       event_type: 'test.ping',
       payload: testPayload,
       response_status: 0,
-      response_body: String(e)
+      response_body: String(e),
+      status: 'failed',
+      retry_count: 0,
+      max_retries: MAX_RETRIES,
+      next_retry_at: new Date(Date.now() + RETRY_DELAYS[0] * 1000).toISOString()
     });
 
     return new Response(
@@ -519,4 +541,183 @@ async function testWebhook(supabase: any, partnerId: string, webhookId: string) 
       { status: 200, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
   }
+}
+
+// Deliver webhook with retry logic
+export async function deliverWebhook(
+  supabase: any,
+  webhookId: string,
+  eventType: string,
+  payload: any
+): Promise<{ success: boolean; logId?: string }> {
+  const { data: webhook, error } = await supabase
+    .from('partner_webhooks')
+    .select('*')
+    .eq('id', webhookId)
+    .eq('is_active', true)
+    .single();
+
+  if (error || !webhook) {
+    console.error('Webhook not found or inactive:', webhookId);
+    return { success: false };
+  }
+
+  // Check if this event is subscribed
+  if (!webhook.events.includes(eventType)) {
+    console.log(`Event ${eventType} not subscribed for webhook ${webhookId}`);
+    return { success: false };
+  }
+
+  const fullPayload = {
+    id: crypto.randomUUID(),
+    event: eventType,
+    timestamp: new Date().toISOString(),
+    data: payload
+  };
+
+  // Generate signature
+  const timestamp = Date.now();
+  const signaturePayload = `${timestamp}.${JSON.stringify(fullPayload)}`;
+  const encoder = new TextEncoder();
+  const key = await crypto.subtle.importKey(
+    'raw',
+    encoder.encode(webhook.secret),
+    { name: 'HMAC', hash: 'SHA-256' },
+    false,
+    ['sign']
+  );
+  const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(signaturePayload));
+  const signatureHex = Array.from(new Uint8Array(signature))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+
+  try {
+    const response = await fetch(webhook.url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'X-Finmo-Signature': `t=${timestamp},v1=${signatureHex}`,
+        'X-Finmo-Event': eventType
+      },
+      body: JSON.stringify(fullPayload)
+    });
+
+    const responseBody = await response.text();
+
+    const { data: logEntry } = await supabase.from('partner_webhook_logs').insert({
+      webhook_id: webhookId,
+      event_type: eventType,
+      payload: fullPayload,
+      response_status: response.status,
+      response_body: responseBody.substring(0, 1000),
+      delivered_at: response.ok ? new Date().toISOString() : null,
+      status: response.ok ? 'delivered' : 'pending',
+      retry_count: 0,
+      max_retries: MAX_RETRIES,
+      next_retry_at: response.ok ? null : new Date(Date.now() + RETRY_DELAYS[0] * 1000).toISOString()
+    }).select('id').single();
+
+    return { success: response.ok, logId: logEntry?.id };
+  } catch (e) {
+    console.error('Webhook delivery failed:', e);
+    
+    const { data: logEntry } = await supabase.from('partner_webhook_logs').insert({
+      webhook_id: webhookId,
+      event_type: eventType,
+      payload: fullPayload,
+      response_status: 0,
+      response_body: String(e),
+      status: 'pending',
+      retry_count: 0,
+      max_retries: MAX_RETRIES,
+      next_retry_at: new Date(Date.now() + RETRY_DELAYS[0] * 1000).toISOString()
+    }).select('id').single();
+
+    return { success: false, logId: logEntry?.id };
+  }
+}
+
+// Retry pending webhooks (called by a cron job or scheduler)
+export async function retryPendingWebhooks(supabase: any): Promise<{ processed: number; succeeded: number }> {
+  const now = new Date().toISOString();
+  
+  // Get pending webhooks that need retry
+  const { data: pendingLogs, error } = await supabase
+    .from('partner_webhook_logs')
+    .select('*, partner_webhooks(*)')
+    .eq('status', 'pending')
+    .lt('next_retry_at', now)
+    .lt('retry_count', MAX_RETRIES)
+    .limit(50);
+
+  if (error || !pendingLogs) {
+    console.error('Failed to fetch pending webhooks:', error);
+    return { processed: 0, succeeded: 0 };
+  }
+
+  let succeeded = 0;
+
+  for (const log of pendingLogs) {
+    const webhook = log.partner_webhooks;
+    if (!webhook || !webhook.is_active) continue;
+
+    const timestamp = Date.now();
+    const signaturePayload = `${timestamp}.${JSON.stringify(log.payload)}`;
+    const encoder = new TextEncoder();
+    const key = await crypto.subtle.importKey(
+      'raw',
+      encoder.encode(webhook.secret),
+      { name: 'HMAC', hash: 'SHA-256' },
+      false,
+      ['sign']
+    );
+    const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(signaturePayload));
+    const signatureHex = Array.from(new Uint8Array(signature))
+      .map(b => b.toString(16).padStart(2, '0'))
+      .join('');
+
+    try {
+      const response = await fetch(webhook.url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Finmo-Signature': `t=${timestamp},v1=${signatureHex}`,
+          'X-Finmo-Event': log.event_type
+        },
+        body: JSON.stringify(log.payload)
+      });
+
+      const responseBody = await response.text();
+      const newRetryCount = log.retry_count + 1;
+      const nextDelay = RETRY_DELAYS[Math.min(newRetryCount, RETRY_DELAYS.length - 1)];
+
+      await supabase.from('partner_webhook_logs')
+        .update({
+          response_status: response.status,
+          response_body: responseBody.substring(0, 1000),
+          delivered_at: response.ok ? new Date().toISOString() : null,
+          status: response.ok ? 'delivered' : (newRetryCount >= MAX_RETRIES ? 'failed' : 'pending'),
+          retry_count: newRetryCount,
+          next_retry_at: response.ok ? null : new Date(Date.now() + nextDelay * 1000).toISOString()
+        })
+        .eq('id', log.id);
+
+      if (response.ok) succeeded++;
+    } catch (e) {
+      const newRetryCount = log.retry_count + 1;
+      const nextDelay = RETRY_DELAYS[Math.min(newRetryCount, RETRY_DELAYS.length - 1)];
+
+      await supabase.from('partner_webhook_logs')
+        .update({
+          response_status: 0,
+          response_body: String(e),
+          status: newRetryCount >= MAX_RETRIES ? 'failed' : 'pending',
+          retry_count: newRetryCount,
+          next_retry_at: newRetryCount >= MAX_RETRIES ? null : new Date(Date.now() + nextDelay * 1000).toISOString()
+        })
+        .eq('id', log.id);
+    }
+  }
+
+  return { processed: pendingLogs.length, succeeded };
 }
