@@ -1074,6 +1074,388 @@ export type Database = {
           },
         ]
       }
+      partner_card_transactions: {
+        Row: {
+          amount: number
+          card_id: string
+          created_at: string | null
+          id: string
+          merchant_category: string | null
+          merchant_name: string | null
+          metadata: Json | null
+          partner_id: string
+          status: string | null
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          card_id: string
+          created_at?: string | null
+          id?: string
+          merchant_category?: string | null
+          merchant_name?: string | null
+          metadata?: Json | null
+          partner_id: string
+          status?: string | null
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          card_id?: string
+          created_at?: string | null
+          id?: string
+          merchant_category?: string | null
+          merchant_name?: string | null
+          metadata?: Json | null
+          partner_id?: string
+          status?: string | null
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_card_transactions_card_id_fkey"
+            columns: ["card_id"]
+            isOneToOne: false
+            referencedRelation: "partner_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_card_transactions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_cards: {
+        Row: {
+          balance: number | null
+          card_holder_name: string
+          card_number_encrypted: string
+          created_at: string | null
+          currency: string | null
+          cvv_encrypted: string
+          expiry_month: number
+          expiry_year: number
+          external_customer_id: string
+          id: string
+          is_active: boolean | null
+          is_frozen: boolean | null
+          metadata: Json | null
+          partner_id: string
+          spending_limit: number | null
+          updated_at: string | null
+          wallet_id: string
+        }
+        Insert: {
+          balance?: number | null
+          card_holder_name: string
+          card_number_encrypted: string
+          created_at?: string | null
+          currency?: string | null
+          cvv_encrypted: string
+          expiry_month: number
+          expiry_year: number
+          external_customer_id: string
+          id?: string
+          is_active?: boolean | null
+          is_frozen?: boolean | null
+          metadata?: Json | null
+          partner_id: string
+          spending_limit?: number | null
+          updated_at?: string | null
+          wallet_id: string
+        }
+        Update: {
+          balance?: number | null
+          card_holder_name?: string
+          card_number_encrypted?: string
+          created_at?: string | null
+          currency?: string | null
+          cvv_encrypted?: string
+          expiry_month?: number
+          expiry_year?: number
+          external_customer_id?: string
+          id?: string
+          is_active?: boolean | null
+          is_frozen?: boolean | null
+          metadata?: Json | null
+          partner_id?: string
+          spending_limit?: number | null
+          updated_at?: string | null
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_cards_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_cards_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "partner_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_escrows: {
+        Row: {
+          amount: number
+          buyer_wallet_id: string
+          created_at: string | null
+          description: string | null
+          dispute_reason: string | null
+          disputed_at: string | null
+          expires_at: string | null
+          external_reference: string | null
+          fee: number | null
+          funded_at: string | null
+          id: string
+          metadata: Json | null
+          partner_id: string
+          refunded_at: string | null
+          released_at: string | null
+          seller_wallet_id: string | null
+          status: string | null
+          token: string
+          updated_at: string | null
+        }
+        Insert: {
+          amount: number
+          buyer_wallet_id: string
+          created_at?: string | null
+          description?: string | null
+          dispute_reason?: string | null
+          disputed_at?: string | null
+          expires_at?: string | null
+          external_reference?: string | null
+          fee?: number | null
+          funded_at?: string | null
+          id?: string
+          metadata?: Json | null
+          partner_id: string
+          refunded_at?: string | null
+          released_at?: string | null
+          seller_wallet_id?: string | null
+          status?: string | null
+          token?: string
+          updated_at?: string | null
+        }
+        Update: {
+          amount?: number
+          buyer_wallet_id?: string
+          created_at?: string | null
+          description?: string | null
+          dispute_reason?: string | null
+          disputed_at?: string | null
+          expires_at?: string | null
+          external_reference?: string | null
+          fee?: number | null
+          funded_at?: string | null
+          id?: string
+          metadata?: Json | null
+          partner_id?: string
+          refunded_at?: string | null
+          released_at?: string | null
+          seller_wallet_id?: string | null
+          status?: string | null
+          token?: string
+          updated_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_escrows_buyer_wallet_id_fkey"
+            columns: ["buyer_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "partner_wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_escrows_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_escrows_seller_wallet_id_fkey"
+            columns: ["seller_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "partner_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_fx_quotes: {
+        Row: {
+          amount: number
+          converted_amount: number
+          created_at: string | null
+          expires_at: string
+          from_currency: string
+          id: string
+          is_used: boolean | null
+          partner_id: string
+          rate: number
+          to_currency: string
+          used_at: string | null
+        }
+        Insert: {
+          amount: number
+          converted_amount: number
+          created_at?: string | null
+          expires_at: string
+          from_currency: string
+          id?: string
+          is_used?: boolean | null
+          partner_id: string
+          rate: number
+          to_currency: string
+          used_at?: string | null
+        }
+        Update: {
+          amount?: number
+          converted_amount?: number
+          created_at?: string | null
+          expires_at?: string
+          from_currency?: string
+          id?: string
+          is_used?: boolean | null
+          partner_id?: string
+          rate?: number
+          to_currency?: string
+          used_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_fx_quotes_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_ip_whitelist: {
+        Row: {
+          api_key_id: string
+          created_at: string | null
+          description: string | null
+          id: string
+          ip_address: unknown
+          is_active: boolean | null
+        }
+        Insert: {
+          api_key_id: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address: unknown
+          is_active?: boolean | null
+        }
+        Update: {
+          api_key_id?: string
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          ip_address?: unknown
+          is_active?: boolean | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_ip_whitelist_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "partner_api_keys"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_kyc_verifications: {
+        Row: {
+          address: string | null
+          created_at: string | null
+          date_of_birth: string | null
+          document_back_url: string | null
+          document_front_url: string | null
+          document_number_encrypted: string | null
+          document_type: string | null
+          external_customer_id: string
+          first_name: string | null
+          id: string
+          last_name: string | null
+          metadata: Json | null
+          nationality: string | null
+          partner_id: string
+          rejection_reason: string | null
+          reviewed_by: string | null
+          selfie_url: string | null
+          status: string | null
+          updated_at: string | null
+          verification_level: string | null
+          verified_at: string | null
+        }
+        Insert: {
+          address?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          document_back_url?: string | null
+          document_front_url?: string | null
+          document_number_encrypted?: string | null
+          document_type?: string | null
+          external_customer_id: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          metadata?: Json | null
+          nationality?: string | null
+          partner_id: string
+          rejection_reason?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: string | null
+          updated_at?: string | null
+          verification_level?: string | null
+          verified_at?: string | null
+        }
+        Update: {
+          address?: string | null
+          created_at?: string | null
+          date_of_birth?: string | null
+          document_back_url?: string | null
+          document_front_url?: string | null
+          document_number_encrypted?: string | null
+          document_type?: string | null
+          external_customer_id?: string
+          first_name?: string | null
+          id?: string
+          last_name?: string | null
+          metadata?: Json | null
+          nationality?: string | null
+          partner_id?: string
+          rejection_reason?: string | null
+          reviewed_by?: string | null
+          selfie_url?: string | null
+          status?: string | null
+          updated_at?: string | null
+          verification_level?: string | null
+          verified_at?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_kyc_verifications_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       partner_transactions: {
         Row: {
           amount: number
@@ -1236,9 +1618,13 @@ export type Database = {
           delivered_at: string | null
           event_type: string
           id: string
+          max_retries: number | null
+          next_retry_at: string | null
           payload: Json
           response_body: string | null
           response_status: number | null
+          retry_count: number | null
+          status: string | null
           webhook_id: string
         }
         Insert: {
@@ -1247,9 +1633,13 @@ export type Database = {
           delivered_at?: string | null
           event_type: string
           id?: string
+          max_retries?: number | null
+          next_retry_at?: string | null
           payload: Json
           response_body?: string | null
           response_status?: number | null
+          retry_count?: number | null
+          status?: string | null
           webhook_id: string
         }
         Update: {
@@ -1258,9 +1648,13 @@ export type Database = {
           delivered_at?: string | null
           event_type?: string
           id?: string
+          max_retries?: number | null
+          next_retry_at?: string | null
           payload?: Json
           response_body?: string | null
           response_status?: number | null
+          retry_count?: number | null
+          status?: string | null
           webhook_id?: string
         }
         Relationships: [
