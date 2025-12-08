@@ -17,7 +17,11 @@ import {
   DollarSign,
   Code,
   Terminal,
-  Book
+  Book,
+  Shield,
+  CreditCard,
+  UserCheck,
+  QrCode
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -77,6 +81,7 @@ const ApiDocs = () => {
         { method: "POST", path: "/partner-payins/address", description: "Generate deposit address" },
         { method: "POST", path: "/partner-payins/payment-link", description: "Create payment link" },
         { method: "GET", path: "/partner-payins/{id}", description: "Get pay-in status" },
+        { method: "GET", path: "/partner-payins/{id}/qr", description: "Generate QR code for payment" },
       ]
     },
     {
@@ -91,11 +96,50 @@ const ApiDocs = () => {
       ]
     },
     {
+      category: "Escrow",
+      icon: Shield,
+      endpoints: [
+        { method: "POST", path: "/partner-escrow", description: "Create escrow transaction" },
+        { method: "POST", path: "/partner-escrow/{id}/fund", description: "Fund escrow" },
+        { method: "POST", path: "/partner-escrow/{id}/release", description: "Release funds to seller" },
+        { method: "POST", path: "/partner-escrow/{id}/dispute", description: "Raise a dispute" },
+        { method: "POST", path: "/partner-escrow/{id}/refund", description: "Refund to buyer" },
+        { method: "GET", path: "/partner-escrow/{id}", description: "Get escrow status" },
+      ]
+    },
+    {
+      category: "Virtual Cards",
+      icon: CreditCard,
+      endpoints: [
+        { method: "POST", path: "/partner-cards", description: "Issue virtual card" },
+        { method: "POST", path: "/partner-cards/{id}/fund", description: "Fund card" },
+        { method: "POST", path: "/partner-cards/{id}/freeze", description: "Freeze card" },
+        { method: "POST", path: "/partner-cards/{id}/unfreeze", description: "Unfreeze card" },
+        { method: "PUT", path: "/partner-cards/{id}/limit", description: "Update spending limit" },
+        { method: "GET", path: "/partner-cards/{id}", description: "Get card details" },
+        { method: "GET", path: "/partner-cards/{id}/transactions", description: "Get card transactions" },
+      ]
+    },
+    {
+      category: "KYC",
+      icon: UserCheck,
+      endpoints: [
+        { method: "POST", path: "/partner-kyc", description: "Initiate KYC verification" },
+        { method: "POST", path: "/partner-kyc/{id}/documents", description: "Upload verification documents" },
+        { method: "POST", path: "/partner-kyc/{id}/submit", description: "Submit for review" },
+        { method: "GET", path: "/partner-kyc/{id}", description: "Get KYC status" },
+        { method: "GET", path: "/partner-kyc", description: "List KYC verifications" },
+      ]
+    },
+    {
       category: "FX Rates",
       icon: DollarSign,
       endpoints: [
-        { method: "GET", path: "/partner-fx-rates/rates", description: "Get current exchange rates" },
+        { method: "GET", path: "/partner-fx-rates", description: "Get current exchange rates" },
+        { method: "GET", path: "/partner-fx-rates/convert", description: "Convert currency" },
         { method: "GET", path: "/partner-fx-rates/pairs", description: "List supported currency pairs" },
+        { method: "POST", path: "/partner-fx-rates/quote", description: "Lock a quote for 30 seconds" },
+        { method: "GET", path: "/partner-fx-rates/quote/{id}", description: "Get locked quote status" },
       ]
     },
     {
@@ -106,6 +150,8 @@ const ApiDocs = () => {
         { method: "GET", path: "/partner-webhooks", description: "List webhooks" },
         { method: "PUT", path: "/partner-webhooks/{id}", description: "Update webhook" },
         { method: "DELETE", path: "/partner-webhooks/{id}", description: "Delete webhook" },
+        { method: "POST", path: "/partner-webhooks/{id}/test", description: "Test webhook delivery" },
+        { method: "GET", path: "/partner-webhooks/{id}/logs", description: "Get delivery logs" },
       ]
     },
   ];
@@ -340,6 +386,212 @@ if (!$isValid) {
     http_response_code(401);
     exit('Invalid signature');
 }`
+    },
+    escrow: {
+      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-escrow \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -d '{
+    "buyer_wallet_id": "wallet_uuid",
+    "seller_wallet_id": "seller_wallet_uuid",
+    "amount": 500,
+    "token": "USDC",
+    "description": "Payment for services",
+    "expires_in_hours": 72
+  }'`,
+      javascript: `const escrow = await finmo.escrow.create({
+  buyerWalletId: 'wallet_uuid',
+  sellerWalletId: 'seller_wallet_uuid',
+  amount: 500,
+  token: 'USDC',
+  description: 'Payment for services',
+  expiresInHours: 72
+});
+
+console.log('Escrow ID:', escrow.id);
+
+// Fund the escrow
+await finmo.escrow.fund(escrow.id);
+
+// Release to seller when conditions met
+await finmo.escrow.release(escrow.id);`,
+      python: `escrow = client.escrow.create(
+    buyer_wallet_id='wallet_uuid',
+    seller_wallet_id='seller_wallet_uuid',
+    amount=500,
+    token='USDC',
+    description='Payment for services',
+    expires_in_hours=72
+)
+
+# Fund the escrow
+client.escrow.fund(escrow.id)
+
+# Release when conditions met
+client.escrow.release(escrow.id)`,
+      php: `<?php
+$escrow = $client->escrow->create([
+    'buyer_wallet_id' => 'wallet_uuid',
+    'seller_wallet_id' => 'seller_wallet_uuid',
+    'amount' => 500,
+    'token' => 'USDC',
+    'description' => 'Payment for services'
+]);
+
+// Fund and release
+$client->escrow->fund($escrow->id);
+$client->escrow->release($escrow->id);`
+    },
+    virtualCard: {
+      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-cards \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -d '{
+    "wallet_id": "wallet_uuid",
+    "external_customer_id": "customer_123",
+    "card_holder_name": "John Doe",
+    "spending_limit": 5000,
+    "currency": "USD"
+  }'`,
+      javascript: `const card = await finmo.cards.issue({
+  walletId: 'wallet_uuid',
+  externalCustomerId: 'customer_123',
+  cardHolderName: 'John Doe',
+  spendingLimit: 5000,
+  currency: 'USD'
+});
+
+console.log('Card last 4:', card.last_four);
+
+// Fund the card
+await finmo.cards.fund(card.id, {
+  amount: 1000,
+  token: 'USDC'
+});
+
+// Freeze if needed
+await finmo.cards.freeze(card.id);`,
+      python: `card = client.cards.issue(
+    wallet_id='wallet_uuid',
+    external_customer_id='customer_123',
+    card_holder_name='John Doe',
+    spending_limit=5000,
+    currency='USD'
+)
+
+# Fund the card
+client.cards.fund(card.id, amount=1000, token='USDC')`,
+      php: `<?php
+$card = $client->cards->issue([
+    'wallet_id' => 'wallet_uuid',
+    'external_customer_id' => 'customer_123',
+    'card_holder_name' => 'John Doe',
+    'spending_limit' => 5000
+]);`
+    },
+    kyc: {
+      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-kyc \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -d '{
+    "external_customer_id": "customer_123",
+    "first_name": "John",
+    "last_name": "Doe",
+    "date_of_birth": "1990-01-15",
+    "nationality": "KE",
+    "verification_level": "standard"
+  }'`,
+      javascript: `const kyc = await finmo.kyc.initiate({
+  externalCustomerId: 'customer_123',
+  firstName: 'John',
+  lastName: 'Doe',
+  dateOfBirth: '1990-01-15',
+  nationality: 'KE',
+  verificationLevel: 'standard'
+});
+
+// Upload documents
+await finmo.kyc.uploadDocuments(kyc.id, {
+  documentType: 'passport',
+  frontImage: frontImageFile,
+  selfie: selfieFile
+});
+
+// Submit for review
+await finmo.kyc.submit(kyc.id);`,
+      python: `kyc = client.kyc.initiate(
+    external_customer_id='customer_123',
+    first_name='John',
+    last_name='Doe',
+    date_of_birth='1990-01-15',
+    nationality='KE',
+    verification_level='standard'
+)
+
+# Upload documents and submit
+client.kyc.upload_documents(kyc.id, 
+    document_type='passport',
+    front_image=front_file
+)
+client.kyc.submit(kyc.id)`,
+      php: `<?php
+$kyc = $client->kyc->initiate([
+    'external_customer_id' => 'customer_123',
+    'first_name' => 'John',
+    'last_name' => 'Doe',
+    'date_of_birth' => '1990-01-15',
+    'nationality' => 'KE'
+]);`
+    },
+    quoteLocking: {
+      curl: `# Lock a quote for 30 seconds
+curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-fx-rates/quote \\
+  -H "Content-Type: application/json" \\
+  -H "x-api-key: YOUR_API_KEY" \\
+  -d '{
+    "from": "USDC",
+    "to": "KES",
+    "amount": 1000,
+    "lock_seconds": 30
+  }'
+
+# Use the quote in a transfer
+curl -X POST .../partner-transfers \\
+  -d '{ "quote_id": "quote_uuid", ... }'`,
+      javascript: `// Lock a quote for guaranteed rate
+const quote = await finmo.fx.lockQuote({
+  from: 'USDC',
+  to: 'KES',
+  amount: 1000,
+  lockSeconds: 30
+});
+
+console.log('Locked rate:', quote.rate);
+console.log('Expires at:', quote.expires_at);
+
+// Use the locked quote in transfer
+const transfer = await finmo.transfers.create({
+  quoteId: quote.id,
+  sourceWalletId: 'wallet_uuid',
+  // ... other params
+});`,
+      python: `# Lock a quote
+quote = client.fx.lock_quote(
+    from_currency='USDC',
+    to_currency='KES',
+    amount=1000,
+    lock_seconds=30
+)
+
+print(f'Locked rate: {quote.rate}')
+print(f'Valid until: {quote.expires_at}')`,
+      php: `<?php
+$quote = $client->fx->lockQuote([
+    'from' => 'USDC',
+    'to' => 'KES',
+    'amount' => 1000,
+    'lock_seconds' => 30
+]);`
     }
   };
 
@@ -354,6 +606,17 @@ if (!$isValid) {
     { event: "payout.failed", description: "Payout failed" },
     { event: "payin.received", description: "Deposit received in wallet" },
     { event: "payin.confirmed", description: "Deposit confirmed on blockchain" },
+    { event: "escrow.created", description: "Escrow transaction created" },
+    { event: "escrow.funded", description: "Escrow funded by buyer" },
+    { event: "escrow.released", description: "Escrow released to seller" },
+    { event: "escrow.disputed", description: "Dispute raised on escrow" },
+    { event: "escrow.refunded", description: "Escrow refunded to buyer" },
+    { event: "card.issued", description: "Virtual card issued" },
+    { event: "card.funded", description: "Card funded from wallet" },
+    { event: "card.frozen", description: "Card frozen" },
+    { event: "kyc.submitted", description: "KYC verification submitted" },
+    { event: "kyc.approved", description: "KYC verification approved" },
+    { event: "kyc.rejected", description: "KYC verification rejected" },
   ];
 
   return (
@@ -550,12 +813,16 @@ if (!$isValid) {
                 </CardHeader>
                 <CardContent>
                   <Tabs defaultValue="createWallet" className="w-full">
-                    <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full">
-                      <TabsTrigger value="createWallet">Create Wallet</TabsTrigger>
-                      <TabsTrigger value="cryptoPayout">Crypto Payout</TabsTrigger>
-                      <TabsTrigger value="mobileMoneyPayout">Mobile Money</TabsTrigger>
-                      <TabsTrigger value="paymentLink">Payment Link</TabsTrigger>
+                    <TabsList className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 w-full">
+                      <TabsTrigger value="createWallet">Wallet</TabsTrigger>
+                      <TabsTrigger value="cryptoPayout">Payout</TabsTrigger>
+                      <TabsTrigger value="mobileMoneyPayout">Mobile</TabsTrigger>
+                      <TabsTrigger value="paymentLink">Pay-in</TabsTrigger>
                       <TabsTrigger value="webhook">Webhooks</TabsTrigger>
+                      <TabsTrigger value="escrow">Escrow</TabsTrigger>
+                      <TabsTrigger value="virtualCard">Cards</TabsTrigger>
+                      <TabsTrigger value="kyc">KYC</TabsTrigger>
+                      <TabsTrigger value="quoteLocking">FX Quote</TabsTrigger>
                     </TabsList>
 
                     {Object.entries(codeExamples).map(([key, examples]) => (
