@@ -123,6 +123,7 @@ const App = () => {
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AdminAuditLogs /></ProtectedRoute>} />
             <Route path="/admin/partners" element={<ProtectedRoute><AdminPartnerManagement /></ProtectedRoute>} />
             <Route path="/api-docs" element={<ApiDocs />} />
+            <Route path="/partner/register" element={<PartnerRegister />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

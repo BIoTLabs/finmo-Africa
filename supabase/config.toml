@@ -80,3 +80,12 @@ verify_jwt = false
 
 [functions.partner-payouts]
 verify_jwt = false
+
+[functions.partner-escrow]
+verify_jwt = false
+
+[functions.partner-cards]
+verify_jwt = false
+
+[functions.partner-kyc]
+verify_jwt = false
