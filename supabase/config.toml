@@ -59,3 +59,18 @@ verify_jwt = true
 
 [functions.admin-bulk-user-operations]
 verify_jwt = true
+
+[functions.partner-auth]
+verify_jwt = false
+
+[functions.partner-wallets]
+verify_jwt = false
+
+[functions.partner-transfers]
+verify_jwt = false
+
+[functions.partner-fx-rates]
+verify_jwt = false
+
+[functions.partner-webhooks]
+verify_jwt = false
