@@ -345,8 +345,6 @@ async function executeBlockchainTransfer(
         metadata: { error: (error as Error).message },
       })
       .eq('id', transactionId);
-      })
-      .eq('id', transactionId);
   }
 }
 
@@ -649,8 +647,8 @@ async function createBatchPayout(req: Request, supabase: any, partnerId: string)
 
       const result = await response.json();
       results.push(result);
-    } catch (error) {
-      results.push({ success: false, error: error.message });
+    } catch (err) {
+      results.push({ success: false, error: (err as Error).message });
     }
   }
 
