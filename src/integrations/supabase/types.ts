@@ -961,6 +961,416 @@ export type Database = {
           },
         ]
       }
+      partner_api_keys: {
+        Row: {
+          created_at: string | null
+          daily_request_limit: number | null
+          environment: string | null
+          expires_at: string | null
+          id: string
+          is_active: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_used_at: string | null
+          name: string | null
+          partner_id: string
+          rate_limit_per_minute: number | null
+          scopes: string[] | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_request_limit?: number | null
+          environment?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash: string
+          key_prefix: string
+          last_used_at?: string | null
+          name?: string | null
+          partner_id: string
+          rate_limit_per_minute?: number | null
+          scopes?: string[] | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_request_limit?: number | null
+          environment?: string | null
+          expires_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          key_hash?: string
+          key_prefix?: string
+          last_used_at?: string | null
+          name?: string | null
+          partner_id?: string
+          rate_limit_per_minute?: number | null
+          scopes?: string[] | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_api_keys_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_api_logs: {
+        Row: {
+          api_key_id: string | null
+          created_at: string | null
+          endpoint: string
+          id: string
+          ip_address: string | null
+          method: string
+          partner_id: string
+          request_body: Json | null
+          response_status: number | null
+          response_time_ms: number | null
+          user_agent: string | null
+        }
+        Insert: {
+          api_key_id?: string | null
+          created_at?: string | null
+          endpoint: string
+          id?: string
+          ip_address?: string | null
+          method: string
+          partner_id: string
+          request_body?: Json | null
+          response_status?: number | null
+          response_time_ms?: number | null
+          user_agent?: string | null
+        }
+        Update: {
+          api_key_id?: string | null
+          created_at?: string | null
+          endpoint?: string
+          id?: string
+          ip_address?: string | null
+          method?: string
+          partner_id?: string
+          request_body?: Json | null
+          response_status?: number | null
+          response_time_ms?: number | null
+          user_agent?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_api_logs_api_key_id_fkey"
+            columns: ["api_key_id"]
+            isOneToOne: false
+            referencedRelation: "partner_api_keys"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_api_logs_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_transactions: {
+        Row: {
+          amount: number
+          blockchain_tx_hash: string | null
+          completed_at: string | null
+          created_at: string | null
+          destination_wallet_id: string | null
+          external_reference: string | null
+          fee: number | null
+          id: string
+          metadata: Json | null
+          partner_id: string
+          source_wallet_id: string | null
+          status: string | null
+          token: string
+          transaction_type: string
+        }
+        Insert: {
+          amount: number
+          blockchain_tx_hash?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          destination_wallet_id?: string | null
+          external_reference?: string | null
+          fee?: number | null
+          id?: string
+          metadata?: Json | null
+          partner_id: string
+          source_wallet_id?: string | null
+          status?: string | null
+          token: string
+          transaction_type: string
+        }
+        Update: {
+          amount?: number
+          blockchain_tx_hash?: string | null
+          completed_at?: string | null
+          created_at?: string | null
+          destination_wallet_id?: string | null
+          external_reference?: string | null
+          fee?: number | null
+          id?: string
+          metadata?: Json | null
+          partner_id?: string
+          source_wallet_id?: string | null
+          status?: string | null
+          token?: string
+          transaction_type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_transactions_destination_wallet_id_fkey"
+            columns: ["destination_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "partner_wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_transactions_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "partner_transactions_source_wallet_id_fkey"
+            columns: ["source_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "partner_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_wallet_balances: {
+        Row: {
+          balance: number | null
+          created_at: string | null
+          id: string
+          token: string
+          updated_at: string | null
+          wallet_id: string
+        }
+        Insert: {
+          balance?: number | null
+          created_at?: string | null
+          id?: string
+          token: string
+          updated_at?: string | null
+          wallet_id: string
+        }
+        Update: {
+          balance?: number | null
+          created_at?: string | null
+          id?: string
+          token?: string
+          updated_at?: string | null
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_wallet_balances_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "partner_wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_wallets: {
+        Row: {
+          created_at: string | null
+          external_customer_id: string
+          id: string
+          is_active: boolean | null
+          label: string | null
+          metadata: Json | null
+          partner_id: string
+          updated_at: string | null
+          wallet_address: string | null
+          wallet_private_key_encrypted: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          external_customer_id: string
+          id?: string
+          is_active?: boolean | null
+          label?: string | null
+          metadata?: Json | null
+          partner_id: string
+          updated_at?: string | null
+          wallet_address?: string | null
+          wallet_private_key_encrypted?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          external_customer_id?: string
+          id?: string
+          is_active?: boolean | null
+          label?: string | null
+          metadata?: Json | null
+          partner_id?: string
+          updated_at?: string | null
+          wallet_address?: string | null
+          wallet_private_key_encrypted?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_wallets_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_webhook_logs: {
+        Row: {
+          attempts: number | null
+          created_at: string | null
+          delivered_at: string | null
+          event_type: string
+          id: string
+          payload: Json
+          response_body: string | null
+          response_status: number | null
+          webhook_id: string
+        }
+        Insert: {
+          attempts?: number | null
+          created_at?: string | null
+          delivered_at?: string | null
+          event_type: string
+          id?: string
+          payload: Json
+          response_body?: string | null
+          response_status?: number | null
+          webhook_id: string
+        }
+        Update: {
+          attempts?: number | null
+          created_at?: string | null
+          delivered_at?: string | null
+          event_type?: string
+          id?: string
+          payload?: Json
+          response_body?: string | null
+          response_status?: number | null
+          webhook_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_webhook_logs_webhook_id_fkey"
+            columns: ["webhook_id"]
+            isOneToOne: false
+            referencedRelation: "partner_webhooks"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partner_webhooks: {
+        Row: {
+          created_at: string | null
+          events: string[]
+          id: string
+          is_active: boolean | null
+          partner_id: string
+          secret: string
+          url: string
+        }
+        Insert: {
+          created_at?: string | null
+          events: string[]
+          id?: string
+          is_active?: boolean | null
+          partner_id: string
+          secret: string
+          url: string
+        }
+        Update: {
+          created_at?: string | null
+          events?: string[]
+          id?: string
+          is_active?: boolean | null
+          partner_id?: string
+          secret?: string
+          url?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "partner_webhooks_partner_id_fkey"
+            columns: ["partner_id"]
+            isOneToOne: false
+            referencedRelation: "partners"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      partners: {
+        Row: {
+          api_tier: string | null
+          approved_at: string | null
+          approved_by: string | null
+          business_type: string | null
+          company_name: string
+          contact_email: string
+          contact_phone: string | null
+          country_code: string | null
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          production_enabled: boolean | null
+          sandbox_enabled: boolean | null
+          status: string | null
+          updated_at: string | null
+          webhook_secret: string | null
+          webhook_url: string | null
+        }
+        Insert: {
+          api_tier?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          business_type?: string | null
+          company_name: string
+          contact_email: string
+          contact_phone?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          production_enabled?: boolean | null
+          sandbox_enabled?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+          webhook_secret?: string | null
+          webhook_url?: string | null
+        }
+        Update: {
+          api_tier?: string | null
+          approved_at?: string | null
+          approved_by?: string | null
+          business_type?: string | null
+          company_name?: string
+          contact_email?: string
+          contact_phone?: string | null
+          country_code?: string | null
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          production_enabled?: boolean | null
+          sandbox_enabled?: boolean | null
+          status?: string | null
+          updated_at?: string | null
+          webhook_secret?: string | null
+          webhook_url?: string | null
+        }
+        Relationships: []
+      }
       payment_methods: {
         Row: {
           account_name: string
@@ -1941,6 +2351,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      generate_api_key: { Args: never; Returns: string }
       generate_wallet_address: { Args: never; Returns: string }
       get_payment_request_public_info: {
         Args: { _request_id: string }
@@ -1970,6 +2381,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      hash_api_key: { Args: { _key: string }; Returns: string }
       hash_phone_number: { Args: { _phone: string }; Returns: string }
       is_listing_seller: {
         Args: { _listing_id: string; _user_id: string }
