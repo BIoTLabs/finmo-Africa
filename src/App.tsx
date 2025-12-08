@@ -52,6 +52,7 @@ import AdminListings from "./pages/AdminListings";
 import AdminMessaging from "./pages/AdminMessaging";
 import AdminDisputes from "./pages/AdminDisputes";
 import DeleteAccount from "./pages/DeleteAccount";
+import PartnerRegister from "./pages/PartnerRegister";
 import AdminUserDeletion from "./pages/AdminUserDeletion";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
