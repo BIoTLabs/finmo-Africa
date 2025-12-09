@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell, UserCog, ClipboardList, Building2 } from 'lucide-react';
+import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell, UserCog, ClipboardList, Building2, Wallet, Coins } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LoadingScreen from '@/components/LoadingScreen';
 import { AdminFeeSettings } from '@/components/AdminFeeSettings';
@@ -238,6 +238,40 @@ const Admin = () => {
                 <CardContent>
                   <Button onClick={() => navigate('/admin/audit-logs')} className="w-full" variant="outline">
                     View Audit Logs
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Wallet className="h-5 w-5" />
+                    Platform Revenue
+                  </CardTitle>
+                  <CardDescription>
+                    View and withdraw platform revenue from P2P, marketplace, and withdrawals
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate('/admin/revenue')} className="w-full">
+                    Manage Revenue
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Coins className="h-5 w-5" />
+                    Staking Reserves
+                  </CardTitle>
+                  <CardDescription>
+                    Monitor staked user funds and manage reserves
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate('/admin/staking-reserves')} className="w-full">
+                    Manage Staking Reserves
                   </Button>
                 </CardContent>
               </Card>
