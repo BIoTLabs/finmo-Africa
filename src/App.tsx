@@ -57,6 +57,8 @@ import AdminUserDeletion from "./pages/AdminUserDeletion";
 import AdminUserManagement from "./pages/AdminUserManagement";
 import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminPartnerManagement from "./pages/AdminPartnerManagement";
+import AdminRevenue from "./pages/AdminRevenue";
+import AdminStakingReserves from "./pages/AdminStakingReserves";
 import ApiDocs from "./pages/ApiDocs";
 import PartnerPricing from "./pages/PartnerPricing";
 import PartnerDashboard from "./pages/PartnerDashboard";
@@ -113,7 +115,7 @@ const App = () => {
             <Route path="/kyc-verification" element={<ProtectedRoute><KYCVerification /></ProtectedRoute>} />
             <Route path="/account-statement" element={<ProtectedRoute><AccountStatement /></ProtectedRoute>} />
             <Route path="/my-ads" element={<ProtectedRoute><MyAds /></ProtectedRoute>} />
-            <Route path="/staking" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
+            <Route path="/staking" element={<ProtectedRoute><Staking /></ProtectedRoute>} />
             <Route path="/rewards" element={<ProtectedRoute><Rewards /></ProtectedRoute>} />
             <Route path="/rewards/details" element={<ProtectedRoute><RewardsDetails /></ProtectedRoute>} />
             <Route path="/admin/rewards-backfill" element={<ProtectedRoute><AdminRewardsBackfill /></ProtectedRoute>} />
@@ -125,6 +127,8 @@ const App = () => {
             <Route path="/admin/user-management" element={<ProtectedRoute><AdminUserManagement /></ProtectedRoute>} />
             <Route path="/admin/audit-logs" element={<ProtectedRoute><AdminAuditLogs /></ProtectedRoute>} />
             <Route path="/admin/partners" element={<ProtectedRoute><AdminPartnerManagement /></ProtectedRoute>} />
+            <Route path="/admin/revenue" element={<ProtectedRoute><AdminRevenue /></ProtectedRoute>} />
+            <Route path="/admin/staking-reserves" element={<ProtectedRoute><AdminStakingReserves /></ProtectedRoute>} />
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
             <Route path="/partner/pricing" element={<PartnerPricing />} />
