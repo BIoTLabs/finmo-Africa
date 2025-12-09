@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, TrendingUp, Lock, Unlock, Calendar, Percent, ChevronDown } from "lucide-react";
+import { ArrowLeft, TrendingUp, Lock, Unlock, Calendar, Percent, ChevronDown, Loader2 } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
@@ -15,6 +15,18 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 interface WalletBalance {
   token: string;
   balance: number;
+}
+
+interface StakingPool {
+  id: string;
+  token: string;
+  apy_rate: number;
+  min_stake: number;
+  max_stake: number | null;
+  lock_period_days: number;
+  total_staked: number;
+  pool_capacity: number | null;
+  is_active: boolean;
 }
 
 interface StakingPosition {
@@ -33,6 +45,7 @@ interface StakingPosition {
 const Staking = () => {
   const navigate = useNavigate();
   const [balances, setBalances] = useState<WalletBalance[]>([]);
+  const [stakingPools, setStakingPools] = useState<StakingPool[]>([]);
   const [stakingPositions, setStakingPositions] = useState<StakingPosition[]>([]);
   const [loading, setLoading] = useState(true);
   const [processing, setProcessing] = useState(false);
@@ -40,15 +53,7 @@ const Staking = () => {
   // Form state
   const [selectedToken, setSelectedToken] = useState<string>("");
   const [amount, setAmount] = useState<string>("");
-  const [duration, setDuration] = useState<string>("");
-
-  const durationOptions = [
-    { days: 30, label: "30 Days", apy: 5.0 },
-    { days: 60, label: "60 Days", apy: 6.5 },
-    { days: 90, label: "90 Days", apy: 8.0 },
-    { days: 180, label: "180 Days", apy: 10.0 },
-    { days: 365, label: "365 Days", apy: 12.0 },
-  ];
+  const [selectedPoolId, setSelectedPoolId] = useState<string>("");
 
   useEffect(() => {
     loadData();
@@ -62,24 +67,20 @@ const Staking = () => {
         return;
       }
 
-      // Load balances
-      const { data: balanceData, error: balanceError } = await supabase
-        .from("wallet_balances")
-        .select("*")
-        .eq("user_id", session.user.id);
+      // Load balances, pools, and positions in parallel
+      const [balanceResult, poolsResult, positionsResult] = await Promise.all([
+        supabase.from("wallet_balances").select("*").eq("user_id", session.user.id),
+        supabase.from("staking_pools").select("*").eq("is_active", true).order("token").order("lock_period_days"),
+        supabase.from("staking_positions").select("*").eq("user_id", session.user.id).order("created_at", { ascending: false })
+      ]);
 
-      if (balanceError) throw balanceError;
-      setBalances(balanceData || []);
+      if (balanceResult.error) throw balanceResult.error;
+      if (poolsResult.error) throw poolsResult.error;
+      if (positionsResult.error) throw positionsResult.error;
 
-      // Load staking positions
-      const { data: stakingData, error: stakingError } = await supabase
-        .from("staking_positions")
-        .select("*")
-        .eq("user_id", session.user.id)
-        .order("created_at", { ascending: false });
-
-      if (stakingError) throw stakingError;
-      setStakingPositions(stakingData || []);
+      setBalances(balanceResult.data || []);
+      setStakingPools(poolsResult.data || []);
+      setStakingPositions(positionsResult.data || []);
 
     } catch (error) {
       console.error("Error loading data:", error);
@@ -89,18 +90,28 @@ const Staking = () => {
     }
   };
 
+  // Get available tokens from pools
+  const availableTokens = [...new Set(stakingPools.map(p => p.token))];
+  
+  // Get pools for selected token
+  const poolsForToken = stakingPools.filter(p => p.token === selectedToken);
+  
+  // Get selected pool
+  const selectedPool = stakingPools.find(p => p.id === selectedPoolId);
+
   const calculateEstimatedRewards = () => {
-    if (!amount || !duration) return 0;
+    if (!amount || !selectedPool) return 0;
     const amountNum = parseFloat(amount);
-    const durationNum = parseInt(duration);
-    const selectedDuration = durationOptions.find(d => d.days === durationNum);
-    if (!selectedDuration) return 0;
-    
-    return (amountNum * selectedDuration.apy / 100) * (durationNum / 365);
+    return (amountNum * selectedPool.apy_rate / 100) * (selectedPool.lock_period_days / 365);
+  };
+
+  const getPoolUtilization = (pool: StakingPool) => {
+    if (!pool.pool_capacity) return 0;
+    return (pool.total_staked / pool.pool_capacity) * 100;
   };
 
   const handleStake = async () => {
-    if (!selectedToken || !amount || !duration) {
+    if (!selectedToken || !amount || !selectedPoolId) {
       toast.error("Please fill in all fields");
       return;
     }
@@ -117,6 +128,21 @@ const Staking = () => {
       return;
     }
 
+    if (!selectedPool) {
+      toast.error("Please select a staking pool");
+      return;
+    }
+
+    if (amountNum < selectedPool.min_stake) {
+      toast.error(`Minimum stake is ${selectedPool.min_stake} ${selectedToken}`);
+      return;
+    }
+
+    if (selectedPool.max_stake && amountNum > selectedPool.max_stake) {
+      toast.error(`Maximum stake is ${selectedPool.max_stake} ${selectedToken}`);
+      return;
+    }
+
     setProcessing(true);
     try {
       const { data, error } = await supabase.functions.invoke('process-staking', {
@@ -124,7 +150,8 @@ const Staking = () => {
           action: 'create',
           token: selectedToken,
           amount: amountNum,
-          duration_days: parseInt(duration)
+          duration_days: selectedPool.lock_period_days,
+          pool_id: selectedPoolId
         }
       });
 
@@ -132,7 +159,7 @@ const Staking = () => {
 
       toast.success(data.message || "Staking position created successfully!");
       setAmount("");
-      setDuration("");
+      setSelectedPoolId("");
       await loadData();
     } catch (error: any) {
       console.error("Error staking:", error);
@@ -184,12 +211,11 @@ const Staking = () => {
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
-        <p>Loading staking...</p>
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
 
-  const selectedDurationData = durationOptions.find(d => d.days.toString() === duration);
   const estimatedRewards = calculateEstimatedRewards();
 
   return (
@@ -210,12 +236,12 @@ const Staking = () => {
           <div className="flex-1 flex items-center gap-3">
             <h1 className="text-2xl font-bold">Staking</h1>
             <Badge variant="secondary" className="bg-white/20 text-primary-foreground border-0">
-              Coming Soon
+              Live
             </Badge>
           </div>
         </div>
         <p className="text-primary-foreground/80 text-sm">
-          Lock your tokens and earn rewards - Feature launching soon!
+          Earn passive income by staking your tokens
         </p>
       </div>
 
@@ -245,14 +271,14 @@ const Staking = () => {
                     <Lock className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
                     <div>
                       <p className="font-medium text-sm">Secure & Transparent</p>
-                      <p className="text-xs text-muted-foreground">Your tokens are locked in smart contracts with guaranteed returns</p>
+                      <p className="text-xs text-muted-foreground">Your tokens are locked with guaranteed returns</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Percent className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
                     <div>
-                      <p className="font-medium text-sm">Flexible APY Rates</p>
-                      <p className="text-xs text-muted-foreground">Earn 5-12% APY based on your chosen staking duration</p>
+                      <p className="font-medium text-sm">Competitive APY Rates</p>
+                      <p className="text-xs text-muted-foreground">Earn 3.5-10% APY based on token and duration</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -266,7 +292,7 @@ const Staking = () => {
                     <Unlock className="w-4 h-4 text-primary mt-1 flex-shrink-0" />
                     <div>
                       <p className="font-medium text-sm">Early Withdrawal Available</p>
-                      <p className="text-xs text-muted-foreground">Withdraw anytime with a 50% penalty, or wait for maturity to get full rewards</p>
+                      <p className="text-xs text-muted-foreground">Withdraw anytime with a 50% penalty on rewards, or wait for maturity to get full rewards</p>
                     </div>
                   </div>
                 </div>
@@ -285,83 +311,127 @@ const Staking = () => {
               <h2 className="text-lg font-semibold">Create New Stake</h2>
             </div>
 
-            <div className="space-y-4">
-              <div>
-                <Label>Select Token</Label>
-                <Select value={selectedToken} onValueChange={setSelectedToken}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose token" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {balances.map((balance) => (
-                      <SelectItem key={balance.token} value={balance.token}>
-                        {balance.token} (Available: {balance.balance.toFixed(2)})
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+            {stakingPools.length === 0 ? (
+              <div className="text-center py-8 text-muted-foreground">
+                <p>No staking pools available at the moment.</p>
+                <p className="text-sm mt-2">Check back soon!</p>
               </div>
-
-              <div>
-                <Label>Amount to Stake</Label>
-                <Input
-                  type="number"
-                  placeholder="0.00"
-                  value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  min="1"
-                  step="0.01"
-                />
-              </div>
-
-              <div>
-                <Label>Staking Duration</Label>
-                <Select value={duration} onValueChange={setDuration}>
-                  <SelectTrigger>
-                    <SelectValue placeholder="Choose duration" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {durationOptions.map((option) => (
-                      <SelectItem key={option.days} value={option.days.toString()}>
-                        {option.label} ({option.apy}% APY)
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              {selectedDurationData && amount && (
-                <div className="bg-muted p-4 rounded-lg space-y-2">
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">APY Rate:</span>
-                    <span className="font-semibold">{selectedDurationData.apy}%</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span className="text-muted-foreground">Duration:</span>
-                    <span className="font-semibold">{selectedDurationData.label}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-muted-foreground">Estimated Rewards:</span>
-                    <span className="font-semibold text-success">
-                      +{estimatedRewards.toFixed(4)} {selectedToken}
-                    </span>
-                  </div>
+            ) : (
+              <div className="space-y-4">
+                <div>
+                  <Label>Select Token</Label>
+                  <Select 
+                    value={selectedToken} 
+                    onValueChange={(value) => {
+                      setSelectedToken(value);
+                      setSelectedPoolId("");
+                    }}
+                  >
+                    <SelectTrigger>
+                      <SelectValue placeholder="Choose token" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableTokens.map((token) => {
+                        const balance = balances.find(b => b.token === token);
+                        return (
+                          <SelectItem key={token} value={token}>
+                            {token} (Available: {balance?.balance.toFixed(2) || '0.00'})
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
                 </div>
-              )}
 
-              <div className="space-y-2">
-                <p className="text-sm text-muted-foreground text-center">
-                  Staking will be available soon. Explore the features above to see what you can earn!
-                </p>
+                {selectedToken && (
+                  <div>
+                    <Label>Select Pool (Duration & APY)</Label>
+                    <Select value={selectedPoolId} onValueChange={setSelectedPoolId}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Choose staking pool" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {poolsForToken.map((pool) => {
+                          const utilization = getPoolUtilization(pool);
+                          return (
+                            <SelectItem key={pool.id} value={pool.id}>
+                              {pool.lock_period_days} days @ {pool.apy_rate}% APY
+                              {pool.pool_capacity && (
+                                <span className="text-muted-foreground ml-2">
+                                  ({utilization.toFixed(0)}% filled)
+                                </span>
+                              )}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+
+                <div>
+                  <Label>Amount to Stake</Label>
+                  <Input
+                    type="number"
+                    placeholder="0.00"
+                    value={amount}
+                    onChange={(e) => setAmount(e.target.value)}
+                    min={selectedPool?.min_stake || 1}
+                    max={selectedPool?.max_stake || undefined}
+                    step="0.01"
+                  />
+                  {selectedPool && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Min: {selectedPool.min_stake} {selectedToken}
+                      {selectedPool.max_stake && ` • Max: ${selectedPool.max_stake} ${selectedToken}`}
+                    </p>
+                  )}
+                </div>
+
+                {selectedPool && amount && (
+                  <div className="bg-muted p-4 rounded-lg space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">APY Rate:</span>
+                      <span className="font-semibold text-primary">{selectedPool.apy_rate}%</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Lock Period:</span>
+                      <span className="font-semibold">{selectedPool.lock_period_days} days</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Estimated Rewards:</span>
+                      <span className="font-semibold text-green-600">
+                        +{estimatedRewards.toFixed(4)} {selectedToken}
+                      </span>
+                    </div>
+                    {selectedPool.pool_capacity && (
+                      <div className="flex justify-between text-sm">
+                        <span className="text-muted-foreground">Pool Capacity:</span>
+                        <span>{selectedPool.total_staked.toFixed(0)} / {selectedPool.pool_capacity.toFixed(0)} {selectedToken}</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <Button
-                  disabled={true}
+                  onClick={handleStake}
+                  disabled={!selectedToken || !amount || !selectedPoolId || processing}
                   className="w-full"
                 >
-                  <Lock className="w-4 h-4 mr-2" />
-                  Coming Soon
+                  {processing ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Processing...
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4 mr-2" />
+                      Stake {amount ? `${amount} ${selectedToken}` : 'Tokens'}
+                    </>
+                  )}
                 </Button>
               </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -438,7 +508,7 @@ const Staking = () => {
                         {stake.status === 'withdrawn' && (
                           <div className="flex justify-between">
                             <span className="text-muted-foreground">Rewards Earned:</span>
-                            <span className="font-semibold text-success">
+                            <span className="font-semibold text-green-600">
                               +{stake.rewards_earned.toFixed(4)} {stake.token}
                             </span>
                           </div>
@@ -447,12 +517,22 @@ const Staking = () => {
 
                       {isActive && (
                         <Button
-                          disabled={true}
+                          onClick={() => handleWithdraw(stake.id)}
                           variant={matured ? "default" : "outline"}
                           className="w-full"
+                          disabled={processing}
                         >
-                          <Unlock className="w-4 h-4 mr-2" />
-                          Coming Soon
+                          {processing ? (
+                            <>
+                              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                              Processing...
+                            </>
+                          ) : (
+                            <>
+                              <Unlock className="w-4 h-4 mr-2" />
+                              {matured ? "Withdraw (Full Rewards)" : "Early Withdraw (50% Penalty)"}
+                            </>
+                          )}
                         </Button>
                       )}
                     </div>

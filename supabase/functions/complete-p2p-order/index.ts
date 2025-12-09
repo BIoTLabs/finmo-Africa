@@ -60,7 +60,22 @@ serve(async (req) => {
       throw new Error('Order has expired');
     }
 
-    // Transfer crypto to buyer
+    // Get P2P fee settings from admin_settings
+    const { data: sellerFeeSetting } = await supabaseClient
+      .from('admin_settings')
+      .select('setting_value')
+      .eq('setting_key', 'p2p_seller_fee_percent')
+      .single();
+
+    const sellerFeePercent = sellerFeeSetting?.setting_value?.value || 0.5; // Default 0.5%
+    
+    // Calculate platform fee (only charged to seller)
+    const platformFee = (Number(order.crypto_amount) * sellerFeePercent) / 100;
+    const sellerReceives = Number(order.crypto_amount) - platformFee;
+
+    console.log(`P2P Fee: ${platformFee} ${order.token} (${sellerFeePercent}% of ${order.crypto_amount})`);
+
+    // Transfer crypto to buyer (full amount - buyer pays no fee)
     const { data: buyerBalance, error: buyerBalanceError } = await supabaseClient
       .from('wallet_balances')
       .select('balance')
@@ -79,16 +94,40 @@ serve(async (req) => {
 
     if (updateBuyerError) throw updateBuyerError;
 
-    // Update order status
+    // Update order status with fee information
     const { error: updateOrderError } = await supabaseClient
       .from('p2p_orders')
       .update({ 
         status: 'completed',
-        completed_at: new Date().toISOString()
+        completed_at: new Date().toISOString(),
+        platform_fee: platformFee,
+        platform_fee_token: order.token,
+        fee_paid_by: 'seller'
       })
       .eq('id', order_id);
 
     if (updateOrderError) throw updateOrderError;
+
+    // Record platform revenue from P2P fee
+    if (platformFee > 0) {
+      await supabaseClient.from('platform_revenue').insert({
+        revenue_type: 'p2p_fee',
+        amount: platformFee,
+        token: order.token,
+        source_order_id: order_id,
+        source_type: 'p2p_order',
+        wallet_type: 'p2p_fees',
+        metadata: {
+          buyer_id: order.buyer_id,
+          seller_id: order.seller_id,
+          crypto_amount: order.crypto_amount,
+          fiat_amount: order.fiat_amount,
+          fee_percent: sellerFeePercent
+        }
+      });
+
+      console.log(`Recorded P2P revenue: ${platformFee} ${order.token}`);
+    }
 
     // Get profiles for transaction record
     const { data: buyerProfile } = await supabaseClient
@@ -116,7 +155,7 @@ serve(async (req) => {
         transaction_type: 'p2p',
         status: 'completed',
         transaction_hash: `0xp2p${order_id.slice(0, 40)}`,
-        withdrawal_fee: 0
+        withdrawal_fee: platformFee
       });
 
     // Award reward points for both buyer and seller
@@ -130,7 +169,7 @@ serve(async (req) => {
       await supabaseClient.rpc('award_points', {
         _user_id: order.seller_id,
         _activity_type: 'p2p_trade',
-        _metadata: { order_id, role: 'seller', amount: order.crypto_amount }
+        _metadata: { order_id, role: 'seller', amount: order.crypto_amount, fee_paid: platformFee }
       });
     } catch (rewardError) {
       console.error('Failed to award P2P points:', rewardError);
@@ -141,7 +180,10 @@ serve(async (req) => {
       JSON.stringify({
         success: true,
         order_id: order_id,
-        buyer_new_balance: newBuyerBalance
+        buyer_new_balance: newBuyerBalance,
+        platform_fee: platformFee,
+        fee_percent: sellerFeePercent,
+        message: `Order completed! Platform fee: ${platformFee.toFixed(4)} ${order.token} (${sellerFeePercent}%)`
       }),
       { 
         headers: { ...corsHeaders, 'Content-Type': 'application/json' },
