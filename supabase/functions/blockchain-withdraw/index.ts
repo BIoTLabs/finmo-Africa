@@ -124,7 +124,6 @@ Deno.serve(async (req) => {
     }
 
     console.log('Processing blockchain withdrawal:', { user: user.id, token });
-
     console.log(`Withdrawal request: ${amount} ${token} on chain ${selectedChainId}`);
 
     // Get user profile and balance
@@ -152,18 +151,48 @@ Deno.serve(async (req) => {
     // Sum up balances across all chains
     const totalBalance = balances.reduce((sum, b) => sum + Number(b.balance), 0);
 
-    // Get withdrawal fee from admin settings
-    const { data: feeSettings } = await supabase
+    // Connect to blockchain to get current gas price
+    const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
+    
+    // Get current gas price and calculate dynamic withdrawal fee (2x average gas cost)
+    const feeData = await provider.getFeeData();
+    const gasPrice = feeData.gasPrice || ethers.parseUnits('50', 'gwei');
+    const estimatedGas = BigInt(65000); // Approximate gas for ERC20 transfer
+    const gasCostWei = gasPrice * estimatedGas;
+    
+    // Convert gas cost to token terms (assuming 1 token = ~$1 for stablecoins)
+    // For native tokens, use actual ETH/MATIC price approximation
+    let gasCostInToken = Number(ethers.formatEther(gasCostWei));
+    
+    // Get fee multiplier from admin settings (default 2x)
+    const { data: feeMultiplierSetting } = await supabase
       .from('admin_settings')
       .select('setting_value')
-      .eq('setting_key', 'withdrawal_fees')
+      .eq('setting_key', 'withdrawal_fee_multiplier')
       .single();
-
-    const withdrawalFee = feeSettings?.setting_value?.[token] || 0;
+    
+    const feeMultiplier = feeMultiplierSetting?.setting_value?.value || 2;
+    
+    // Calculate platform withdrawal fee (2x gas cost, minimum 0.50 for stablecoins)
+    let withdrawalFee = gasCostInToken * feeMultiplier;
+    
+    // Set minimum fees based on token type
+    const stablecoins = ['USDC', 'USDT', 'DAI'];
+    if (stablecoins.includes(token)) {
+      withdrawalFee = Math.max(withdrawalFee, 0.50); // Minimum $0.50 for stablecoins
+    } else {
+      withdrawalFee = Math.max(withdrawalFee, 0.001); // Minimum for other tokens
+    }
+    
+    // Round to reasonable precision
+    withdrawalFee = Math.round(withdrawalFee * 10000) / 10000;
+    
     const totalAmount = amount + withdrawalFee;
 
+    console.log(`Withdrawal fee calculated: ${withdrawalFee} ${token} (${feeMultiplier}x gas cost)`);
+
     if (totalBalance < totalAmount) {
-      throw new Error(`Insufficient balance. Required: ${totalAmount} ${token} (including ${withdrawalFee} ${token} fee), Available: ${totalBalance} ${token}`);
+      throw new Error(`Insufficient balance. Required: ${totalAmount.toFixed(4)} ${token} (including ${withdrawalFee.toFixed(4)} ${token} fee), Available: ${totalBalance.toFixed(4)} ${token}`);
     }
 
     // Get master wallet private key (should be set as secret)
@@ -172,8 +201,6 @@ Deno.serve(async (req) => {
       throw new Error('Master wallet not configured');
     }
 
-    // Connect to blockchain
-    const provider = new ethers.JsonRpcProvider(chainConfig.rpcUrl);
     const masterWallet = new ethers.Wallet(masterWalletKey, provider);
 
     let txHash: string;
@@ -222,7 +249,7 @@ Deno.serve(async (req) => {
       console.log(`${token} transaction confirmed:`, txHash);
     }
 
-    // Update user balance (deduct amount + fee) - find first non-zero balance and deduct from it
+    // Update user balance (deduct amount + fee)
     const balanceWithFunds = balances.find(b => Number(b.balance) >= totalAmount);
     
     if (balanceWithFunds) {
@@ -234,7 +261,7 @@ Deno.serve(async (req) => {
         .eq('token', token)
         .eq('balance', balanceWithFunds.balance);
     } else {
-      // Deduct proportionally from all balances if no single balance has enough
+      // Deduct from first available balance
       for (const bal of balances) {
         if (Number(bal.balance) > 0) {
           const newBalance = Math.max(0, Number(bal.balance) - totalAmount);
@@ -244,9 +271,38 @@ Deno.serve(async (req) => {
             .eq('user_id', user.id)
             .eq('token', token)
             .eq('balance', bal.balance);
-          break; // Only deduct from first available
+          break;
         }
       }
+    }
+
+    // Record platform revenue from withdrawal fee
+    if (withdrawalFee > 0) {
+      await supabase.from('platform_revenue').insert({
+        revenue_type: 'withdrawal_fee',
+        amount: withdrawalFee,
+        token: token,
+        source_type: 'withdrawal',
+        wallet_type: 'withdrawal_fees',
+        metadata: {
+          user_id: user.id,
+          chain_id: selectedChainId,
+          chain_name: chainConfig.name,
+          tx_hash: txHash,
+          fee_multiplier: feeMultiplier,
+          gas_cost_estimate: gasCostInToken
+        }
+      });
+
+      // Update platform wallet balance
+      await supabase
+        .from('platform_wallets')
+        .update({ 
+          balance: supabase.rpc('increment_balance', { amount: withdrawalFee })
+        })
+        .eq('wallet_type', 'withdrawal_fees')
+        .eq('token', token);
+        
     }
 
     // Create transaction record
@@ -281,7 +337,8 @@ Deno.serve(async (req) => {
         transaction,
         txHash,
         chain: chainConfig.name,
-        message: 'Withdrawal successful! Transaction confirmed on blockchain.',
+        withdrawal_fee: withdrawalFee,
+        message: `Withdrawal successful! Fee: ${withdrawalFee.toFixed(4)} ${token}`,
       }),
       { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
     );
@@ -292,7 +349,6 @@ Deno.serve(async (req) => {
       stack: error instanceof Error ? error.stack : undefined
     });
     
-    // Return generic error message to user except for known user errors
     const userMessage = error instanceof Error && 
       ['Invalid Ethereum wallet address', 'Cannot send to burn address', 
        'Insufficient balance', 'KYC verification required',

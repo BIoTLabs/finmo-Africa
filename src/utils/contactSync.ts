@@ -32,12 +32,55 @@ export const requestContactsPermission = async (): Promise<boolean> => {
   }
 };
 
+// Normalize phone number with enhanced handling for various formats
+const normalizePhoneNumber = (phone: string): string => {
+  // Remove all non-digit characters except leading +
+  let cleaned = phone.replace(/[^\d+]/g, '');
+  
+  // Handle common formatting issues
+  if (cleaned.startsWith('00')) {
+    cleaned = '+' + cleaned.slice(2);
+  }
+  
+  // Ensure it starts with +
+  if (!cleaned.startsWith('+')) {
+    // Try to detect country code patterns
+    if (cleaned.startsWith('1') && cleaned.length === 11) {
+      // US/Canada format
+      cleaned = '+' + cleaned;
+    } else if (cleaned.startsWith('44') && cleaned.length >= 12) {
+      // UK format
+      cleaned = '+' + cleaned;
+    } else if (cleaned.startsWith('234') && cleaned.length >= 13) {
+      // Nigeria format
+      cleaned = '+' + cleaned;
+    } else if (cleaned.startsWith('254') && cleaned.length >= 12) {
+      // Kenya format
+      cleaned = '+' + cleaned;
+    } else if (cleaned.startsWith('27') && cleaned.length >= 11) {
+      // South Africa format
+      cleaned = '+' + cleaned;
+    } else if (cleaned.startsWith('91') && cleaned.length >= 12) {
+      // India format
+      cleaned = '+' + cleaned;
+    } else if (cleaned.startsWith('233') && cleaned.length >= 12) {
+      // Ghana format
+      cleaned = '+' + cleaned;
+    } else {
+      // Default: assume needs country code
+      cleaned = '+' + cleaned;
+    }
+  }
+  
+  return cleaned;
+};
+
 // Web Contact Picker API implementation
 const syncContactsWeb = async (): Promise<PhoneContact[]> => {
   try {
     if (!isContactPickerAvailable()) {
       toast.error('Contact Picker not supported', {
-        description: 'Your browser doesn\'t support contact picking. Please use Chrome, Edge, or a Chromium-based browser.'
+        description: 'Your browser doesn\'t support contact picking. Please use Chrome, Edge, or a Chromium-based browser on Android.'
       });
       return [];
     }
@@ -55,9 +98,10 @@ const syncContactsWeb = async (): Promise<PhoneContact[]> => {
       
       contact.tel?.forEach((phone: string) => {
         if (phone) {
+          const normalizedPhone = normalizePhoneNumber(phone);
           phoneContacts.push({
             name,
-            phoneNumber: phone.replace(/\s+/g, ''), // Remove spaces
+            phoneNumber: normalizedPhone,
           });
         }
       });
@@ -108,9 +152,10 @@ const syncContactsMobile = async (): Promise<PhoneContact[]> => {
       
       contact.phones?.forEach((phone) => {
         if (phone.number) {
+          const normalizedPhone = normalizePhoneNumber(phone.number);
           phoneContacts.push({
             name,
-            phoneNumber: phone.number.replace(/\s+/g, ''), // Remove spaces
+            phoneNumber: normalizedPhone,
           });
         }
       });
@@ -153,7 +198,7 @@ export const syncPhoneContacts = async (): Promise<PhoneContact[]> => {
 };
 
 // Save contacts to Supabase database with validation
-export const saveContactsToDatabase = async (contacts: PhoneContact[]): Promise<void> => {
+export const saveContactsToDatabase = async (contacts: PhoneContact[]): Promise<{ saved: number; skipped: number }> => {
   const { data: { session } } = await supabase.auth.getSession();
   
   if (!session) {
@@ -163,32 +208,43 @@ export const saveContactsToDatabase = async (contacts: PhoneContact[]): Promise<
   console.log(`Attempting to save ${contacts.length} contacts to database`);
   
   // Filter and validate contacts
-  const validatedContacts: Array<{ name: string; phoneNumber: string; isValid: boolean; error?: string }> = [];
+  const validatedContacts: Array<{ name: string; phoneNumber: string }> = [];
   const invalidContacts: Array<{ name: string; phoneNumber: string; error: string }> = [];
 
-  contacts.forEach(contact => {
+  for (const contact of contacts) {
     if (!contact.name || !contact.phoneNumber) {
-      return; // Skip empty entries
+      continue; // Skip empty entries
     }
 
-    // Attempt auto-correction
-    const correctedPhone = autoCorrectPhoneNumber(contact.phoneNumber);
+    // Normalize and attempt auto-correction
+    const normalizedPhone = normalizePhoneNumber(contact.phoneNumber);
+    const correctedPhone = autoCorrectPhoneNumber(normalizedPhone);
     const validation = validateE164PhoneNumber(correctedPhone);
 
     if (validation.valid && validation.normalized) {
       validatedContacts.push({
         name: contact.name,
-        phoneNumber: validation.normalized,
-        isValid: true
+        phoneNumber: validation.normalized
       });
     } else {
-      invalidContacts.push({
-        name: contact.name,
-        phoneNumber: contact.phoneNumber,
-        error: validation.error || "Invalid format"
-      });
+      // Try alternative normalization
+      const altPhone = autoCorrectPhoneNumber(contact.phoneNumber);
+      const altValidation = validateE164PhoneNumber(altPhone);
+      
+      if (altValidation.valid && altValidation.normalized) {
+        validatedContacts.push({
+          name: contact.name,
+          phoneNumber: altValidation.normalized
+        });
+      } else {
+        invalidContacts.push({
+          name: contact.name,
+          phoneNumber: contact.phoneNumber,
+          error: validation.error || altValidation.error || "Invalid format"
+        });
+      }
     }
-  });
+  }
 
   console.log(`Validated: ${validatedContacts.length} valid, ${invalidContacts.length} invalid contacts`);
 
@@ -201,11 +257,19 @@ export const saveContactsToDatabase = async (contacts: PhoneContact[]): Promise<
       throw new Error(`No valid contacts found. ${invalidContacts.length} contacts had invalid phone numbers.`);
     }
     console.log("No valid contacts to save");
-    return;
+    return { saved: 0, skipped: invalidContacts.length };
   }
 
+  // Deduplicate by phone number (keep first occurrence)
+  const uniqueContacts = validatedContacts.reduce((acc, contact) => {
+    if (!acc.find(c => c.phoneNumber === contact.phoneNumber)) {
+      acc.push(contact);
+    }
+    return acc;
+  }, [] as typeof validatedContacts);
+
   // Prepare contacts for insertion with normalized phone numbers
-  const contactsToInsert = validatedContacts.map(contact => ({
+  const contactsToInsert = uniqueContacts.map(contact => ({
     user_id: session.user.id,
     contact_name: contact.name,
     contact_phone: contact.phoneNumber,
@@ -223,5 +287,39 @@ export const saveContactsToDatabase = async (contacts: PhoneContact[]): Promise<
     throw new Error("Failed to save contacts to database");
   }
 
-  console.log(`Successfully saved ${validatedContacts.length} contacts${invalidContacts.length > 0 ? ` (${invalidContacts.length} skipped due to invalid format)` : ""}`);
+  const savedCount = uniqueContacts.length;
+  const skippedCount = invalidContacts.length + (validatedContacts.length - uniqueContacts.length);
+
+  console.log(`Successfully saved ${savedCount} contacts${skippedCount > 0 ? ` (${skippedCount} skipped due to invalid format or duplicates)` : ""}`);
+  
+  return { saved: savedCount, skipped: skippedCount };
+};
+
+// Check if a contact is on FinMo
+export const checkContactsOnFinMo = async (phones: string[]): Promise<Set<string>> => {
+  const finmoUsers = new Set<string>();
+  
+  try {
+    // Normalize all phone numbers
+    const normalizedPhones = phones.map(p => normalizePhoneNumber(p));
+    
+    // Check in batches of 50
+    const batchSize = 50;
+    for (let i = 0; i < normalizedPhones.length; i += batchSize) {
+      const batch = normalizedPhones.slice(i, i + batchSize);
+      
+      const { data, error } = await supabase
+        .from('user_registry')
+        .select('phone_number')
+        .in('phone_number', batch);
+      
+      if (!error && data) {
+        data.forEach(user => finmoUsers.add(user.phone_number));
+      }
+    }
+  } catch (error) {
+    console.error('Error checking contacts on FinMo:', error);
+  }
+  
+  return finmoUsers;
 };

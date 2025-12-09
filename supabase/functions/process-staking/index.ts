@@ -13,6 +13,7 @@ interface StakeRequest {
   amount?: number;
   duration_days?: number;
   stake_id?: string;
+  pool_id?: string;
 }
 
 Deno.serve(async (req) => {
@@ -41,7 +42,7 @@ Deno.serve(async (req) => {
     }
 
     const requestData: StakeRequest = await req.json();
-    const { action, token, amount, duration_days, stake_id } = requestData;
+    const { action, token, amount, duration_days, stake_id, pool_id } = requestData;
 
     console.log('Processing staking action:', { action, user: user.id, token });
 
@@ -59,12 +60,42 @@ Deno.serve(async (req) => {
         throw new Error('Amount must be greater than zero');
       }
 
-      if (amount < 1) {
-        throw new Error('Minimum stake amount is 1');
+      // Fetch staking pool from database for this token and duration
+      const { data: stakingPool, error: poolError } = await supabase
+        .from('staking_pools')
+        .select('*')
+        .eq('token', token)
+        .eq('lock_period_days', duration_days)
+        .eq('is_active', true)
+        .single();
+
+      if (poolError || !stakingPool) {
+        // Try to find any pool for this token
+        const { data: availablePools } = await supabase
+          .from('staking_pools')
+          .select('lock_period_days')
+          .eq('token', token)
+          .eq('is_active', true);
+        
+        const durations = availablePools?.map(p => p.lock_period_days).join(', ') || 'none available';
+        throw new Error(`No staking pool found for ${token} with ${duration_days} day duration. Available durations: ${durations}`);
       }
 
-      if (![30, 60, 90, 180, 365].includes(duration_days)) {
-        throw new Error('Invalid duration. Choose from: 30, 60, 90, 180, or 365 days');
+      // Validate amount against pool limits
+      if (amount < stakingPool.min_stake) {
+        throw new Error(`Minimum stake amount is ${stakingPool.min_stake} ${token}`);
+      }
+
+      if (stakingPool.max_stake && amount > stakingPool.max_stake) {
+        throw new Error(`Maximum stake amount is ${stakingPool.max_stake} ${token}`);
+      }
+
+      // Check pool capacity
+      if (stakingPool.pool_capacity) {
+        const remainingCapacity = stakingPool.pool_capacity - stakingPool.total_staked;
+        if (amount > remainingCapacity) {
+          throw new Error(`Pool capacity exceeded. Available: ${remainingCapacity.toFixed(2)} ${token}`);
+        }
       }
 
       // Lock user's balance row to prevent race conditions
@@ -84,15 +115,8 @@ Deno.serve(async (req) => {
         throw new Error('Insufficient balance');
       }
 
-      // Calculate APY based on duration (longer = better rate)
-      const apyRates: Record<number, number> = {
-        30: 5.0,
-        60: 6.5,
-        90: 8.0,
-        180: 10.0,
-        365: 12.0
-      };
-      const apyRate = apyRates[duration_days];
+      // Use the APY from the pool
+      const apyRate = stakingPool.apy_rate;
 
       // Calculate rewards
       const { data: estimatedRewards, error: rewardsError } = await supabase
@@ -152,6 +176,22 @@ Deno.serve(async (req) => {
         throw new Error('Unable to create staking position');
       }
 
+      // Update pool total staked
+      await supabase
+        .from('staking_pools')
+        .update({ total_staked: stakingPool.total_staked + amount })
+        .eq('id', stakingPool.id);
+
+      // Update staking reserves
+      await supabase
+        .from('staking_reserves')
+        .upsert({
+          token: token,
+          total_staked: stakingPool.total_staked + amount,
+          pending_rewards: estimatedRewards,
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'token' });
+
       console.log('Stake created:', stakingPosition.id);
 
       return new Response(
@@ -160,7 +200,8 @@ Deno.serve(async (req) => {
           stake_id: stakingPosition.id,
           estimated_rewards: estimatedRewards,
           apy_rate: apyRate,
-          message: 'Staking position created successfully!'
+          pool_id: stakingPool.id,
+          message: `Successfully staked ${amount} ${token} at ${apyRate}% APY for ${duration_days} days!`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -257,6 +298,30 @@ Deno.serve(async (req) => {
         throw new Error('Unable to complete withdrawal');
       }
 
+      // Update pool total staked
+      const { data: pool } = await supabase
+        .from('staking_pools')
+        .select('id, total_staked')
+        .eq('token', stake.token)
+        .eq('lock_period_days', stake.duration_days)
+        .single();
+
+      if (pool) {
+        await supabase
+          .from('staking_pools')
+          .update({ total_staked: Math.max(0, pool.total_staked - stake.staked_amount) })
+          .eq('id', pool.id);
+      }
+
+      // Update staking reserves
+      await supabase
+        .from('staking_reserves')
+        .update({
+          total_staked: Math.max(0, (pool?.total_staked || stake.staked_amount) - stake.staked_amount),
+          updated_at: new Date().toISOString()
+        })
+        .eq('token', stake.token);
+
       console.log('Withdrawal completed:', { stake_id, totalAmount, finalRewards });
 
       return new Response(
@@ -266,9 +331,10 @@ Deno.serve(async (req) => {
           rewards_earned: finalRewards,
           total_returned: totalAmount,
           is_matured: isMatured,
+          penalty_applied: !isMatured,
           message: isMatured 
-            ? 'Withdrawal completed successfully!' 
-            : 'Early withdrawal completed with 50% penalty on rewards'
+            ? `Withdrawal completed! You received ${totalAmount.toFixed(4)} ${stake.token} (${stake.staked_amount} principal + ${finalRewards.toFixed(4)} rewards)` 
+            : `Early withdrawal completed with 50% penalty. You received ${totalAmount.toFixed(4)} ${stake.token}`
         }),
         { headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
@@ -284,6 +350,7 @@ Deno.serve(async (req) => {
     
     const userMessage = error instanceof Error && 
       ['Insufficient balance', 'Invalid duration', 'Invalid amount', 'Minimum stake amount',
+       'Maximum stake amount', 'Pool capacity exceeded', 'No staking pool found',
        'Amount must be greater than zero', 'Staking position not found'].some(msg => error.message.includes(msg))
       ? error.message
       : 'Unable to process staking request. Please try again later.';
