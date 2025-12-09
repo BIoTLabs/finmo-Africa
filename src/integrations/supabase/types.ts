@@ -74,6 +74,45 @@ export type Database = {
         }
         Relationships: []
       }
+      admin_withdrawals: {
+        Row: {
+          admin_id: string
+          amount: number
+          completed_at: string | null
+          created_at: string | null
+          destination_address: string
+          id: string
+          status: string
+          token: string
+          transaction_hash: string | null
+          wallet_type: string
+        }
+        Insert: {
+          admin_id: string
+          amount: number
+          completed_at?: string | null
+          created_at?: string | null
+          destination_address: string
+          id?: string
+          status?: string
+          token?: string
+          transaction_hash?: string | null
+          wallet_type: string
+        }
+        Update: {
+          admin_id?: string
+          amount?: number
+          completed_at?: string | null
+          created_at?: string | null
+          destination_address?: string
+          id?: string
+          status?: string
+          token?: string
+          transaction_hash?: string | null
+          wallet_type?: string
+        }
+        Relationships: []
+      }
       api_usage_logs: {
         Row: {
           api_key_id: string | null
@@ -593,10 +632,14 @@ export type Database = {
           id: string
           images: string[] | null
           is_active: boolean | null
+          is_promoted: boolean | null
           is_service: boolean | null
+          listing_fee_paid: number | null
           listing_type: string
           location: string | null
           price: number
+          promotion_expires_at: string | null
+          promotion_tier: string | null
           seller_id: string
           title: string
           updated_at: string | null
@@ -610,10 +653,14 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_active?: boolean | null
+          is_promoted?: boolean | null
           is_service?: boolean | null
+          listing_fee_paid?: number | null
           listing_type?: string
           location?: string | null
           price: number
+          promotion_expires_at?: string | null
+          promotion_tier?: string | null
           seller_id: string
           title: string
           updated_at?: string | null
@@ -627,10 +674,14 @@ export type Database = {
           id?: string
           images?: string[] | null
           is_active?: boolean | null
+          is_promoted?: boolean | null
           is_service?: boolean | null
+          listing_fee_paid?: number | null
           listing_type?: string
           location?: string | null
           price?: number
+          promotion_expires_at?: string | null
+          promotion_tier?: string | null
           seller_id?: string
           title?: string
           updated_at?: string | null
@@ -775,6 +826,53 @@ export type Database = {
         Relationships: [
           {
             foreignKeyName: "marketplace_orders_listing_id_fkey"
+            columns: ["listing_id"]
+            isOneToOne: false
+            referencedRelation: "marketplace_listings"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      marketplace_promotions: {
+        Row: {
+          amount_paid: number
+          created_at: string | null
+          expires_at: string
+          id: string
+          is_active: boolean | null
+          listing_id: string | null
+          promotion_tier: string
+          starts_at: string | null
+          token: string
+          user_id: string
+        }
+        Insert: {
+          amount_paid: number
+          created_at?: string | null
+          expires_at: string
+          id?: string
+          is_active?: boolean | null
+          listing_id?: string | null
+          promotion_tier: string
+          starts_at?: string | null
+          token?: string
+          user_id: string
+        }
+        Update: {
+          amount_paid?: number
+          created_at?: string | null
+          expires_at?: string
+          id?: string
+          is_active?: boolean | null
+          listing_id?: string | null
+          promotion_tier?: string
+          starts_at?: string | null
+          token?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "marketplace_promotions_listing_id_fkey"
             columns: ["listing_id"]
             isOneToOne: false
             referencedRelation: "marketplace_listings"
@@ -939,11 +1037,14 @@ export type Database = {
           crypto_amount: number
           currency_code: string
           expires_at: string
+          fee_paid_by: string | null
           fiat_amount: number
           id: string
           listing_id: string
           paid_at: string | null
           payment_method_id: string | null
+          platform_fee: number | null
+          platform_fee_token: string | null
           rate: number
           seller_id: string
           status: Database["public"]["Enums"]["p2p_order_status"] | null
@@ -958,11 +1059,14 @@ export type Database = {
           crypto_amount: number
           currency_code: string
           expires_at: string
+          fee_paid_by?: string | null
           fiat_amount: number
           id?: string
           listing_id: string
           paid_at?: string | null
           payment_method_id?: string | null
+          platform_fee?: number | null
+          platform_fee_token?: string | null
           rate: number
           seller_id: string
           status?: Database["public"]["Enums"]["p2p_order_status"] | null
@@ -977,11 +1081,14 @@ export type Database = {
           crypto_amount?: number
           currency_code?: string
           expires_at?: string
+          fee_paid_by?: string | null
           fiat_amount?: number
           id?: string
           listing_id?: string
           paid_at?: string | null
           payment_method_id?: string | null
+          platform_fee?: number | null
+          platform_fee_token?: string | null
           rate?: number
           seller_id?: string
           status?: Database["public"]["Enums"]["p2p_order_status"] | null
@@ -2016,6 +2123,75 @@ export type Database = {
         }
         Relationships: []
       }
+      platform_revenue: {
+        Row: {
+          amount: number
+          created_at: string | null
+          id: string
+          metadata: Json | null
+          revenue_type: string
+          source_order_id: string | null
+          source_type: string | null
+          token: string
+          wallet_type: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          revenue_type: string
+          source_order_id?: string | null
+          source_type?: string | null
+          token?: string
+          wallet_type: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string | null
+          id?: string
+          metadata?: Json | null
+          revenue_type?: string
+          source_order_id?: string | null
+          source_type?: string | null
+          token?: string
+          wallet_type?: string
+        }
+        Relationships: []
+      }
+      platform_wallets: {
+        Row: {
+          balance: number
+          created_at: string | null
+          description: string | null
+          id: string
+          token: string
+          updated_at: string | null
+          wallet_address: string
+          wallet_type: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          token?: string
+          updated_at?: string | null
+          wallet_address: string
+          wallet_type: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string | null
+          description?: string | null
+          id?: string
+          token?: string
+          updated_at?: string | null
+          wallet_address?: string
+          wallet_type?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           aa_wallet_address: string | null
@@ -2172,6 +2348,48 @@ export type Database = {
         }
         Relationships: []
       }
+      staking_pools: {
+        Row: {
+          apy_rate: number
+          created_at: string | null
+          id: string
+          is_active: boolean | null
+          lock_period_days: number
+          max_stake: number | null
+          min_stake: number
+          pool_capacity: number | null
+          token: string
+          total_staked: number
+          updated_at: string | null
+        }
+        Insert: {
+          apy_rate: number
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          lock_period_days: number
+          max_stake?: number | null
+          min_stake?: number
+          pool_capacity?: number | null
+          token: string
+          total_staked?: number
+          updated_at?: string | null
+        }
+        Update: {
+          apy_rate?: number
+          created_at?: string | null
+          id?: string
+          is_active?: boolean | null
+          lock_period_days?: number
+          max_stake?: number | null
+          min_stake?: number
+          pool_capacity?: number | null
+          token?: string
+          total_staked?: number
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       staking_positions: {
         Row: {
           apy_rate: number
@@ -2217,6 +2435,33 @@ export type Database = {
           updated_at?: string
           user_id?: string
           withdrawn_at?: string | null
+        }
+        Relationships: []
+      }
+      staking_reserves: {
+        Row: {
+          id: string
+          pending_rewards: number
+          reserve_balance: number
+          token: string
+          total_staked: number
+          updated_at: string | null
+        }
+        Insert: {
+          id?: string
+          pending_rewards?: number
+          reserve_balance?: number
+          token: string
+          total_staked?: number
+          updated_at?: string | null
+        }
+        Update: {
+          id?: string
+          pending_rewards?: number
+          reserve_balance?: number
+          token?: string
+          total_staked?: number
+          updated_at?: string | null
         }
         Relationships: []
       }
@@ -2573,6 +2818,36 @@ export type Database = {
           badge_type?: Database["public"]["Enums"]["badge_type"]
           id?: string
           nft_token_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      user_listing_credits: {
+        Row: {
+          created_at: string | null
+          free_listings_limit: number
+          free_listings_used: number
+          id: string
+          purchased_credits: number
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          free_listings_limit?: number
+          free_listings_used?: number
+          id?: string
+          purchased_credits?: number
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          free_listings_limit?: number
+          free_listings_used?: number
+          id?: string
+          purchased_credits?: number
+          updated_at?: string | null
           user_id?: string
         }
         Relationships: []
