@@ -5,19 +5,33 @@ export const useAdminCheck = () => {
   const [isAdmin, setIsAdmin] = useState(false);
   const [loading, setLoading] = useState(true);
 
+  // Timeout protection - max 5 seconds for admin check
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (loading) {
+        console.warn('Admin check timed out');
+        setIsAdmin(false);
+        setLoading(false);
+      }
+    }, 5000);
+
+    return () => clearTimeout(timeout);
+  }, [loading]);
+
   useEffect(() => {
     const checkAdminStatus = async () => {
       try {
-        const { data: { user } } = await supabase.auth.getUser();
+        // Use getSession first (faster, cached) then verify with has_role
+        const { data: { session } } = await supabase.auth.getSession();
         
-        if (!user) {
+        if (!session?.user) {
           setIsAdmin(false);
           setLoading(false);
           return;
         }
 
         const { data, error } = await supabase
-          .rpc('has_role', { _user_id: user.id, _role: 'admin' });
+          .rpc('has_role', { _user_id: session.user.id, _role: 'admin' });
 
         if (error) {
           console.error('Error checking admin status:', error);

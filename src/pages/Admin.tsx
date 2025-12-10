@@ -79,7 +79,8 @@ const Admin = () => {
     }
   }, [isAdmin]);
 
-  if (adminLoading || loading) {
+  // Only block on admin check, not backend info fetch
+  if (adminLoading) {
     return <LoadingScreen />;
   }
 
@@ -100,29 +101,19 @@ const Admin = () => {
               <p className="text-muted-foreground">Backend Functions & Integrations Review</p>
             </div>
           </div>
-          <Button onClick={fetchBackendInfo} variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
+          <Button onClick={fetchBackendInfo} variant="outline" size="sm" disabled={loading}>
+            <RefreshCw className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+            {loading ? 'Loading...' : 'Refresh'}
           </Button>
         </div>
 
-        {!backendInfo && !loading && (
-          <Card>
-            <CardContent className="py-10 text-center">
-              <p className="text-muted-foreground">
-                Click the refresh button to load backend information
-              </p>
-            </CardContent>
-          </Card>
-        )}
+        {/* Show dashboard immediately, backend info loads in background */}
+        <div className="space-y-6">
+          {/* Fee Settings Section */}
+          <AdminFeeSettings />
 
-        {backendInfo && (
-          <div className="space-y-6">
-            {/* Fee Settings Section */}
-            <AdminFeeSettings />
-
-            {/* Platform Management */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {/* Platform Management */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               <Card>
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
@@ -415,7 +406,8 @@ const Admin = () => {
               </CardContent>
             </Card>
 
-            {/* Backend Info Tabs */}
+            {/* Backend Info Tabs - shows when data is available */}
+            {backendInfo && (
             <Tabs defaultValue="database" className="space-y-6">
             <TabsList className="grid w-full grid-cols-3">
               <TabsTrigger value="database">
@@ -468,18 +460,15 @@ const Admin = () => {
                 <CardHeader>
                   <CardTitle>Database Functions</CardTitle>
                   <CardDescription>
-                    List of all registered database functions
+                    Custom PostgreSQL functions available in your database
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                  <div className="flex flex-wrap gap-2">
                     {backendInfo.database.functions.map((func) => (
-                      <div
-                        key={func}
-                        className="p-3 border rounded-lg bg-card hover:bg-accent transition-colors"
-                      >
-                        <code className="text-sm font-mono">{func}()</code>
-                      </div>
+                      <Badge key={func} variant="outline" className="font-mono">
+                        {func}
+                      </Badge>
                     ))}
                   </div>
                 </CardContent>
@@ -491,25 +480,34 @@ const Admin = () => {
                 <CardHeader>
                   <CardTitle>Edge Functions</CardTitle>
                   <CardDescription>
-                    Serverless functions deployed in the backend
+                    Serverless functions running on the edge
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
-                  <div className="space-y-3">
-                    {backendInfo.edgeFunctions.map((func) => (
-                      <div
-                        key={func}
-                        className="p-4 border rounded-lg bg-card hover:bg-accent transition-colors flex items-center justify-between"
-                      >
-                        <div>
-                          <code className="text-sm font-mono font-semibold">{func}</code>
-                          <p className="text-sm text-muted-foreground mt-1">
-                            Status: <Badge variant="secondary">Deployed</Badge>
-                          </p>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Function Name</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Type</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {backendInfo.edgeFunctions.map((func) => (
+                        <TableRow key={func}>
+                          <TableCell className="font-medium font-mono">{func}</TableCell>
+                          <TableCell>
+                            <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+                              Deployed
+                            </Badge>
+                          </TableCell>
+                          <TableCell>
+                            <Badge variant="outline">HTTP</Badge>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
                 </CardContent>
               </Card>
             </TabsContent>
@@ -517,37 +515,37 @@ const Admin = () => {
             <TabsContent value="integrations" className="space-y-4">
               <Card>
                 <CardHeader>
-                  <CardTitle>Active Integrations</CardTitle>
+                  <CardTitle>Integration Status</CardTitle>
                   <CardDescription>
-                    Overview of enabled backend services
+                    Status of various integrations
                   </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-semibold">Authentication</h3>
-                        <p className="text-sm text-muted-foreground">User authentication system</p>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Shield className="h-5 w-5 text-muted-foreground" />
+                        <span>Authentication</span>
                       </div>
-                      <Badge variant={backendInfo.integrations.authentication ? 'default' : 'secondary'}>
+                      <Badge className={backendInfo.integrations.authentication ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
                         {backendInfo.integrations.authentication ? 'Enabled' : 'Disabled'}
                       </Badge>
                     </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-semibold">Realtime</h3>
-                        <p className="text-sm text-muted-foreground">Real-time data synchronization</p>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Zap className="h-5 w-5 text-muted-foreground" />
+                        <span>Realtime</span>
                       </div>
-                      <Badge variant={backendInfo.integrations.realtimeEnabled ? 'default' : 'secondary'}>
+                      <Badge className={backendInfo.integrations.realtimeEnabled ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
                         {backendInfo.integrations.realtimeEnabled ? 'Enabled' : 'Disabled'}
                       </Badge>
                     </div>
-                    <div className="flex items-center justify-between p-4 border rounded-lg">
-                      <div>
-                        <h3 className="font-semibold">Storage</h3>
-                        <p className="text-sm text-muted-foreground">File storage service</p>
+                    <div className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex items-center gap-3">
+                        <Database className="h-5 w-5 text-muted-foreground" />
+                        <span>Storage</span>
                       </div>
-                      <Badge variant={backendInfo.integrations.storageEnabled ? 'default' : 'secondary'}>
+                      <Badge className={backendInfo.integrations.storageEnabled ? 'bg-green-500/10 text-green-500' : 'bg-red-500/10 text-red-500'}>
                         {backendInfo.integrations.storageEnabled ? 'Enabled' : 'Disabled'}
                       </Badge>
                     </div>
@@ -557,7 +555,10 @@ const Admin = () => {
 
               <Card>
                 <CardHeader>
-                  <CardTitle>System Information</CardTitle>
+                  <CardTitle>Summary</CardTitle>
+                  <CardDescription>
+                    Overview of your backend configuration
+                  </CardDescription>
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-2 text-sm">
@@ -582,10 +583,10 @@ const Admin = () => {
               </Card>
             </TabsContent>
             </Tabs>
+            )}
           </div>
-        )}
+        </div>
       </div>
-    </div>
   );
 };
 
