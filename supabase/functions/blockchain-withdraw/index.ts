@@ -45,6 +45,137 @@ interface WithdrawRequest {
   chain_id?: number;
 }
 
+// Helper function to check transaction limits
+async function checkTransactionLimits(
+  supabase: any,
+  userId: string,
+  amountUsd: number
+): Promise<{ allowed: boolean; error?: string }> {
+  // Get user's KYC tier from profile
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select('kyc_tier')
+    .eq('id', userId)
+    .single();
+
+  if (profileError) {
+    console.error('Failed to fetch profile for limit check:', profileError);
+    return { allowed: true }; // Allow if we can't verify (fail open for UX)
+  }
+
+  const userTier = profile?.kyc_tier || 'tier_0';
+
+  // Get tier limits
+  const { data: tierLimits, error: tierError } = await supabase
+    .from('kyc_tiers')
+    .select('daily_limit_usd, monthly_limit_usd, single_transaction_limit_usd')
+    .eq('tier', userTier)
+    .eq('is_active', true)
+    .single();
+
+  if (tierError || !tierLimits) {
+    console.error('Failed to fetch tier limits:', tierError);
+    return { allowed: true }; // Allow if we can't verify
+  }
+
+  const dailyLimit = tierLimits.daily_limit_usd;
+  const monthlyLimit = tierLimits.monthly_limit_usd;
+  const singleTransactionLimit = tierLimits.single_transaction_limit_usd || dailyLimit;
+
+  // Check single transaction limit
+  if (amountUsd > singleTransactionLimit) {
+    return {
+      allowed: false,
+      error: `Withdrawal amount ($${amountUsd.toFixed(2)}) exceeds your limit of $${singleTransactionLimit.toFixed(2)}. Upgrade your KYC tier for higher limits.`,
+    };
+  }
+
+  // Get today's usage
+  const today = new Date().toISOString().split('T')[0];
+  const { data: limitRecord } = await supabase
+    .from('user_transaction_limits')
+    .select('daily_total_usd')
+    .eq('user_id', userId)
+    .eq('date', today)
+    .single();
+
+  const dailyUsed = Number(limitRecord?.daily_total_usd || 0);
+
+  // Check daily limit
+  if (dailyUsed + amountUsd > dailyLimit) {
+    const remaining = Math.max(0, dailyLimit - dailyUsed);
+    return {
+      allowed: false,
+      error: `Daily limit exceeded. You've used $${dailyUsed.toFixed(2)} of your $${dailyLimit.toFixed(2)} daily limit. Remaining: $${remaining.toFixed(2)}`,
+    };
+  }
+
+  // Get monthly usage
+  const firstDayOfMonth = new Date();
+  firstDayOfMonth.setDate(1);
+  const monthStart = firstDayOfMonth.toISOString().split('T')[0];
+
+  const { data: monthlyRecords } = await supabase
+    .from('user_transaction_limits')
+    .select('daily_total_usd')
+    .eq('user_id', userId)
+    .gte('date', monthStart);
+
+  const monthlyUsed = monthlyRecords?.reduce((sum: number, r: any) => sum + Number(r.daily_total_usd || 0), 0) || 0;
+
+  // Check monthly limit
+  if (monthlyUsed + amountUsd > monthlyLimit) {
+    const remaining = Math.max(0, monthlyLimit - monthlyUsed);
+    return {
+      allowed: false,
+      error: `Monthly limit exceeded. You've used $${monthlyUsed.toFixed(2)} of your $${monthlyLimit.toFixed(2)} monthly limit. Remaining: $${remaining.toFixed(2)}`,
+    };
+  }
+
+  return { allowed: true };
+}
+
+// Helper function to update transaction limits after successful transaction
+async function updateTransactionLimits(
+  supabase: any,
+  userId: string,
+  amountUsd: number
+): Promise<void> {
+  const today = new Date().toISOString().split('T')[0];
+
+  // Try to get existing record
+  const { data: existing } = await supabase
+    .from('user_transaction_limits')
+    .select('id, daily_total_usd, transaction_count')
+    .eq('user_id', userId)
+    .eq('date', today)
+    .single();
+
+  if (existing) {
+    // Update existing record
+    await supabase
+      .from('user_transaction_limits')
+      .update({
+        daily_total_usd: Number(existing.daily_total_usd || 0) + amountUsd,
+        transaction_count: (existing.transaction_count || 0) + 1,
+        last_transaction_at: new Date().toISOString(),
+        updated_at: new Date().toISOString(),
+      })
+      .eq('id', existing.id);
+  } else {
+    // Insert new record
+    await supabase
+      .from('user_transaction_limits')
+      .insert({
+        user_id: userId,
+        date: today,
+        daily_total_usd: amountUsd,
+        transaction_count: 1,
+        last_transaction_at: new Date().toISOString(),
+      });
+  }
+}
+
 Deno.serve(async (req) => {
   if (req.method === 'OPTIONS') {
     return new Response(null, { headers: corsHeaders });
@@ -106,6 +237,14 @@ Deno.serve(async (req) => {
       throw new Error('Amount exceeds maximum withdrawal limit');
     }
 
+    // Check KYC tier transaction limits (assuming stablecoins are ~$1 USD)
+    const amountUsd = amount; // For stablecoins, 1:1 with USD
+    const limitCheck = await checkTransactionLimits(supabase, user.id, amountUsd);
+    
+    if (!limitCheck.allowed) {
+      throw new Error(limitCheck.error || 'Transaction limit exceeded');
+    }
+
     // Validate Ethereum wallet address with checksum
     if (!ethers.isAddress(recipient_wallet)) {
       throw new Error('Invalid Ethereum wallet address format');
@@ -123,7 +262,7 @@ Deno.serve(async (req) => {
       throw new Error('Cannot send to burn address');
     }
 
-    console.log('Processing blockchain withdrawal:', { user: user.id, token });
+    console.log('Processing blockchain withdrawal:', { user: user.id, token, amountUsd });
     console.log(`Withdrawal request: ${amount} ${token} on chain ${selectedChainId}`);
 
     // Get user profile and balance
@@ -276,6 +415,9 @@ Deno.serve(async (req) => {
       }
     }
 
+    // Update transaction limits after successful withdrawal
+    await updateTransactionLimits(supabase, user.id, amountUsd);
+
     // Record platform revenue from withdrawal fee
     if (withdrawalFee > 0) {
       await supabase.from('platform_revenue').insert({
@@ -353,7 +495,8 @@ Deno.serve(async (req) => {
       ['Invalid Ethereum wallet address', 'Cannot send to burn address', 
        'Insufficient balance', 'KYC verification required',
        'Invalid withdrawal amount', 'Amount must be greater than zero',
-       'Amount exceeds maximum withdrawal limit'].some(msg => error.message.includes(msg))
+       'Amount exceeds maximum withdrawal limit',
+       'Daily limit exceeded', 'Monthly limit exceeded', 'Withdrawal amount'].some(msg => error.message.includes(msg))
       ? error.message
       : 'Unable to process withdrawal. Please try again later.';
     
