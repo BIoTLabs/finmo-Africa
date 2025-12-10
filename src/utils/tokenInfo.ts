@@ -6,6 +6,9 @@ export const TOKEN_INFO: Record<string, { name: string; icon: string; category: 
   DAI: { name: 'Dai', icon: '💵', category: 'Stablecoins' },
   BUSD: { name: 'Binance USD', icon: '💵', category: 'Stablecoins' },
   
+  // Commodities (Tokenized Assets)
+  XAUT: { name: 'Tether Gold', icon: '🥇', category: 'Commodities' },
+  
   // Wrapped Assets
   WBTC: { name: 'Wrapped Bitcoin', icon: '₿', category: 'Wrapped Assets' },
   WETH: { name: 'Wrapped Ether', icon: 'Ξ', category: 'Wrapped Assets' },
