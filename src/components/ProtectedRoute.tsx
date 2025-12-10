@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import LoadingScreen from "./LoadingScreen";
+import { useSessionManager } from "@/hooks/useSessionManager";
 
 
 interface ProtectedRouteProps {
@@ -12,6 +13,9 @@ const ProtectedRoute = ({ children }: ProtectedRouteProps) => {
   const navigate = useNavigate();
   const [loading, setLoading] = useState(true);
   const [authenticated, setAuthenticated] = useState(false);
+  
+  // Enable single-device session management across all protected routes
+  useSessionManager();
 
   useEffect(() => {
     checkAuth();

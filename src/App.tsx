@@ -2,7 +2,6 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import { useAutoLogout } from "@/hooks/useAutoLogout";
 import NotFound from "./pages/NotFound";
 import Auth from "./pages/Auth";
 import RootRedirect from "./components/RootRedirect";
@@ -66,9 +65,6 @@ import PartnerDashboard from "./pages/PartnerDashboard";
 const queryClient = new QueryClient();
 
 const App = () => {
-  // Enable auto-logout after 5 minutes of inactivity
-  useAutoLogout(300000);
-
   return (
     <QueryClientProvider client={queryClient}>
       <Toaster />
