@@ -15,7 +15,6 @@ import { RewardsNotification } from "@/components/RewardsNotification";
 import { MainnetBanner } from "@/components/MainnetBanner";
 import { NotificationBell } from "@/components/NotificationBell";
 import finmoLogo from "@/assets/finmo-logo.png";
-import { useSessionManager } from "@/hooks/useSessionManager";
 import { getTokenInfo } from "@/utils/tokenInfo";
 
 interface WalletBalance {
@@ -40,9 +39,6 @@ const Dashboard = () => {
   const [balanceVisible, setBalanceVisible] = useState(true);
   const [userId, setUserId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
-  
-  // Enable single-device session management
-  useSessionManager();
 
   // Use real-time hooks
   const { transactions, connected } = useRealtimeTransactions(userId);
