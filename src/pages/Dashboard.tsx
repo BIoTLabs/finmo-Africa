@@ -242,13 +242,21 @@ const Dashboard = () => {
                 History
               </Button>
             </div>
-            <div className="grid grid-cols-2 gap-2 mt-2">
+            <div className="grid grid-cols-3 gap-2 mt-2">
               <Button
                 onClick={() => navigate("/p2p")}
                 variant="outline"
               >
                 <ArrowUpRight className="w-4 h-4 mr-2" />
                 P2P
+              </Button>
+              <Button
+                onClick={() => navigate("/staking")}
+                variant="outline"
+                className="bg-success/10 border-success/30 hover:bg-success/20"
+              >
+                <TrendingUp className="w-4 h-4 mr-2 text-success" />
+                Staking
               </Button>
               <Button
                 onClick={() => navigate("/rewards")}
