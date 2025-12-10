@@ -8,10 +8,11 @@ import { useRealtimeP2PExplorer } from "@/hooks/useRealtimeP2PExplorer";
 import { useRealtimeMarketplaceExplorer } from "@/hooks/useRealtimeMarketplaceExplorer";
 
 import { useWalletTransparency } from "@/hooks/useWalletTransparency";
+import { useRealtimeStakingExplorer } from "@/hooks/useRealtimeStakingExplorer";
 import { ExplorerTransactionCard } from "@/components/ExplorerTransactionCard";
 import { ExplorerP2PCard } from "@/components/ExplorerP2PCard";
 import { ExplorerMarketplaceCard } from "@/components/ExplorerMarketplaceCard";
-
+import { ExplorerStakingCard } from "@/components/ExplorerStakingCard";
 import { ExplorerStats } from "@/components/ExplorerStats";
 import LoadingScreen from "@/components/LoadingScreen";
 
@@ -28,6 +29,7 @@ const Explorer = () => {
   });
   const { orders: p2pOrders, loading: p2pLoading, connected: p2pConnected } = useRealtimeP2PExplorer();
   const { orders: marketplaceOrders, loading: marketplaceLoading, connected: marketplaceConnected } = useRealtimeMarketplaceExplorer();
+  const { positions: stakingPositions, loading: stakingLoading, connected: stakingConnected } = useRealtimeStakingExplorer();
   
   const { hotWallet, coldStorage, staked, loading: transparencyLoading } = useWalletTransparency();
 
@@ -72,10 +74,11 @@ const Explorer = () => {
 
       <div className="container mx-auto px-4 py-6">
         <Tabs defaultValue="transactions" className="w-full">
-          <TabsList className="grid w-full grid-cols-3 mb-6">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
             <TabsTrigger value="transactions" className="gap-2">
               <Activity className="h-4 w-4" />
-              Transactions
+              <span className="hidden sm:inline">Transactions</span>
+              <span className="sm:hidden">Txns</span>
             </TabsTrigger>
             <TabsTrigger value="p2p" className="gap-2">
               <ArrowRightLeft className="h-4 w-4" />
@@ -83,7 +86,12 @@ const Explorer = () => {
             </TabsTrigger>
             <TabsTrigger value="marketplace" className="gap-2">
               <ShoppingCart className="h-4 w-4" />
-              Marketplace
+              <span className="hidden sm:inline">Marketplace</span>
+              <span className="sm:hidden">Market</span>
+            </TabsTrigger>
+            <TabsTrigger value="staking" className="gap-2">
+              <TrendingUp className="h-4 w-4" />
+              Staking
             </TabsTrigger>
           </TabsList>
 
@@ -133,6 +141,23 @@ const Explorer = () => {
               <div className="space-y-3">
                 {marketplaceOrders.map((order) => (
                   <ExplorerMarketplaceCard key={order.id} order={order} />
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          <TabsContent value="staking" className="space-y-4">
+            {stakingLoading ? (
+              <LoadingScreen />
+            ) : stakingPositions.length === 0 ? (
+              <div className="text-center py-12">
+                <TrendingUp className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-muted-foreground">No staking positions yet</p>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {stakingPositions.map((position) => (
+                  <ExplorerStakingCard key={position.id} position={position} />
                 ))}
               </div>
             )}
