@@ -411,6 +411,57 @@ export type Database = {
         }
         Relationships: []
       }
+      country_kyc_requirements: {
+        Row: {
+          accepted_id_types: string[]
+          additional_validations: Json | null
+          country_iso: string
+          created_at: string | null
+          daily_limit_override: number | null
+          id: string
+          is_active: boolean | null
+          monthly_limit_override: number | null
+          regulatory_notes: string | null
+          required_documents: string[]
+          required_fields: string[]
+          single_transaction_limit_override: number | null
+          tier: Database["public"]["Enums"]["kyc_tier"]
+          updated_at: string | null
+        }
+        Insert: {
+          accepted_id_types?: string[]
+          additional_validations?: Json | null
+          country_iso: string
+          created_at?: string | null
+          daily_limit_override?: number | null
+          id?: string
+          is_active?: boolean | null
+          monthly_limit_override?: number | null
+          regulatory_notes?: string | null
+          required_documents?: string[]
+          required_fields?: string[]
+          single_transaction_limit_override?: number | null
+          tier: Database["public"]["Enums"]["kyc_tier"]
+          updated_at?: string | null
+        }
+        Update: {
+          accepted_id_types?: string[]
+          additional_validations?: Json | null
+          country_iso?: string
+          created_at?: string | null
+          daily_limit_override?: number | null
+          id?: string
+          is_active?: boolean | null
+          monthly_limit_override?: number | null
+          regulatory_notes?: string | null
+          required_documents?: string[]
+          required_fields?: string[]
+          single_transaction_limit_override?: number | null
+          tier?: Database["public"]["Enums"]["kyc_tier"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       disputes: {
         Row: {
           admin_notes: string | null
@@ -498,61 +549,172 @@ export type Database = {
         }
         Relationships: []
       }
+      kyc_tiers: {
+        Row: {
+          created_at: string | null
+          daily_limit_usd: number
+          description: string | null
+          features: Json | null
+          id: string
+          is_active: boolean | null
+          monthly_limit_usd: number
+          name: string
+          required_documents: string[]
+          required_fields: string[]
+          single_transaction_limit_usd: number | null
+          tier: Database["public"]["Enums"]["kyc_tier"]
+          updated_at: string | null
+        }
+        Insert: {
+          created_at?: string | null
+          daily_limit_usd?: number
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          monthly_limit_usd?: number
+          name: string
+          required_documents?: string[]
+          required_fields?: string[]
+          single_transaction_limit_usd?: number | null
+          tier: Database["public"]["Enums"]["kyc_tier"]
+          updated_at?: string | null
+        }
+        Update: {
+          created_at?: string | null
+          daily_limit_usd?: number
+          description?: string | null
+          features?: Json | null
+          id?: string
+          is_active?: boolean | null
+          monthly_limit_usd?: number
+          name?: string
+          required_documents?: string[]
+          required_fields?: string[]
+          single_transaction_limit_usd?: number | null
+          tier?: Database["public"]["Enums"]["kyc_tier"]
+          updated_at?: string | null
+        }
+        Relationships: []
+      }
       kyc_verifications: {
         Row: {
           address: string
+          address_verification_status: string | null
+          admin_notes: string | null
           country_code: string
           created_at: string | null
           date_of_birth: string
+          employer_name: string | null
+          escalated_to: string | null
+          escalation_reason: string | null
+          face_match_score: number | null
           full_name: string
           id: string
           id_document_url: string | null
           id_number: string
           id_type: string
+          id_verification_score: number | null
+          kyc_tier: Database["public"]["Enums"]["kyc_tier"] | null
+          liveness_check_passed: boolean | null
+          liveness_score: number | null
+          occupation: string | null
+          proof_of_address_type: string | null
+          proof_of_address_url: string | null
           rejection_reason: string | null
+          reviewer_checklist: Json | null
+          risk_flags: Json | null
+          risk_score: number | null
           selfie_url: string | null
+          source_of_funds: string | null
+          source_of_funds_documents: string[] | null
           status: string | null
           submitted_at: string | null
+          tax_id: string | null
+          tax_id_type: string | null
           updated_at: string | null
           user_id: string
+          verification_level: Database["public"]["Enums"]["kyc_tier"] | null
           verified_at: string | null
           verified_by: string | null
         }
         Insert: {
           address: string
+          address_verification_status?: string | null
+          admin_notes?: string | null
           country_code: string
           created_at?: string | null
           date_of_birth: string
+          employer_name?: string | null
+          escalated_to?: string | null
+          escalation_reason?: string | null
+          face_match_score?: number | null
           full_name: string
           id?: string
           id_document_url?: string | null
           id_number: string
           id_type: string
+          id_verification_score?: number | null
+          kyc_tier?: Database["public"]["Enums"]["kyc_tier"] | null
+          liveness_check_passed?: boolean | null
+          liveness_score?: number | null
+          occupation?: string | null
+          proof_of_address_type?: string | null
+          proof_of_address_url?: string | null
           rejection_reason?: string | null
+          reviewer_checklist?: Json | null
+          risk_flags?: Json | null
+          risk_score?: number | null
           selfie_url?: string | null
+          source_of_funds?: string | null
+          source_of_funds_documents?: string[] | null
           status?: string | null
           submitted_at?: string | null
+          tax_id?: string | null
+          tax_id_type?: string | null
           updated_at?: string | null
           user_id: string
+          verification_level?: Database["public"]["Enums"]["kyc_tier"] | null
           verified_at?: string | null
           verified_by?: string | null
         }
         Update: {
           address?: string
+          address_verification_status?: string | null
+          admin_notes?: string | null
           country_code?: string
           created_at?: string | null
           date_of_birth?: string
+          employer_name?: string | null
+          escalated_to?: string | null
+          escalation_reason?: string | null
+          face_match_score?: number | null
           full_name?: string
           id?: string
           id_document_url?: string | null
           id_number?: string
           id_type?: string
+          id_verification_score?: number | null
+          kyc_tier?: Database["public"]["Enums"]["kyc_tier"] | null
+          liveness_check_passed?: boolean | null
+          liveness_score?: number | null
+          occupation?: string | null
+          proof_of_address_type?: string | null
+          proof_of_address_url?: string | null
           rejection_reason?: string | null
+          reviewer_checklist?: Json | null
+          risk_flags?: Json | null
+          risk_score?: number | null
           selfie_url?: string | null
+          source_of_funds?: string | null
+          source_of_funds_documents?: string[] | null
           status?: string | null
           submitted_at?: string | null
+          tax_id?: string | null
+          tax_id_type?: string | null
           updated_at?: string | null
           user_id?: string
+          verification_level?: Database["public"]["Enums"]["kyc_tier"] | null
           verified_at?: string | null
           verified_by?: string | null
         }
@@ -2271,12 +2433,15 @@ export type Database = {
           encryption_key_version: string | null
           id: string
           is_suspended: boolean | null
+          kyc_tier: Database["public"]["Enums"]["kyc_tier"] | null
+          kyc_tier_upgraded_at: string | null
           phone_number: string
           socials: Json | null
           suspended_at: string | null
           suspended_by: string | null
           suspension_expires_at: string | null
           suspension_reason: string | null
+          transaction_limits_reset_at: string | null
           updated_at: string
           wallet_address: string | null
           wallet_private_key_encrypted: string | null
@@ -2293,12 +2458,15 @@ export type Database = {
           encryption_key_version?: string | null
           id: string
           is_suspended?: boolean | null
+          kyc_tier?: Database["public"]["Enums"]["kyc_tier"] | null
+          kyc_tier_upgraded_at?: string | null
           phone_number: string
           socials?: Json | null
           suspended_at?: string | null
           suspended_by?: string | null
           suspension_expires_at?: string | null
           suspension_reason?: string | null
+          transaction_limits_reset_at?: string | null
           updated_at?: string
           wallet_address?: string | null
           wallet_private_key_encrypted?: string | null
@@ -2315,12 +2483,15 @@ export type Database = {
           encryption_key_version?: string | null
           id?: string
           is_suspended?: boolean | null
+          kyc_tier?: Database["public"]["Enums"]["kyc_tier"] | null
+          kyc_tier_upgraded_at?: string | null
           phone_number?: string
           socials?: Json | null
           suspended_at?: string | null
           suspended_by?: string | null
           suspension_expires_at?: string | null
           suspension_reason?: string | null
+          transaction_limits_reset_at?: string | null
           updated_at?: string
           wallet_address?: string | null
           wallet_private_key_encrypted?: string | null
@@ -3098,6 +3269,42 @@ export type Database = {
         }
         Relationships: []
       }
+      user_transaction_limits: {
+        Row: {
+          created_at: string | null
+          daily_total_usd: number | null
+          date: string
+          id: string
+          last_transaction_at: string | null
+          monthly_total_usd: number | null
+          transaction_count: number | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          created_at?: string | null
+          daily_total_usd?: number | null
+          date?: string
+          id?: string
+          last_transaction_at?: string | null
+          monthly_total_usd?: number | null
+          transaction_count?: number | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          created_at?: string | null
+          daily_total_usd?: number | null
+          date?: string
+          id?: string
+          last_transaction_at?: string | null
+          monthly_total_usd?: number | null
+          transaction_count?: number | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       verification_attempts: {
         Row: {
           attempted_at: string | null
@@ -3439,6 +3646,7 @@ export type Database = {
         | "steady_earner"
         | "kyc_verified"
         | "super_connector"
+      kyc_tier: "tier_0" | "tier_1" | "tier_2" | "tier_3"
       p2p_listing_type: "buy" | "sell"
       p2p_order_status:
         | "pending"
@@ -3592,6 +3800,7 @@ export const Constants = {
         "kyc_verified",
         "super_connector",
       ],
+      kyc_tier: ["tier_0", "tier_1", "tier_2", "tier_3"],
       p2p_listing_type: ["buy", "sell"],
       p2p_order_status: [
         "pending",
