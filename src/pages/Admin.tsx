@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell, UserCog, ClipboardList, Building2, Wallet, Coins } from 'lucide-react';
+import { ArrowLeft, Database, Zap, Shield, RefreshCw, Trophy, UserCheck, Store, Bell, UserCog, ClipboardList, Building2, Wallet, Coins, Globe } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
 import LoadingScreen from '@/components/LoadingScreen';
 import { AdminFeeSettings } from '@/components/AdminFeeSettings';
@@ -272,6 +272,23 @@ const Admin = () => {
                 <CardContent>
                   <Button onClick={() => navigate('/admin/staking-reserves')} className="w-full">
                     Manage Staking Reserves
+                  </Button>
+                </CardContent>
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Globe className="h-5 w-5" />
+                    Country Management
+                  </CardTitle>
+                  <CardDescription>
+                    Enable or disable country access for registration
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Button onClick={() => navigate('/admin/countries')} className="w-full">
+                    Manage Countries
                   </Button>
                 </CardContent>
               </Card>
