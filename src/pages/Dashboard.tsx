@@ -14,6 +14,7 @@ import RealtimeStatus from "@/components/RealtimeStatus";
 import { RewardsNotification } from "@/components/RewardsNotification";
 import { MainnetBanner } from "@/components/MainnetBanner";
 import { NotificationBell } from "@/components/NotificationBell";
+import { TransactionLimitsCard } from "@/components/TransactionLimitsCard";
 import finmoLogo from "@/assets/finmo-logo.png";
 import { getTokenInfo } from "@/utils/tokenInfo";
 
@@ -268,6 +269,11 @@ const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Transaction Limits */}
+      <div className="px-6 pt-4">
+        <TransactionLimitsCard userId={userId} />
       </div>
 
       {/* Token List */}
