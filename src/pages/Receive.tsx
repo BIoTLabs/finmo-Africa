@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
 import { SUPPORTED_CHAINS } from "@/utils/blockchain";
 import { SupportedTokensList } from "@/components/SupportedTokensList";
+import { TOKEN_INFO } from "@/utils/tokenInfo";
 
 const Receive = () => {
   const navigate = useNavigate();
@@ -154,7 +155,7 @@ Type: finmo_wallet`;
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground">
-              Your wallet supports {Object.keys(SUPPORTED_CHAINS).length} blockchain networks and all tokens including: USDC, USDT, DAI, WBTC, WETH, LINK, BUSD, UNI, AAVE, MKR, SHIB, APE, GRT, plus native tokens (MATIC, ETH)
+              Your wallet supports {Object.keys(SUPPORTED_CHAINS).length} blockchain networks and all tokens including: {Object.keys(TOKEN_INFO).join(', ')}, plus native tokens (MATIC, ETH)
             </p>
             <div className="space-y-2">
               <div className="flex items-center gap-2">
