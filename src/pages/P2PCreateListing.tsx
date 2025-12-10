@@ -11,6 +11,9 @@ import { ArrowLeft } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import MobileNav from "@/components/MobileNav";
 
+// Curated tokens for P2P trading (stablecoins + gold)
+const P2P_TOKENS = ['USDC', 'USDT', 'XAUT'] as const;
+
 interface Country {
   code: string;
   name: string;
@@ -132,8 +135,9 @@ const P2PCreateListing = () => {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="USDC">USDC</SelectItem>
-                  <SelectItem value="USDT">USDT</SelectItem>
+                  {P2P_TOKENS.map((t) => (
+                    <SelectItem key={t} value={t}>{t}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
