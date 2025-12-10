@@ -1941,7 +1941,7 @@ export type Database = {
           sandbox_enabled: boolean | null
           status: string | null
           updated_at: string | null
-          user_id: string | null
+          user_id: string
           webhook_secret: string | null
           webhook_url: string | null
         }
@@ -1962,7 +1962,7 @@ export type Database = {
           sandbox_enabled?: boolean | null
           status?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id: string
           webhook_secret?: string | null
           webhook_url?: string | null
         }
@@ -1983,7 +1983,7 @@ export type Database = {
           sandbox_enabled?: boolean | null
           status?: string | null
           updated_at?: string | null
-          user_id?: string | null
+          user_id?: string
           webhook_secret?: string | null
           webhook_url?: string | null
         }

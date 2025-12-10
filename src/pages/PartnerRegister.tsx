@@ -88,12 +88,6 @@ export default function PartnerRegister() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!user) {
-      toast.error("Please log in to register as a partner");
-      navigate("/auth", { state: { returnTo: "/partner/register" } });
-      return;
-    }
-    
     if (!formData.company_name || !formData.business_type || !formData.contact_email) {
       toast.error("Please fill in all required fields");
       return;
@@ -102,8 +96,30 @@ export default function PartnerRegister() {
     setIsSubmitting(true);
 
     try {
+      // Refresh session to ensure it's valid before insert
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      
+      if (!session || sessionError) {
+        toast.error("Your session has expired. Please log in again.");
+        navigate("/auth", { state: { returnTo: "/partner/register" } });
+        return;
+      }
+
+      // Check if user already has a partner record
+      const { data: existingPartner } = await supabase
+        .from("partners")
+        .select("id")
+        .eq("user_id", session.user.id)
+        .maybeSingle();
+
+      if (existingPartner) {
+        toast.error("You already have a partner application on file.");
+        navigate("/partner/dashboard");
+        return;
+      }
+
       const { error } = await supabase.from("partners").insert({
-        user_id: user.id,
+        user_id: session.user.id,
         company_name: formData.company_name,
         business_type: formData.business_type,
         country_code: formData.country_code || null,
@@ -119,8 +135,11 @@ export default function PartnerRegister() {
       });
 
       if (error) {
-        if (error.message.includes("duplicate") || error.message.includes("unique")) {
-          toast.error("A partner with this email already exists");
+        if (error.message.includes("row-level security")) {
+          toast.error("Session expired. Please log in again.");
+          navigate("/auth", { state: { returnTo: "/partner/register" } });
+        } else if (error.message.includes("duplicate") || error.message.includes("unique")) {
+          toast.error("You already have a partner application on file.");
         } else {
           throw error;
         }

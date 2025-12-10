@@ -144,10 +144,27 @@ const AdminPartnerManagement = () => {
 
   const createPartner = async () => {
     try {
+      // Get current user for user_id (now required)
+      const { data: { user } } = await supabase.auth.getUser();
+      if (!user) {
+        toast({
+          title: 'Error',
+          description: 'You must be logged in to create a partner',
+          variant: 'destructive',
+        });
+        return;
+      }
+
       const { data, error } = await supabase
         .from('partners')
         .insert({
-          ...newPartner,
+          company_name: newPartner.company_name,
+          business_type: newPartner.business_type,
+          country_code: newPartner.country_code,
+          contact_email: newPartner.contact_email,
+          contact_phone: newPartner.contact_phone || null,
+          api_tier: newPartner.api_tier,
+          user_id: user.id,
           status: 'pending'
         })
         .select()
