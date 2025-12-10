@@ -80,20 +80,32 @@ const Auth = () => {
     fetchCountries();
   }, []);
 
+  // Timeout protection for loading state
+  useEffect(() => {
+    const timeout = setTimeout(() => {
+      if (checking) {
+        console.warn("Session check timed out, showing login form");
+        setChecking(false);
+      }
+    }, 3000); // 3 second max wait
+    
+    return () => clearTimeout(timeout);
+  }, [checking]);
+
   useEffect(() => {
     // Check if user is already logged in
     const checkSession = async () => {
       try {
         const { data: { session }, error } = await supabase.auth.getSession();
         
-        // If there's an error or no session, clear any stale data and show login
+        // If there's an error or no session, just show login form
         if (error || !session) {
-          await supabase.auth.signOut();
           setChecking(false);
           return;
         }
         
-        // Verify the user actually exists by checking if we can get their data
+        // Valid session exists - redirect to dashboard
+        // Only verify user if we have a session (reduces unnecessary API calls)
         const { data: { user }, error: userError } = await supabase.auth.getUser();
         
         if (userError || !user) {
@@ -104,20 +116,16 @@ const Auth = () => {
           return;
         }
         
-        // Valid session and user exists - redirect to dashboard
         navigate("/dashboard", { replace: true });
       } catch (error) {
         console.error("Session check error:", error);
-        await supabase.auth.signOut();
         setChecking(false);
       }
     };
     checkSession();
 
     // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
-      console.log("Auth state changed:", event, session?.user?.id);
-      
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
       if (event === 'SIGNED_OUT') {
         setChecking(false);
       } else if (session && event === 'SIGNED_IN') {
