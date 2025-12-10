@@ -113,6 +113,72 @@ export type Database = {
         }
         Relationships: []
       }
+      analytics_daily_summary: {
+        Row: {
+          active_users: number | null
+          country_breakdown: Json | null
+          created_at: string | null
+          date: string
+          id: string
+          marketplace_orders_count: number | null
+          marketplace_volume: number | null
+          new_users: number | null
+          p2p_orders_count: number | null
+          p2p_volume: Json | null
+          revenue_marketplace: number | null
+          revenue_p2p: number | null
+          revenue_withdrawal: number | null
+          staking_new_positions: number | null
+          staking_total_value: Json | null
+          token_breakdown: Json | null
+          total_transactions: number | null
+          total_users: number | null
+          transaction_volume: Json | null
+        }
+        Insert: {
+          active_users?: number | null
+          country_breakdown?: Json | null
+          created_at?: string | null
+          date: string
+          id?: string
+          marketplace_orders_count?: number | null
+          marketplace_volume?: number | null
+          new_users?: number | null
+          p2p_orders_count?: number | null
+          p2p_volume?: Json | null
+          revenue_marketplace?: number | null
+          revenue_p2p?: number | null
+          revenue_withdrawal?: number | null
+          staking_new_positions?: number | null
+          staking_total_value?: Json | null
+          token_breakdown?: Json | null
+          total_transactions?: number | null
+          total_users?: number | null
+          transaction_volume?: Json | null
+        }
+        Update: {
+          active_users?: number | null
+          country_breakdown?: Json | null
+          created_at?: string | null
+          date?: string
+          id?: string
+          marketplace_orders_count?: number | null
+          marketplace_volume?: number | null
+          new_users?: number | null
+          p2p_orders_count?: number | null
+          p2p_volume?: Json | null
+          revenue_marketplace?: number | null
+          revenue_p2p?: number | null
+          revenue_withdrawal?: number | null
+          staking_new_positions?: number | null
+          staking_total_value?: Json | null
+          token_breakdown?: Json | null
+          total_transactions?: number | null
+          total_users?: number | null
+          transaction_volume?: Json | null
+        }
+        Relationships: []
+      }
       api_usage_logs: {
         Row: {
           api_key_id: string | null
