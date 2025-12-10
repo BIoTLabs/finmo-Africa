@@ -211,7 +211,7 @@ const AdminKYC = () => {
         .update({
           status: 'approved',
           verified_at: new Date().toISOString(),
-          kyc_tier: tier,
+          kyc_tier: tier as "tier_0" | "tier_1" | "tier_2" | "tier_3",
           admin_notes: adminNotes || null,
           reviewer_checklist: checklist,
         })
@@ -223,7 +223,7 @@ const AdminKYC = () => {
       const { error: profileError } = await supabase
         .from('profiles')
         .update({
-          kyc_tier: tier,
+          kyc_tier: tier as "tier_0" | "tier_1" | "tier_2" | "tier_3",
           kyc_tier_upgraded_at: new Date().toISOString(),
         })
         .eq('id', verification.user_id);
