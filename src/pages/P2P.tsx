@@ -11,6 +11,9 @@ import { ArrowLeft, TrendingUp, TrendingDown, Filter, ChevronDown, Info, Shield,
 import { useNavigate } from "react-router-dom";
 import MobileNav from "@/components/MobileNav";
 
+// Curated tokens for P2P trading (stablecoins + gold)
+const P2P_TOKENS = ['USDC', 'USDT', 'XAUT'] as const;
+
 interface P2PListing {
   id: string;
   listing_type: "buy" | "sell";
@@ -145,9 +148,10 @@ const P2P = () => {
         </div>
 
         <Tabs value={selectedToken} onValueChange={setSelectedToken}>
-          <TabsList className="grid w-full grid-cols-2">
-            <TabsTrigger value="USDC">USDC</TabsTrigger>
-            <TabsTrigger value="USDT">USDT</TabsTrigger>
+          <TabsList className={`grid w-full grid-cols-${P2P_TOKENS.length}`}>
+            {P2P_TOKENS.map((token) => (
+              <TabsTrigger key={token} value={token}>{token}</TabsTrigger>
+            ))}
           </TabsList>
         </Tabs>
 
