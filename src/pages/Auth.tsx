@@ -14,8 +14,8 @@ import { usePhoneValidation } from "@/hooks/usePhoneValidation";
 import { NetworkAccessDialog } from "@/components/NetworkAccessDialog";
 import { extractOTPError, getOTPErrorMessage } from "@/utils/errorMessages";
 
-// African country codes
-const COUNTRY_CODES = [
+// Fallback country codes (used while loading from database)
+const FALLBACK_COUNTRY_CODES = [
   { code: "+234", country: "Nigeria", flag: "🇳🇬" },
   { code: "+254", country: "Kenya", flag: "🇰🇪" },
   { code: "+27", country: "South Africa", flag: "🇿🇦" },
@@ -23,6 +23,12 @@ const COUNTRY_CODES = [
   { code: "+256", country: "Uganda", flag: "🇺🇬" },
   { code: "+255", country: "Tanzania", flag: "🇹🇿" },
 ];
+
+interface CountryCode {
+  code: string;
+  country: string;
+  flag: string;
+}
 
 const Auth = () => {
   const navigate = useNavigate();
@@ -35,7 +41,44 @@ const Auth = () => {
   const [loading, setLoading] = useState(false);
   const [checking, setChecking] = useState(true);
   const [showInfo, setShowInfo] = useState(false);
+  const [countryCodes, setCountryCodes] = useState<CountryCode[]>(FALLBACK_COUNTRY_CODES);
   const phoneValidation = usePhoneValidation(countryCode, phoneNumber);
+
+  // Fetch enabled countries from database
+  useEffect(() => {
+    const fetchCountries = async () => {
+      try {
+        const { data, error } = await supabase
+          .from('supported_countries')
+          .select('country_code, country_name, flag_emoji, sort_order')
+          .eq('is_enabled', true)
+          .order('sort_order', { ascending: true });
+
+        if (error) {
+          console.error('Error fetching countries:', error);
+          return;
+        }
+
+        if (data && data.length > 0) {
+          const formattedCountries = data.map(c => ({
+            code: c.country_code,
+            country: c.country_name,
+            flag: c.flag_emoji
+          }));
+          setCountryCodes(formattedCountries);
+          
+          // Set default to first enabled country if current selection is not available
+          if (!formattedCountries.some(c => c.code === countryCode)) {
+            setCountryCode(formattedCountries[0].code);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching countries:', error);
+      }
+    };
+
+    fetchCountries();
+  }, []);
 
   useEffect(() => {
     // Check if user is already logged in
@@ -274,7 +317,7 @@ const Auth = () => {
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
-                      {COUNTRY_CODES.map((c) => (
+                      {countryCodes.map((c) => (
                         <SelectItem key={c.code} value={c.code}>
                           {c.flag} {c.code}
                         </SelectItem>

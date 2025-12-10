@@ -2630,30 +2630,60 @@ export type Database = {
       supported_countries: {
         Row: {
           country_code: string
+          country_iso: string | null
           country_name: string
           created_at: string | null
           currency_code: string
           currency_symbol: string
+          flag_emoji: string | null
           id: string
           is_active: boolean | null
+          is_beta: boolean | null
+          is_enabled: boolean | null
+          phone_digits: number | null
+          phone_example: string | null
+          phone_format: string | null
+          region: string | null
+          sort_order: number | null
+          updated_at: string | null
         }
         Insert: {
           country_code: string
+          country_iso?: string | null
           country_name: string
           created_at?: string | null
           currency_code: string
           currency_symbol: string
+          flag_emoji?: string | null
           id?: string
           is_active?: boolean | null
+          is_beta?: boolean | null
+          is_enabled?: boolean | null
+          phone_digits?: number | null
+          phone_example?: string | null
+          phone_format?: string | null
+          region?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
         }
         Update: {
           country_code?: string
+          country_iso?: string | null
           country_name?: string
           created_at?: string | null
           currency_code?: string
           currency_symbol?: string
+          flag_emoji?: string | null
           id?: string
           is_active?: boolean | null
+          is_beta?: boolean | null
+          is_enabled?: boolean | null
+          phone_digits?: number | null
+          phone_example?: string | null
+          phone_format?: string | null
+          region?: string | null
+          sort_order?: number | null
+          updated_at?: string | null
         }
         Relationships: []
       }

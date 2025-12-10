@@ -7,7 +7,9 @@ export interface PhoneRule {
   example: string; // Example phone number
 }
 
+// All 16 supported African countries - dynamic loading from DB for auth, static fallback for validation
 export const COUNTRY_PHONE_RULES: Record<string, PhoneRule> = {
+  // Existing enabled countries
   "+234": {
     country: "Nigeria",
     flag: "🇳🇬",
@@ -49,6 +51,77 @@ export const COUNTRY_PHONE_RULES: Record<string, PhoneRule> = {
     digits: 9,
     format: "+255 XXX XXX XXX",
     example: "+255 712 345 678"
+  },
+  // New countries (admin must enable)
+  "+20": {
+    country: "Egypt",
+    flag: "🇪🇬",
+    digits: 10,
+    format: "+20 XXX XXX XXXX",
+    example: "+20 100 123 4567"
+  },
+  "+212": {
+    country: "Morocco",
+    flag: "🇲🇦",
+    digits: 9,
+    format: "+212 XXX XXX XXX",
+    example: "+212 612 345 678"
+  },
+  "+237": {
+    country: "Cameroon",
+    flag: "🇨🇲",
+    digits: 9,
+    format: "+237 XXX XXX XXX",
+    example: "+237 670 123 456"
+  },
+  "+225": {
+    country: "Côte d'Ivoire",
+    flag: "🇨🇮",
+    digits: 10,
+    format: "+225 XX XX XXX XXX",
+    example: "+225 07 12 345 678"
+  },
+  "+221": {
+    country: "Senegal",
+    flag: "🇸🇳",
+    digits: 9,
+    format: "+221 XX XXX XXXX",
+    example: "+221 77 123 4567"
+  },
+  "+250": {
+    country: "Rwanda",
+    flag: "🇷🇼",
+    digits: 9,
+    format: "+250 XXX XXX XXX",
+    example: "+250 788 123 456"
+  },
+  "+251": {
+    country: "Ethiopia",
+    flag: "🇪🇹",
+    digits: 9,
+    format: "+251 XXX XXX XXX",
+    example: "+251 911 234 567"
+  },
+  "+263": {
+    country: "Zimbabwe",
+    flag: "🇿🇼",
+    digits: 9,
+    format: "+263 XX XXX XXXX",
+    example: "+263 77 123 4567"
+  },
+  "+267": {
+    country: "Botswana",
+    flag: "🇧🇼",
+    digits: 8,
+    format: "+267 XX XXX XXX",
+    example: "+267 71 234 567"
+  },
+  "+260": {
+    country: "Zambia",
+    flag: "🇿🇲",
+    digits: 9,
+    format: "+260 XXX XXX XXX",
+    example: "+260 977 123 456"
   }
 };
 

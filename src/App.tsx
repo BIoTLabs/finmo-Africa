@@ -58,6 +58,7 @@ import AdminAuditLogs from "./pages/AdminAuditLogs";
 import AdminPartnerManagement from "./pages/AdminPartnerManagement";
 import AdminRevenue from "./pages/AdminRevenue";
 import AdminStakingReserves from "./pages/AdminStakingReserves";
+import AdminCountries from "./pages/AdminCountries";
 import ApiDocs from "./pages/ApiDocs";
 import PartnerPricing from "./pages/PartnerPricing";
 import PartnerDashboard from "./pages/PartnerDashboard";
@@ -125,6 +126,7 @@ const App = () => {
             <Route path="/admin/partners" element={<ProtectedRoute><AdminPartnerManagement /></ProtectedRoute>} />
             <Route path="/admin/revenue" element={<ProtectedRoute><AdminRevenue /></ProtectedRoute>} />
             <Route path="/admin/staking-reserves" element={<ProtectedRoute><AdminStakingReserves /></ProtectedRoute>} />
+            <Route path="/admin/countries" element={<ProtectedRoute><AdminCountries /></ProtectedRoute>} />
             <Route path="/api-docs" element={<ApiDocs />} />
             <Route path="/partner/register" element={<PartnerRegister />} />
             <Route path="/partner/pricing" element={<PartnerPricing />} />
