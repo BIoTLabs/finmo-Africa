@@ -137,17 +137,40 @@ async function authenticatePartner(req: Request, supabase: any) {
   };
 }
 
-function encryptPrivateKey(privateKey: string, encryptionKey: string): string {
+async function encryptPrivateKey(privateKey: string, encryptionKey: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(privateKey);
-  const key = encoder.encode(encryptionKey.slice(0, 32));
   
-  const encrypted = new Uint8Array(data.length);
-  for (let i = 0; i < data.length; i++) {
-    encrypted[i] = data[i] ^ key[i % key.length];
-  }
+  // Derive a proper 256-bit key from the encryption key using SHA-256
+  const keyMaterial = await crypto.subtle.digest(
+    'SHA-256',
+    encoder.encode(encryptionKey)
+  );
   
-  return btoa(String.fromCharCode(...encrypted));
+  const cryptoKey = await crypto.subtle.importKey(
+    'raw',
+    keyMaterial,
+    { name: 'AES-GCM' },
+    false,
+    ['encrypt']
+  );
+  
+  // Generate a random 12-byte IV for AES-GCM
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  
+  // Encrypt the private key using AES-256-GCM
+  const encryptedData = await crypto.subtle.encrypt(
+    { name: 'AES-GCM', iv },
+    cryptoKey,
+    data
+  );
+  
+  // Combine IV + encrypted data and encode as base64
+  const combined = new Uint8Array(iv.length + encryptedData.byteLength);
+  combined.set(iv, 0);
+  combined.set(new Uint8Array(encryptedData), iv.length);
+  
+  return btoa(String.fromCharCode(...combined));
 }
 
 async function createWallet(req: Request, supabase: any, partnerId: string, encryptionKey: string) {
@@ -178,7 +201,7 @@ async function createWallet(req: Request, supabase: any, partnerId: string, encr
 
   // Generate new wallet
   const wallet = ethers.Wallet.createRandom();
-  const encryptedKey = encryptPrivateKey(wallet.privateKey, encryptionKey);
+  const encryptedKey = await encryptPrivateKey(wallet.privateKey, encryptionKey);
 
   // Create wallet record
   const { data: newWallet, error } = await supabase
