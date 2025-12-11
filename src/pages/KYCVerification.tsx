@@ -42,6 +42,16 @@ const ID_TYPES: Record<string, { value: string; label: string }[]> = {
     { value: 'voters_id', label: "Voter's ID" },
     { value: 'drivers_license', label: "Driver's License" },
   ],
+  UG: [
+    { value: 'national_id', label: 'National ID' },
+    { value: 'passport', label: 'Passport' },
+    { value: 'drivers_license', label: "Driver's License" },
+  ],
+  TZ: [
+    { value: 'nida_id', label: 'NIDA National ID' },
+    { value: 'passport', label: 'Passport' },
+    { value: 'voters_id', label: "Voter's ID" },
+  ],
   DEFAULT: [
     { value: 'passport', label: 'Passport' },
     { value: 'national_id', label: 'National ID' },
@@ -54,6 +64,8 @@ const TAX_ID_LABELS: Record<string, string> = {
   ZA: 'Tax Number',
   KE: 'KRA PIN',
   GH: 'TIN (Tax Identification Number)',
+  UG: 'TIN (Tax Identification Number)',
+  TZ: 'TIN (Tax Identification Number)',
   DEFAULT: 'Tax ID',
 };
 
@@ -117,18 +129,18 @@ export default function KYCVerification() {
 
       if (profile?.phone_number) {
         // Extract country from phone number
-        if (profile.phone_number.startsWith('+234')) setUserCountry('NG');
-        else if (profile.phone_number.startsWith('+27')) setUserCountry('ZA');
-        else if (profile.phone_number.startsWith('+254')) setUserCountry('KE');
-        else if (profile.phone_number.startsWith('+233')) setUserCountry('GH');
-        else setUserCountry('DEFAULT');
+        let countryCode = 'DEFAULT';
+        if (profile.phone_number.startsWith('+234')) countryCode = 'NG';
+        else if (profile.phone_number.startsWith('+27')) countryCode = 'ZA';
+        else if (profile.phone_number.startsWith('+254')) countryCode = 'KE';
+        else if (profile.phone_number.startsWith('+233')) countryCode = 'GH';
+        else if (profile.phone_number.startsWith('+256')) countryCode = 'UG';
+        else if (profile.phone_number.startsWith('+255')) countryCode = 'TZ';
 
+        setUserCountry(countryCode);
         setFormData(prev => ({
           ...prev,
-          country_code: profile.phone_number.startsWith('+234') ? 'NG' :
-                        profile.phone_number.startsWith('+27') ? 'ZA' :
-                        profile.phone_number.startsWith('+254') ? 'KE' :
-                        profile.phone_number.startsWith('+233') ? 'GH' : '',
+          country_code: countryCode !== 'DEFAULT' ? countryCode : '',
         }));
       }
     } catch (error) {
@@ -172,24 +184,40 @@ export default function KYCVerification() {
     return TAX_ID_LABELS[formData.country_code] || TAX_ID_LABELS.DEFAULT;
   }, [formData.country_code]);
 
-  const uploadFile = async (file: File, folder: string) => {
+  const uploadFile = async (file: File, folder: string): Promise<string> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
 
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}/${folder}/${Date.now()}.${fileExt}`;
     
-    const { error: uploadError } = await supabase.storage
+    // Create upload with timeout
+    const uploadPromise = supabase.storage
       .from('kyc-documents')
       .upload(fileName, file);
 
-    if (uploadError) throw uploadError;
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error('Upload timed out. Please check your connection and try again.')), 30000);
+    });
 
-    const { data: { publicUrl } } = supabase.storage
+    const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
+
+    if (uploadError) {
+      console.error('Upload error:', uploadError);
+      throw new Error(`Failed to upload ${folder.replace(/-/g, ' ')}: ${uploadError.message}`);
+    }
+
+    // Generate signed URL for private bucket access
+    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
       .from('kyc-documents')
-      .getPublicUrl(fileName);
+      .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
 
-    return publicUrl;
+    if (signedUrlError || !signedUrlData?.signedUrl) {
+      // Fallback to path-based URL if signed URL fails
+      return `kyc-documents/${fileName}`;
+    }
+
+    return signedUrlData.signedUrl;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -552,6 +580,8 @@ export default function KYCVerification() {
                       <SelectItem value="ZA">🇿🇦 South Africa</SelectItem>
                       <SelectItem value="KE">🇰🇪 Kenya</SelectItem>
                       <SelectItem value="GH">🇬🇭 Ghana</SelectItem>
+                      <SelectItem value="UG">🇺🇬 Uganda</SelectItem>
+                      <SelectItem value="TZ">🇹🇿 Tanzania</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
