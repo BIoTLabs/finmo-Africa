@@ -158,7 +158,7 @@ const ApiDocs = () => {
 
   const codeExamples = {
     createWallet: {
-      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-wallets \\
+      curl: `curl -X POST https://api.myfinmo.app/v1/partner-wallets \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -201,7 +201,7 @@ $wallet = $client->wallets->create([
 echo "Wallet created: " . $wallet->address;`
     },
     cryptoPayout: {
-      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-payouts/crypto \\
+      curl: `curl -X POST https://api.myfinmo.app/v1/partner-payouts/crypto \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -243,7 +243,7 @@ $payout = $client->payouts->crypto([
 echo "Payout ID: " . $payout->id;`
     },
     mobileMoneyPayout: {
-      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-payouts/mobile-money \\
+      curl: `curl -X POST https://api.myfinmo.app/v1/partner-payouts/mobile-money \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -282,7 +282,7 @@ $payout = $client->payouts->mobileMoney([
 ]);`
     },
     paymentLink: {
-      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-payins/payment-link \\
+      curl: `curl -X POST https://api.myfinmo.app/v1/partner-payins/payment-link \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -321,7 +321,7 @@ $paymentLink = $client->payins->createPaymentLink([
 ]);`
     },
     webhook: {
-      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-webhooks \\
+      curl: `curl -X POST https://api.myfinmo.app/v1/partner-webhooks \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -388,7 +388,7 @@ if (!$isValid) {
 }`
     },
     escrow: {
-      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-escrow \\
+      curl: `curl -X POST https://api.myfinmo.app/v1/partner-escrow \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -443,7 +443,7 @@ $client->escrow->fund($escrow->id);
 $client->escrow->release($escrow->id);`
     },
     virtualCard: {
-      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-cards \\
+      curl: `curl -X POST https://api.myfinmo.app/v1/partner-cards \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -490,7 +490,7 @@ $card = $client->cards->issue([
 ]);`
     },
     kyc: {
-      curl: `curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-kyc \\
+      curl: `curl -X POST https://api.myfinmo.app/v1/partner-kyc \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -545,7 +545,7 @@ $kyc = $client->kyc->initiate([
     },
     quoteLocking: {
       curl: `# Lock a quote for 30 seconds
-curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-fx-rates/quote \\
+curl -X POST https://api.myfinmo.app/v1/partner-fx-rates/quote \\
   -H "Content-Type: application/json" \\
   -H "x-api-key: YOUR_API_KEY" \\
   -d '{
@@ -556,7 +556,7 @@ curl -X POST https://khqsseqrmanpcbeyvkdp.supabase.co/functions/v1/partner-fx-ra
   }'
 
 # Use the quote in a transfer
-curl -X POST .../partner-transfers \\
+curl -X POST https://api.myfinmo.app/v1/partner-transfers \\
   -d '{ "quote_id": "quote_uuid", ... }'`,
       javascript: `// Lock a quote for guaranteed rate
 const quote = await finmo.fx.lockQuote({
