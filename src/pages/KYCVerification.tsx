@@ -241,9 +241,14 @@ export default function KYCVerification() {
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}/${folder}/${Date.now()}.${fileExt}`;
     
-    // Upload with 30s timeout
+    // Convert Supabase PromiseLike to real Promise with .then() and add timeout
+    const uploadPromise = supabase.storage
+      .from('kyc-documents')
+      .upload(fileName, file)
+      .then(result => result);
+    
     const { error: uploadError } = await withTimeout(
-      supabase.storage.from('kyc-documents').upload(fileName, file),
+      uploadPromise,
       30000,
       'Upload timed out. Please check your connection and try again.'
     );
@@ -253,9 +258,14 @@ export default function KYCVerification() {
       throw new Error(`Failed to upload ${folder.replace(/-/g, ' ')}: ${uploadError.message}`);
     }
 
-    // Generate signed URL with 10s timeout
+    // Convert Supabase PromiseLike to real Promise with .then() and add timeout
+    const signedUrlPromise = supabase.storage
+      .from('kyc-documents')
+      .createSignedUrl(fileName, 60 * 60 * 24 * 365)
+      .then(result => result);
+
     const { data: signedUrlData, error: signedUrlError } = await withTimeout(
-      supabase.storage.from('kyc-documents').createSignedUrl(fileName, 60 * 60 * 24 * 365),
+      signedUrlPromise,
       10000,
       'Failed to generate document URL. Please try again.'
     );
