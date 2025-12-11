@@ -1,12 +1,18 @@
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 
 export const useSessionManager = () => {
+  const mountedRef = useRef(true);
+
   useEffect(() => {
+    mountedRef.current = true;
+    
     const registerSession = async () => {
+      if (!mountedRef.current) return;
+      
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session || !mountedRef.current) return;
 
       const deviceInfo = {
         userAgent: navigator.userAgent,
@@ -36,23 +42,30 @@ export const useSessionManager = () => {
 
     // Listen for auth state changes
     const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (!mountedRef.current) return;
+      
       if (event === 'SIGNED_IN' && session) {
         await registerSession();
       } else if (event === 'TOKEN_REFRESHED' && session) {
+        if (!mountedRef.current) return;
         // Update last active time
         await supabase
           .from('user_sessions')
           .update({ last_active: new Date().toISOString() })
           .eq('user_id', session.user.id);
       } else if (event === 'SIGNED_OUT') {
-        toast.info("You've been signed out");
+        if (mountedRef.current) {
+          toast.info("You've been signed out");
+        }
       }
     });
 
     // Periodic session check (every 60 seconds - less aggressive)
     const intervalId = setInterval(async () => {
+      if (!mountedRef.current) return;
+      
       const { data: { session } } = await supabase.auth.getSession();
-      if (!session) return;
+      if (!session || !mountedRef.current) return;
 
       // Check if our session is still the active one
       const { data: activeSession } = await supabase
@@ -60,6 +73,8 @@ export const useSessionManager = () => {
         .select('session_id')
         .eq('user_id', session.user.id)
         .maybeSingle();
+
+      if (!mountedRef.current) return;
 
       if (activeSession && activeSession.session_id !== session.access_token) {
         // Another device has logged in, sign out this session
@@ -75,6 +90,7 @@ export const useSessionManager = () => {
     }, 60000); // Check every 60 seconds
 
     return () => {
+      mountedRef.current = false;
       subscription.unsubscribe();
       clearInterval(intervalId);
     };
