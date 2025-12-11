@@ -184,6 +184,16 @@ export default function KYCVerification() {
     return TAX_ID_LABELS[formData.country_code] || TAX_ID_LABELS.DEFAULT;
   }, [formData.country_code]);
 
+  // Utility function to wrap promises with timeout
+  const withTimeout = <T,>(promise: Promise<T>, ms: number, errorMessage: string): Promise<T> => {
+    return Promise.race([
+      promise,
+      new Promise<never>((_, reject) => 
+        setTimeout(() => reject(new Error(errorMessage)), ms)
+      )
+    ]);
+  };
+
   const uploadFile = async (file: File, folder: string): Promise<string> => {
     const { data: { user } } = await supabase.auth.getUser();
     if (!user) throw new Error("Not authenticated");
@@ -191,26 +201,24 @@ export default function KYCVerification() {
     const fileExt = file.name.split('.').pop();
     const fileName = `${user.id}/${folder}/${Date.now()}.${fileExt}`;
     
-    // Create upload with timeout
-    const uploadPromise = supabase.storage
-      .from('kyc-documents')
-      .upload(fileName, file);
-
-    const timeoutPromise = new Promise<never>((_, reject) => {
-      setTimeout(() => reject(new Error('Upload timed out. Please check your connection and try again.')), 30000);
-    });
-
-    const { error: uploadError } = await Promise.race([uploadPromise, timeoutPromise]);
+    // Upload with 30s timeout
+    const { error: uploadError } = await withTimeout(
+      supabase.storage.from('kyc-documents').upload(fileName, file),
+      30000,
+      'Upload timed out. Please check your connection and try again.'
+    );
 
     if (uploadError) {
       console.error('Upload error:', uploadError);
       throw new Error(`Failed to upload ${folder.replace(/-/g, ' ')}: ${uploadError.message}`);
     }
 
-    // Generate signed URL for private bucket access
-    const { data: signedUrlData, error: signedUrlError } = await supabase.storage
-      .from('kyc-documents')
-      .createSignedUrl(fileName, 60 * 60 * 24 * 365); // 1 year expiry
+    // Generate signed URL with 10s timeout
+    const { data: signedUrlData, error: signedUrlError } = await withTimeout(
+      supabase.storage.from('kyc-documents').createSignedUrl(fileName, 60 * 60 * 24 * 365),
+      10000,
+      'Failed to generate document URL. Please try again.'
+    );
 
     if (signedUrlError || !signedUrlData?.signedUrl) {
       // Fallback to path-based URL if signed URL fails
@@ -277,18 +285,26 @@ export default function KYCVerification() {
         kyc_tier: 'tier_0',
       };
 
-      const { error } = await supabase
-        .from("kyc_verifications")
-        .insert(insertData);
+      // Database insert with 15s timeout
+      const insertPromise = async () => {
+        return await supabase.from("kyc_verifications").insert(insertData);
+      };
+      
+      const result = await withTimeout(
+        insertPromise(),
+        15000,
+        'Failed to save verification data. Please try again.'
+      );
 
-      if (error) throw error;
+      if (result.error) throw result.error;
 
       toast({
         title: "KYC Submitted",
         description: `Your ${getTierDisplayName(targetTier)} verification has been submitted for review.`,
       });
 
-      await trackActivity('kyc_completion');
+      // Non-blocking - don't await, let it run in background
+      trackActivity('kyc_completion').catch(console.error);
       checkKYCStatus();
     } catch (error: any) {
       toast({
