@@ -333,19 +333,21 @@ export default function KYCVerification() {
         kyc_tier: 'tier_0',
       };
 
-      // Wrap database insert with 15-second timeout
-      const insertPromise = Promise.resolve(supabase.from("kyc_verifications").insert(insertData));
+      console.log('Inserting KYC data:', insertData);
       
-      const result = await withTimeout(
-        insertPromise,
+      // Execute the insert query wrapped in async IIFE to get proper Promise
+      const { data: insertedData, error: insertError } = await withTimeout(
+        (async () => await supabase.from("kyc_verifications").insert(insertData).select())(),
         15000,
         'Database operation timed out. Please try again.'
-      );
+      ) as { data: any; error: any };
 
-      if (result.error) {
-        console.error('Insert error:', result.error);
-        throw new Error(result.error.message || 'Failed to save verification data');
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw new Error(insertError.message || 'Failed to save verification data');
       }
+      
+      console.log('KYC record created successfully:', insertedData);
 
       if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
 
