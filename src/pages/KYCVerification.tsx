@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -15,7 +15,7 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Upload, CheckCircle2, XCircle, Clock, ArrowLeft, ArrowRight,
   Shield, AlertTriangle, Camera, FileText, MapPin, Briefcase,
-  DollarSign, User, Info
+  DollarSign, User, Info, Loader2
 } from "lucide-react";
 import { useRewardTracking } from "@/hooks/useRewardTracking";
 import { useKYCTiers, useCountryKYCRequirements, useUserKYCTier, getTierDisplayName, getTierColor, type KYCTier, type CountryKYCRequirement } from "@/hooks/useKYCTiers";
@@ -82,6 +82,7 @@ const SOURCE_OF_FUNDS_OPTIONS = [
 
 export default function KYCVerification() {
   const [loading, setLoading] = useState(false);
+  const [loadingStep, setLoadingStep] = useState<string>("");
   const [kycStatus, setKycStatus] = useState<any>(null);
   const [currentStep, setCurrentStep] = useState(1);
   const [targetTier, setTargetTier] = useState<string>('tier_1');
@@ -104,6 +105,8 @@ export default function KYCVerification() {
   const [proofOfAddress, setProofOfAddress] = useState<File | null>(null);
   const [sourceOfFundsDoc, setSourceOfFundsDoc] = useState<File | null>(null);
   
+  const mountedRef = useRef(true);
+  
   const { toast } = useToast();
   const navigate = useNavigate();
   const { trackActivity } = useRewardTracking();
@@ -112,8 +115,13 @@ export default function KYCVerification() {
   const { userTier, limits, loading: userTierLoading } = useUserKYCTier();
 
   useEffect(() => {
+    mountedRef.current = true;
     checkKYCStatus();
     fetchUserCountry();
+    
+    return () => {
+      mountedRef.current = false;
+    };
   }, []);
 
   const fetchUserCountry = async () => {
@@ -230,11 +238,15 @@ export default function KYCVerification() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!mountedRef.current) return;
+    
     setLoading(true);
+    setLoadingStep("Validating...");
 
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
+      if (!mountedRef.current) return;
 
       if (!idDocument || !selfie) {
         throw new Error("Please upload both ID document and selfie");
@@ -259,16 +271,37 @@ export default function KYCVerification() {
         }
       }
 
+      // Upload files with progress
+      if (!mountedRef.current) return;
+      setLoadingStep("Uploading ID document...");
       const idDocumentUrl = await uploadFile(idDocument, 'id-documents');
+      
+      if (!mountedRef.current) return;
+      setLoadingStep("Uploading selfie...");
       const selfieUrl = await uploadFile(selfie, 'selfies');
-      const proofOfAddressUrl = proofOfAddress ? await uploadFile(proofOfAddress, 'proof-of-address') : null;
-      const sourceOfFundsDocUrl = sourceOfFundsDoc ? await uploadFile(sourceOfFundsDoc, 'source-of-funds') : null;
+      
+      let proofOfAddressUrl = null;
+      if (proofOfAddress) {
+        if (!mountedRef.current) return;
+        setLoadingStep("Uploading proof of address...");
+        proofOfAddressUrl = await uploadFile(proofOfAddress, 'proof-of-address');
+      }
+      
+      let sourceOfFundsDocUrl = null;
+      if (sourceOfFundsDoc) {
+        if (!mountedRef.current) return;
+        setLoadingStep("Uploading source of funds document...");
+        sourceOfFundsDocUrl = await uploadFile(sourceOfFundsDoc, 'source-of-funds');
+      }
+
+      if (!mountedRef.current) return;
+      setLoadingStep("Saving verification data...");
 
       const insertData: any = {
         user_id: user.id,
         full_name: formData.full_name,
         date_of_birth: formData.date_of_birth,
-        address: formData.address,
+        address: formData.address || '',
         country_code: formData.country_code,
         id_type: formData.id_type,
         id_number: formData.id_number,
@@ -285,18 +318,16 @@ export default function KYCVerification() {
         kyc_tier: 'tier_0',
       };
 
-      // Database insert with 15s timeout
-      const insertPromise = async () => {
-        return await supabase.from("kyc_verifications").insert(insertData);
-      };
-      
-      const result = await withTimeout(
-        insertPromise(),
-        15000,
-        'Failed to save verification data. Please try again.'
-      );
+      const { error: insertError } = await supabase
+        .from("kyc_verifications")
+        .insert(insertData);
 
-      if (result.error) throw result.error;
+      if (insertError) {
+        console.error('Insert error:', insertError);
+        throw new Error(insertError.message || 'Failed to save verification data');
+      }
+
+      if (!mountedRef.current) return;
 
       toast({
         title: "KYC Submitted",
@@ -307,13 +338,19 @@ export default function KYCVerification() {
       trackActivity('kyc_completion').catch(console.error);
       checkKYCStatus();
     } catch (error: any) {
-      toast({
-        title: "Error",
-        description: error.message,
-        variant: "destructive",
-      });
+      console.error('KYC submission error:', error);
+      if (mountedRef.current) {
+        toast({
+          title: "Submission Failed",
+          description: error.message || "An unexpected error occurred. Please try again.",
+          variant: "destructive",
+        });
+      }
     } finally {
-      setLoading(false);
+      if (mountedRef.current) {
+        setLoading(false);
+        setLoadingStep("");
+      }
     }
   };
 
@@ -843,8 +880,15 @@ export default function KYCVerification() {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={loading}>
-                  {loading ? "Submitting..." : "Submit for Verification"}
+                <Button type="submit" disabled={loading} className="min-w-[200px]">
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {loadingStep || "Submitting..."}
+                    </span>
+                  ) : (
+                    "Submit for Verification"
+                  )}
                 </Button>
               )}
             </div>

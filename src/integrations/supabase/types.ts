@@ -599,7 +599,7 @@ export type Database = {
       }
       kyc_verifications: {
         Row: {
-          address: string
+          address: string | null
           address_verification_status: string | null
           admin_notes: string | null
           country_code: string
@@ -639,7 +639,7 @@ export type Database = {
           verified_by: string | null
         }
         Insert: {
-          address: string
+          address?: string | null
           address_verification_status?: string | null
           admin_notes?: string | null
           country_code: string
@@ -679,7 +679,7 @@ export type Database = {
           verified_by?: string | null
         }
         Update: {
-          address?: string
+          address?: string | null
           address_verification_status?: string | null
           admin_notes?: string | null
           country_code?: string
