@@ -764,44 +764,54 @@ export default function KYCVerification() {
                 </div>
 
                 <div>
-                  <Label>ID Document (Front)</Label>
+                  <Label htmlFor="id-document-upload">ID Document (Front)</Label>
                   <div className="mt-2">
-                    <label className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors">
+                    <label 
+                      htmlFor="id-document-upload"
+                      className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors"
+                    >
                       <FileText className="h-8 w-8 text-muted-foreground" />
                       <span className="text-sm font-medium">
                         {idDocument ? idDocument.name : "Upload ID Document"}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        PNG, JPG or PDF up to 10MB
+                        Tap to take photo or choose file
                       </span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setIdDocument(e.target.files?.[0] || null)}
-                      />
                     </label>
+                    <input
+                      id="id-document-upload"
+                      type="file"
+                      className="sr-only"
+                      accept="image/*,.pdf"
+                      capture="environment"
+                      onChange={(e) => setIdDocument(e.target.files?.[0] || null)}
+                    />
                   </div>
                 </div>
 
                 <div>
-                  <Label>Selfie (holding ID next to face)</Label>
+                  <Label htmlFor="selfie-upload">Selfie (holding ID next to face)</Label>
                   <div className="mt-2">
-                    <label className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors">
+                    <label 
+                      htmlFor="selfie-upload"
+                      className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors"
+                    >
                       <Camera className="h-8 w-8 text-muted-foreground" />
                       <span className="text-sm font-medium">
-                        {selfie ? selfie.name : "Upload Selfie"}
+                        {selfie ? selfie.name : "Take Selfie"}
                       </span>
                       <span className="text-xs text-muted-foreground">
-                        Clear photo with your face and ID visible
+                        Tap to open camera
                       </span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*"
-                        onChange={(e) => setSelfie(e.target.files?.[0] || null)}
-                      />
                     </label>
+                    <input
+                      id="selfie-upload"
+                      type="file"
+                      className="sr-only"
+                      accept="image/*"
+                      capture="user"
+                      onChange={(e) => setSelfie(e.target.files?.[0] || null)}
+                    />
                   </div>
                 </div>
               </div>
@@ -832,18 +842,26 @@ export default function KYCVerification() {
                     Utility bill, bank statement, or government letter dated within 3 months
                   </p>
                   <div className="mt-2">
-                    <label className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors">
+                    <label 
+                      htmlFor="proof-address-upload"
+                      className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors"
+                    >
                       <MapPin className="h-8 w-8 text-muted-foreground" />
                       <span className="text-sm font-medium">
                         {proofOfAddress ? proofOfAddress.name : "Upload Proof of Address"}
                       </span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setProofOfAddress(e.target.files?.[0] || null)}
-                      />
+                      <span className="text-xs text-muted-foreground">
+                        Tap to take photo or choose file
+                      </span>
                     </label>
+                    <input
+                      id="proof-address-upload"
+                      type="file"
+                      className="sr-only"
+                      accept="image/*,.pdf"
+                      capture="environment"
+                      onChange={(e) => setProofOfAddress(e.target.files?.[0] || null)}
+                    />
                   </div>
                 </div>
 
@@ -926,18 +944,26 @@ export default function KYCVerification() {
                     Bank statement, pay slip, or business registration
                   </p>
                   <div className="mt-2">
-                    <label className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors">
+                    <label 
+                      htmlFor="source-funds-upload"
+                      className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors"
+                    >
                       <Briefcase className="h-8 w-8 text-muted-foreground" />
                       <span className="text-sm font-medium">
                         {sourceOfFundsDoc ? sourceOfFundsDoc.name : "Upload Document (Optional)"}
                       </span>
-                      <input
-                        type="file"
-                        className="hidden"
-                        accept="image/*,.pdf"
-                        onChange={(e) => setSourceOfFundsDoc(e.target.files?.[0] || null)}
-                      />
+                      <span className="text-xs text-muted-foreground">
+                        Tap to take photo or choose file
+                      </span>
                     </label>
+                    <input
+                      id="source-funds-upload"
+                      type="file"
+                      className="sr-only"
+                      accept="image/*,.pdf"
+                      capture="environment"
+                      onChange={(e) => setSourceOfFundsDoc(e.target.files?.[0] || null)}
+                    />
                   </div>
                 </div>
               </div>
