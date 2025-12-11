@@ -80,6 +80,36 @@ const SOURCE_OF_FUNDS_OPTIONS = [
   'Other',
 ];
 
+// Valid ID types that match the database constraint
+const VALID_ID_TYPES = [
+  'passport', 'national_id', 'drivers_license', 'voters_card',
+  'nin_slip', 'international_passport', 'bvn',
+  'sa_id_card', 'sa_id_book',
+  'ghana_card', 'voters_id',
+  'kenya_id', 'kra_pin',
+  'nida_id', 'uganda_id'
+];
+
+// Parse constraint violation errors for user-friendly messages
+const parseKYCError = (error: any): string => {
+  const message = error?.message || '';
+  
+  if (message.includes('kyc_verifications_id_type_check')) {
+    return 'Invalid ID type selected. Please select a valid document type for your country.';
+  }
+  if (message.includes('duplicate key')) {
+    return 'You already have a pending verification. Please wait for it to be reviewed.';
+  }
+  if (message.includes('violates check constraint')) {
+    return 'One of the submitted values is invalid. Please review your information.';
+  }
+  if (message.includes('timed out')) {
+    return 'The operation took too long. Please try again.';
+  }
+  
+  return message || 'An unexpected error occurred. Please try again.';
+};
+
 export default function KYCVerification() {
   const [loading, setLoading] = useState(false);
   const [loadingStep, setLoadingStep] = useState<string>("");
@@ -312,6 +342,11 @@ export default function KYCVerification() {
       if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
       setLoadingStep("Saving verification data...");
 
+      // Validate ID type before submission
+      if (!VALID_ID_TYPES.includes(formData.id_type)) {
+        throw new Error(`Invalid ID type "${formData.id_type}". Please select a valid document type for your country.`);
+      }
+
       const insertData: any = {
         user_id: user.id,
         full_name: formData.full_name,
@@ -388,9 +423,10 @@ export default function KYCVerification() {
       
       console.error('KYC submission error:', error);
       if (mountedRef.current) {
+        const userFriendlyMessage = parseKYCError(error);
         toast({
           title: "Submission Failed",
-          description: error.message || "An unexpected error occurred. Please try again.",
+          description: userFriendlyMessage,
           variant: "destructive",
         });
       }
