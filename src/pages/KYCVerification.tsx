@@ -333,21 +333,41 @@ export default function KYCVerification() {
         kyc_tier: 'tier_0',
       };
 
-      console.log('Inserting KYC data:', insertData);
+      console.log('Inserting KYC data:', JSON.stringify(insertData, null, 2));
       
-      // Execute the insert query wrapped in async IIFE to get proper Promise
-      const { data: insertedData, error: insertError } = await withTimeout(
-        (async () => await supabase.from("kyc_verifications").insert(insertData).select())(),
-        15000,
-        'Database operation timed out. Please try again.'
-      ) as { data: any; error: any };
+      // Execute database insert with timeout - convert PromiseLike to proper Promise
+      let insertResult: { data: any; error: any };
+      
+      try {
+        const timeoutPromise = new Promise<never>((_, reject) => {
+          setTimeout(() => reject(new Error('Database operation timed out. Please try again.')), 15000);
+        });
+        
+        // Use .then() to convert Supabase PromiseLike to a real Promise
+        const insertPromise = supabase
+          .from("kyc_verifications")
+          .insert(insertData)
+          .select()
+          .then(result => result);
+        
+        insertResult = await Promise.race([insertPromise, timeoutPromise]) as { data: any; error: any };
+      } catch (err: any) {
+        console.error('Database operation failed:', err);
+        throw err;
+      }
 
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        throw new Error(insertError.message || 'Failed to save verification data');
+      console.log('Database response:', JSON.stringify(insertResult, null, 2));
+
+      if (insertResult.error) {
+        console.error('Insert error:', insertResult.error);
+        throw new Error(insertResult.error.message || 'Failed to save verification data');
       }
       
-      console.log('KYC record created successfully:', insertedData);
+      if (!insertResult.data || insertResult.data.length === 0) {
+        throw new Error('Failed to create verification record - no data returned');
+      }
+      
+      console.log('KYC record created successfully:', insertResult.data[0]?.id);
 
       if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
 
