@@ -106,6 +106,7 @@ export default function KYCVerification() {
   const [sourceOfFundsDoc, setSourceOfFundsDoc] = useState<File | null>(null);
   
   const mountedRef = useRef(true);
+  const abortControllerRef = useRef<AbortController | null>(null);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -121,6 +122,7 @@ export default function KYCVerification() {
     
     return () => {
       mountedRef.current = false;
+      abortControllerRef.current?.abort();
     };
   }, []);
 
@@ -236,9 +238,22 @@ export default function KYCVerification() {
     return signedUrlData.signedUrl;
   };
 
+  const handleCancel = () => {
+    abortControllerRef.current?.abort();
+    setLoading(false);
+    setLoadingStep("");
+    toast({
+      title: "Submission Cancelled",
+      description: "KYC submission was cancelled.",
+    });
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mountedRef.current) return;
+    
+    // Create new abort controller for this submission
+    abortControllerRef.current = new AbortController();
     
     setLoading(true);
     setLoadingStep("Validating...");
@@ -246,7 +261,7 @@ export default function KYCVerification() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
 
       if (!idDocument || !selfie) {
         throw new Error("Please upload both ID document and selfie");
@@ -272,29 +287,29 @@ export default function KYCVerification() {
       }
 
       // Upload files with progress
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
       setLoadingStep("Uploading ID document...");
       const idDocumentUrl = await uploadFile(idDocument, 'id-documents');
       
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
       setLoadingStep("Uploading selfie...");
       const selfieUrl = await uploadFile(selfie, 'selfies');
       
       let proofOfAddressUrl = null;
       if (proofOfAddress) {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
         setLoadingStep("Uploading proof of address...");
         proofOfAddressUrl = await uploadFile(proofOfAddress, 'proof-of-address');
       }
       
       let sourceOfFundsDocUrl = null;
       if (sourceOfFundsDoc) {
-        if (!mountedRef.current) return;
+        if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
         setLoadingStep("Uploading source of funds document...");
         sourceOfFundsDocUrl = await uploadFile(sourceOfFundsDoc, 'source-of-funds');
       }
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
       setLoadingStep("Saving verification data...");
 
       const insertData: any = {
@@ -318,26 +333,37 @@ export default function KYCVerification() {
         kyc_tier: 'tier_0',
       };
 
-      const { error: insertError } = await supabase
-        .from("kyc_verifications")
-        .insert(insertData);
+      // Wrap database insert with 15-second timeout
+      const insertPromise = Promise.resolve(supabase.from("kyc_verifications").insert(insertData));
+      
+      const result = await withTimeout(
+        insertPromise,
+        15000,
+        'Database operation timed out. Please try again.'
+      );
 
-      if (insertError) {
-        console.error('Insert error:', insertError);
-        throw new Error(insertError.message || 'Failed to save verification data');
+      if (result.error) {
+        console.error('Insert error:', result.error);
+        throw new Error(result.error.message || 'Failed to save verification data');
       }
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
 
       toast({
         title: "KYC Submitted",
         description: `Your ${getTierDisplayName(targetTier)} verification has been submitted for review.`,
       });
 
-      // Non-blocking - don't await, let it run in background
-      trackActivity('kyc_completion').catch(console.error);
+      // Truly non-blocking - use setTimeout to ensure it doesn't block
+      setTimeout(() => {
+        trackActivity('kyc_completion').catch(console.error);
+      }, 0);
+      
       checkKYCStatus();
     } catch (error: any) {
+      // Ignore abort errors
+      if (error.name === 'AbortError') return;
+      
       console.error('KYC submission error:', error);
       if (mountedRef.current) {
         toast({
@@ -880,16 +906,23 @@ export default function KYCVerification() {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <Button type="submit" disabled={loading} className="min-w-[200px]">
-                  {loading ? (
-                    <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      {loadingStep || "Submitting..."}
-                    </span>
-                  ) : (
-                    "Submit for Verification"
+                <div className="flex gap-2">
+                  {loading && (
+                    <Button type="button" variant="outline" onClick={handleCancel}>
+                      Cancel
+                    </Button>
                   )}
-                </Button>
+                  <Button type="submit" disabled={loading} className="min-w-[200px]">
+                    {loading ? (
+                      <span className="flex items-center gap-2">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        {loadingStep || "Submitting..."}
+                      </span>
+                    ) : (
+                      "Submit for Verification"
+                    )}
+                  </Button>
+                </div>
               )}
             </div>
           </form>
