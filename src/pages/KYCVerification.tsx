@@ -234,12 +234,9 @@ export default function KYCVerification() {
     ]);
   };
 
-  const uploadFile = async (file: File, folder: string): Promise<string> => {
-    const { data: { user } } = await supabase.auth.getUser();
-    if (!user) throw new Error("Not authenticated");
-
+  const uploadFile = async (file: File, folder: string, userId: string): Promise<string> => {
     const fileExt = file.name.split('.').pop();
-    const fileName = `${user.id}/${folder}/${Date.now()}.${fileExt}`;
+    const fileName = `${userId}/${folder}/${Date.now()}.${fileExt}`;
     
     // Convert Supabase PromiseLike to real Promise with .then() and add timeout
     const uploadPromise = supabase.storage
@@ -299,7 +296,13 @@ export default function KYCVerification() {
     setLoadingStep("Validating...");
 
     try {
-      const { data: { user } } = await supabase.auth.getUser();
+      // Get user once with timeout to prevent endless loading on slow connections
+      const authResult = await withTimeout(
+        supabase.auth.getUser().then(result => result),
+        10000,
+        'Authentication timed out. Please check your connection and try again.'
+      );
+      const user = authResult.data?.user;
       if (!user) throw new Error("Not authenticated");
       if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
 
@@ -326,27 +329,27 @@ export default function KYCVerification() {
         }
       }
 
-      // Upload files with progress
+      // Upload files with progress - pass userId to avoid redundant auth calls
       if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
       setLoadingStep("Uploading ID document...");
-      const idDocumentUrl = await uploadFile(idDocument, 'id-documents');
+      const idDocumentUrl = await uploadFile(idDocument, 'id-documents', user.id);
       
       if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
       setLoadingStep("Uploading selfie...");
-      const selfieUrl = await uploadFile(selfie, 'selfies');
+      const selfieUrl = await uploadFile(selfie, 'selfies', user.id);
       
       let proofOfAddressUrl = null;
       if (proofOfAddress) {
         if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
         setLoadingStep("Uploading proof of address...");
-        proofOfAddressUrl = await uploadFile(proofOfAddress, 'proof-of-address');
+        proofOfAddressUrl = await uploadFile(proofOfAddress, 'proof-of-address', user.id);
       }
       
       let sourceOfFundsDocUrl = null;
       if (sourceOfFundsDoc) {
         if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
         setLoadingStep("Uploading source of funds document...");
-        sourceOfFundsDocUrl = await uploadFile(sourceOfFundsDoc, 'source-of-funds');
+        sourceOfFundsDocUrl = await uploadFile(sourceOfFundsDoc, 'source-of-funds', user.id);
       }
 
       if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
