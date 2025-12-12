@@ -1,4 +1,4 @@
-import { useState, useEffect, useMemo, useRef } from "react";
+import { useState, useEffect, useMemo, useRef, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -10,15 +10,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useToast } from "@/hooks/use-toast";
 import { 
   Upload, CheckCircle2, XCircle, Clock, ArrowLeft, ArrowRight,
   Shield, AlertTriangle, Camera, FileText, MapPin, Briefcase,
-  DollarSign, User, Info, Loader2
+  DollarSign, User, Info, Loader2, RefreshCw
 } from "lucide-react";
 import { useRewardTracking } from "@/hooks/useRewardTracking";
 import { useKYCTiers, useCountryKYCRequirements, useUserKYCTier, getTierDisplayName, getTierColor, type KYCTier, type CountryKYCRequirement } from "@/hooks/useKYCTiers";
+
+// Upload state interface for immediate file uploads
+interface UploadState {
+  status: 'idle' | 'compressing' | 'uploading' | 'complete' | 'error';
+  progress: number;
+  url: string | null;
+  error: string | null;
+  file: File | null;
+}
+
+const initialUploadState: UploadState = { 
+  status: 'idle', progress: 0, url: null, error: null, file: null 
+};
 
 const ID_TYPES: Record<string, { value: string; label: string }[]> = {
   NG: [
@@ -130,14 +142,14 @@ export default function KYCVerification() {
     occupation: "",
     employer_name: "",
   });
-  const [idDocument, setIdDocument] = useState<File | null>(null);
-  const [selfie, setSelfie] = useState<File | null>(null);
-  const [proofOfAddress, setProofOfAddress] = useState<File | null>(null);
-  const [sourceOfFundsDoc, setSourceOfFundsDoc] = useState<File | null>(null);
+  // Immediate upload states - files upload as soon as selected
+  const [idDocumentUpload, setIdDocumentUpload] = useState<UploadState>(initialUploadState);
+  const [selfieUpload, setSelfieUpload] = useState<UploadState>(initialUploadState);
+  const [proofOfAddressUpload, setProofOfAddressUpload] = useState<UploadState>(initialUploadState);
+  const [sourceOfFundsUpload, setSourceOfFundsUpload] = useState<UploadState>(initialUploadState);
   
   const mountedRef = useRef(true);
-  const loadingRef = useRef(false); // Use ref for master timeout to avoid stale closure
-  const abortControllerRef = useRef<AbortController | null>(null);
+  const userIdRef = useRef<string | null>(null);
   
   const { toast } = useToast();
   const navigate = useNavigate();
@@ -150,10 +162,13 @@ export default function KYCVerification() {
     mountedRef.current = true;
     checkKYCStatus();
     fetchUserCountry();
+    // Pre-fetch user ID for uploads
+    supabase.auth.getUser().then(({ data }) => {
+      userIdRef.current = data.user?.id || null;
+    });
     
     return () => {
       mountedRef.current = false;
-      abortControllerRef.current?.abort();
     };
   }, []);
 
@@ -357,71 +372,115 @@ export default function KYCVerification() {
     }
   };
 
-  const uploadFile = async (file: File, folder: string, userId: string): Promise<string> => {
-    // Compress image before upload (critical for mobile)
-    const compressedFile = await compressImage(file);
+  // Immediate file upload handler - called when user selects a file
+  const handleFileSelect = useCallback(async (
+    file: File, 
+    type: 'id' | 'selfie' | 'proofOfAddress' | 'sourceOfFunds',
+    setUploadState: React.Dispatch<React.SetStateAction<UploadState>>
+  ) => {
+    // Get user ID
+    let userId = userIdRef.current;
+    if (!userId) {
+      const { data } = await supabase.auth.getUser();
+      userId = data.user?.id || null;
+      userIdRef.current = userId;
+    }
     
-    const fileExt = compressedFile.type === 'image/jpeg' ? 'jpg' : file.name.split('.').pop();
-    const fileName = `${userId}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
-    
-    // No timeout - let the upload complete naturally
-    // Browser handles connection failures, server returns errors for real issues
-    const { error: uploadError } = await supabase.storage
-      .from('kyc-documents')
-      .upload(fileName, compressedFile);
-
-    if (uploadError) {
-      console.error('Upload error:', uploadError);
-      throw new Error(`Failed to upload ${folder.replace(/-/g, ' ')}: ${uploadError.message}`);
+    if (!userId) {
+      setUploadState({ status: 'error', progress: 0, url: null, error: 'Not authenticated', file });
+      return;
     }
 
-    // Skip signed URL generation - use path directly
-    // Admin can access via service role
-    return `kyc-documents/${fileName}`;
-  };
+    // Start compressing
+    setUploadState({ status: 'compressing', progress: 15, url: null, error: null, file });
 
-  const handleCancel = () => {
-    abortControllerRef.current?.abort();
-    setLoading(false);
-    setLoadingStep("");
-    toast({
-      title: "Submission Cancelled",
-      description: "KYC submission was cancelled.",
-    });
-  };
+    try {
+      // Compress the image
+      const compressed = await compressImage(file);
+      
+      if (!mountedRef.current) return;
+      
+      // Start uploading
+      setUploadState(prev => ({ ...prev, status: 'uploading', progress: 50 }));
+
+      // Upload to Supabase Storage
+      const fileExt = compressed.type === 'image/jpeg' ? 'jpg' : file.name.split('.').pop();
+      const folder = type === 'id' ? 'id-documents' : type === 'selfie' ? 'selfies' : type === 'proofOfAddress' ? 'proof-of-address' : 'source-of-funds';
+      const fileName = `${userId}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
+
+      const { error: uploadError } = await supabase.storage
+        .from('kyc-documents')
+        .upload(fileName, compressed);
+
+      if (!mountedRef.current) return;
+
+      if (uploadError) {
+        throw new Error(uploadError.message);
+      }
+
+      // Success!
+      const url = `kyc-documents/${fileName}`;
+      setUploadState({ status: 'complete', progress: 100, url, error: null, file });
+      
+    } catch (err: any) {
+      console.error(`Upload error for ${type}:`, err);
+      if (mountedRef.current) {
+        setUploadState({ 
+          status: 'error', 
+          progress: 0, 
+          url: null, 
+          error: err.message || 'Upload failed', 
+          file 
+        });
+      }
+    }
+  }, [compressImage]);
+
+  // Reset upload state for retry
+  const resetUpload = useCallback((setUploadState: React.Dispatch<React.SetStateAction<UploadState>>) => {
+    setUploadState(initialUploadState);
+  }, []);
+
+  // Check if all required uploads are complete
+  const canSubmit = useMemo(() => {
+    if (loading) return false;
+    
+    const idReady = idDocumentUpload.status === 'complete';
+    const selfieReady = selfieUpload.status === 'complete';
+    
+    // Tier 2+ requires proof of address
+    const proofReady = targetTier === 'tier_1' || proofOfAddressUpload.status === 'complete';
+    
+    return idReady && selfieReady && proofReady;
+  }, [idDocumentUpload, selfieUpload, proofOfAddressUpload, targetTier, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mountedRef.current) return;
     
-    // Create new abort controller for this submission
-    abortControllerRef.current = new AbortController();
-    
-    loadingRef.current = true;
-    setLoading(true);
-    setLoadingStep("Validating...");
+    // Verify all required uploads are complete (files already uploaded!)
+    if (idDocumentUpload.status !== 'complete') {
+      toast({ title: "Please wait", description: "ID document is still uploading", variant: "destructive" });
+      return;
+    }
+    if (selfieUpload.status !== 'complete') {
+      toast({ title: "Please wait", description: "Selfie is still uploading", variant: "destructive" });
+      return;
+    }
+    if ((targetTier === 'tier_2' || targetTier === 'tier_3') && proofOfAddressUpload.status !== 'complete') {
+      toast({ title: "Please wait", description: "Proof of address is still uploading", variant: "destructive" });
+      return;
+    }
 
-    // No master timeout - let operations complete naturally
-    // Users can cancel via the cancel button if needed
+    setLoading(true);
+    setLoadingStep("Saving verification...");
 
     try {
-      // Get user - no timeout, let it complete
-      const authResult = await supabase.auth.getUser();
-      const user = authResult.data?.user;
+      const { data: { user } } = await supabase.auth.getUser();
       if (!user) throw new Error("Not authenticated");
-      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) {
-        return;
-      }
-
-      if (!idDocument || !selfie) {
-        throw new Error("Please upload both ID document and selfie");
-      }
 
       // Validate based on tier requirements
       if (targetTier === 'tier_2' || targetTier === 'tier_3') {
-        if (!proofOfAddress) {
-          throw new Error("Proof of address is required for this verification tier");
-        }
         if (!formData.tax_id) {
           throw new Error(`${taxIdLabel} is required for this verification tier`);
         }
@@ -436,33 +495,12 @@ export default function KYCVerification() {
         }
       }
 
-      // Upload ALL documents in PARALLEL for fastest mobile experience
-      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) {
-        return;
-      }
-      
-      // Count total documents to upload for progress feedback
-      const totalDocs = 2 + (proofOfAddress ? 1 : 0) + (sourceOfFundsDoc ? 1 : 0);
-      setLoadingStep(`Uploading ${totalDocs} documents... Please wait.`);
-      
-      // Upload ALL files in parallel - dramatically reduces total time
-      const uploadPromises: Promise<string | null>[] = [
-        uploadFile(idDocument, 'id-documents', user.id),
-        uploadFile(selfie, 'selfies', user.id),
-        proofOfAddress ? uploadFile(proofOfAddress, 'proof-of-address', user.id) : Promise.resolve(null),
-        sourceOfFundsDoc ? uploadFile(sourceOfFundsDoc, 'source-of-funds', user.id) : Promise.resolve(null),
-      ];
-      
-      const [idDocumentUrl, selfieUrl, proofOfAddressUrl, sourceOfFundsDocUrl] = await Promise.all(uploadPromises);
-
-      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
-      setLoadingStep("Saving verification data...");
-
       // Validate ID type before submission
       if (!VALID_ID_TYPES.includes(formData.id_type)) {
         throw new Error(`Invalid ID type "${formData.id_type}". Please select a valid document type for your country.`);
       }
 
+      // Just do the database insert - files already uploaded!
       const insertData: any = {
         user_id: user.id,
         full_name: formData.full_name,
@@ -471,13 +509,13 @@ export default function KYCVerification() {
         country_code: formData.country_code,
         id_type: formData.id_type,
         id_number: formData.id_number,
-        id_document_url: idDocumentUrl,
-        selfie_url: selfieUrl,
-        proof_of_address_url: proofOfAddressUrl,
+        id_document_url: idDocumentUpload.url,
+        selfie_url: selfieUpload.url,
+        proof_of_address_url: proofOfAddressUpload.url,
         tax_id: formData.tax_id || null,
         tax_id_type: formData.tax_id ? taxIdLabel : null,
         source_of_funds: formData.source_of_funds || null,
-        source_of_funds_documents: sourceOfFundsDocUrl ? [sourceOfFundsDocUrl] : null,
+        source_of_funds_documents: sourceOfFundsUpload.url ? [sourceOfFundsUpload.url] : null,
         occupation: formData.occupation || null,
         employer_name: formData.employer_name || null,
         verification_level: targetTier,
@@ -486,57 +524,37 @@ export default function KYCVerification() {
 
       console.log('Inserting KYC data:', JSON.stringify(insertData, null, 2));
       
-      // Execute database insert - no timeout, let it complete
-      const insertResult = await supabase
+      const { error } = await supabase
         .from("kyc_verifications")
         .insert(insertData)
         .select();
 
-      console.log('Database response:', JSON.stringify(insertResult, null, 2));
-
-      if (insertResult.error) {
-        console.error('Insert error:', insertResult.error);
-        throw new Error(insertResult.error.message || 'Failed to save verification data');
+      if (error) {
+        console.error('Insert error:', error);
+        throw new Error(error.message || 'Failed to save verification data');
       }
-      
-      if (!insertResult.data || insertResult.data.length === 0) {
-        throw new Error('Failed to create verification record - no data returned');
-      }
-      
-      console.log('KYC record created successfully:', insertResult.data[0]?.id);
-
-      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
 
       toast({
         title: "KYC Submitted",
         description: `Your ${getTierDisplayName(targetTier)} verification has been submitted for review.`,
       });
 
-      // Truly non-blocking - use setTimeout to ensure it doesn't block
+      // Non-blocking tracking
       setTimeout(() => {
         trackActivity('kyc_completion').catch(console.error);
       }, 0);
       
       checkKYCStatus();
     } catch (error: any) {
-      // Ignore abort errors
-      if (error.name === 'AbortError') return;
-      
       console.error('KYC submission error:', error);
-      if (mountedRef.current) {
-        const userFriendlyMessage = parseKYCError(error);
-        toast({
-          title: "Submission Failed",
-          description: userFriendlyMessage,
-          variant: "destructive",
-        });
-      }
+      toast({
+        title: "Submission Failed",
+        description: parseKYCError(error),
+        variant: "destructive",
+      });
     } finally {
-      loadingRef.current = false;
-      if (mountedRef.current) {
-        setLoading(false);
-        setLoadingStep("");
-      }
+      setLoading(false);
+      setLoadingStep("");
     }
   };
 
@@ -562,12 +580,73 @@ export default function KYCVerification() {
       return formData.full_name && formData.date_of_birth && formData.country_code;
     }
     if (currentStep === 2) {
-      return formData.id_type && formData.id_number && idDocument && selfie;
+      // Can proceed if uploads are complete or in progress
+      const idOk = ['uploading', 'compressing', 'complete'].includes(idDocumentUpload.status);
+      const selfieOk = ['uploading', 'compressing', 'complete'].includes(selfieUpload.status);
+      return formData.id_type && formData.id_number && idOk && selfieOk;
     }
     if (currentStep === 3) {
-      return formData.address && proofOfAddress && formData.tax_id;
+      const proofOk = ['uploading', 'compressing', 'complete'].includes(proofOfAddressUpload.status);
+      return formData.address && proofOk && formData.tax_id;
     }
     return true;
+  };
+
+  // File upload status component
+  const FileUploadStatus = ({ 
+    uploadState, 
+    icon: Icon, 
+    idleLabel,
+    onRetry
+  }: { 
+    uploadState: UploadState; 
+    icon: React.ElementType; 
+    idleLabel: string;
+    onRetry?: () => void;
+  }) => {
+    switch (uploadState.status) {
+      case 'idle':
+        return (
+          <>
+            <Icon className="h-8 w-8 text-muted-foreground" />
+            <span className="text-sm font-medium">{idleLabel}</span>
+            <span className="text-xs text-muted-foreground">Tap to take photo or choose file</span>
+          </>
+        );
+      case 'compressing':
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-sm font-medium">Compressing...</span>
+            <Progress value={uploadState.progress} className="w-32 h-2" />
+          </div>
+        );
+      case 'uploading':
+        return (
+          <div className="flex flex-col items-center gap-2">
+            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+            <span className="text-sm font-medium">Uploading...</span>
+            <Progress value={uploadState.progress} className="w-32 h-2" />
+          </div>
+        );
+      case 'complete':
+        return (
+          <div className="flex flex-col items-center gap-2 text-green-600">
+            <CheckCircle2 className="h-8 w-8" />
+            <span className="text-sm font-medium truncate max-w-[200px]">{uploadState.file?.name}</span>
+            <span className="text-xs">✓ Uploaded</span>
+          </div>
+        );
+      case 'error':
+        return (
+          <div className="flex flex-col items-center gap-2 text-destructive">
+            <XCircle className="h-8 w-8" />
+            <span className="text-sm font-medium">Upload failed</span>
+            <span className="text-xs">{uploadState.error}</span>
+            <span className="text-xs underline cursor-pointer" onClick={onRetry}>Tap to retry</span>
+          </div>
+        );
+    }
   };
 
   // Show status if KYC exists
@@ -870,15 +949,18 @@ export default function KYCVerification() {
                   <div className="mt-2">
                     <label 
                       htmlFor="id-document-upload"
-                      className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors"
+                      className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
+                        idDocumentUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
+                        idDocumentUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
+                        'hover:bg-accent'
+                      }`}
                     >
-                      <FileText className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm font-medium">
-                        {idDocument ? idDocument.name : "Upload ID Document"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Tap to take photo or choose file
-                      </span>
+                      <FileUploadStatus 
+                        uploadState={idDocumentUpload} 
+                        icon={FileText} 
+                        idleLabel="Upload ID Document"
+                        onRetry={() => resetUpload(setIdDocumentUpload)}
+                      />
                     </label>
                     <input
                       id="id-document-upload"
@@ -886,7 +968,10 @@ export default function KYCVerification() {
                       className="sr-only"
                       accept="image/*,.pdf"
                       capture="environment"
-                      onChange={(e) => setIdDocument(e.target.files?.[0] || null)}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'id', setIdDocumentUpload);
+                      }}
                     />
                   </div>
                 </div>
@@ -896,15 +981,18 @@ export default function KYCVerification() {
                   <div className="mt-2">
                     <label 
                       htmlFor="selfie-upload"
-                      className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors"
+                      className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
+                        selfieUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
+                        selfieUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
+                        'hover:bg-accent'
+                      }`}
                     >
-                      <Camera className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm font-medium">
-                        {selfie ? selfie.name : "Take Selfie"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Tap to open camera
-                      </span>
+                      <FileUploadStatus 
+                        uploadState={selfieUpload} 
+                        icon={Camera} 
+                        idleLabel="Take Selfie"
+                        onRetry={() => resetUpload(setSelfieUpload)}
+                      />
                     </label>
                     <input
                       id="selfie-upload"
@@ -912,7 +1000,10 @@ export default function KYCVerification() {
                       className="sr-only"
                       accept="image/*"
                       capture="user"
-                      onChange={(e) => setSelfie(e.target.files?.[0] || null)}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'selfie', setSelfieUpload);
+                      }}
                     />
                   </div>
                 </div>
@@ -946,15 +1037,18 @@ export default function KYCVerification() {
                   <div className="mt-2">
                     <label 
                       htmlFor="proof-address-upload"
-                      className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors"
+                      className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
+                        proofOfAddressUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
+                        proofOfAddressUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
+                        'hover:bg-accent'
+                      }`}
                     >
-                      <MapPin className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm font-medium">
-                        {proofOfAddress ? proofOfAddress.name : "Upload Proof of Address"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Tap to take photo or choose file
-                      </span>
+                      <FileUploadStatus 
+                        uploadState={proofOfAddressUpload} 
+                        icon={MapPin} 
+                        idleLabel="Upload Proof of Address"
+                        onRetry={() => resetUpload(setProofOfAddressUpload)}
+                      />
                     </label>
                     <input
                       id="proof-address-upload"
@@ -962,7 +1056,10 @@ export default function KYCVerification() {
                       className="sr-only"
                       accept="image/*,.pdf"
                       capture="environment"
-                      onChange={(e) => setProofOfAddress(e.target.files?.[0] || null)}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
+                      }}
                     />
                   </div>
                 </div>
@@ -1048,15 +1145,18 @@ export default function KYCVerification() {
                   <div className="mt-2">
                     <label 
                       htmlFor="source-funds-upload"
-                      className="flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 hover:bg-accent transition-colors"
+                      className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
+                        sourceOfFundsUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
+                        sourceOfFundsUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
+                        'hover:bg-accent'
+                      }`}
                     >
-                      <Briefcase className="h-8 w-8 text-muted-foreground" />
-                      <span className="text-sm font-medium">
-                        {sourceOfFundsDoc ? sourceOfFundsDoc.name : "Upload Document (Optional)"}
-                      </span>
-                      <span className="text-xs text-muted-foreground">
-                        Tap to take photo or choose file
-                      </span>
+                      <FileUploadStatus 
+                        uploadState={sourceOfFundsUpload} 
+                        icon={Briefcase} 
+                        idleLabel="Upload Document (Optional)"
+                        onRetry={() => resetUpload(setSourceOfFundsUpload)}
+                      />
                     </label>
                     <input
                       id="source-funds-upload"
@@ -1064,7 +1164,10 @@ export default function KYCVerification() {
                       className="sr-only"
                       accept="image/*,.pdf"
                       capture="environment"
-                      onChange={(e) => setSourceOfFundsDoc(e.target.files?.[0] || null)}
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                      }}
                     />
                   </div>
                 </div>
@@ -1092,23 +1195,21 @@ export default function KYCVerification() {
                   <ArrowRight className="h-4 w-4 ml-2" />
                 </Button>
               ) : (
-                <div className="flex gap-2">
-                  {loading && (
-                    <Button type="button" variant="outline" onClick={handleCancel}>
-                      Cancel
-                    </Button>
+                <Button type="submit" disabled={!canSubmit} className="min-w-[200px]">
+                  {loading ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      {loadingStep || "Saving..."}
+                    </span>
+                  ) : !canSubmit ? (
+                    <span className="flex items-center gap-2">
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      Waiting for uploads...
+                    </span>
+                  ) : (
+                    "Submit for Verification"
                   )}
-                  <Button type="submit" disabled={loading} className="min-w-[200px]">
-                    {loading ? (
-                      <span className="flex items-center gap-2">
-                        <Loader2 className="h-4 w-4 animate-spin" />
-                        {loadingStep || "Submitting..."}
-                      </span>
-                    ) : (
-                      "Submit for Verification"
-                    )}
-                  </Button>
-                </div>
+                </Button>
               )}
             </div>
           </form>
