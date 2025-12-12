@@ -261,16 +261,27 @@ export default function KYCVerification() {
   };
 
   // Compress image for mobile - reduces file size significantly
-  // With timeout protection to prevent hanging on slow devices
-  const compressImage = async (file: File, maxSizeKB?: number): Promise<File> => {
+  // Uses FileReader for iOS compatibility and includes safety timeout
+  const compressImage = useCallback(async (file: File, maxSizeKB?: number): Promise<File> => {
+    console.log(`[Compression] Starting for ${file.name}, size: ${(file.size / 1024).toFixed(1)}KB, type: ${file.type}`);
+    
     // Skip compression for non-image files
     if (!file.type.startsWith('image/')) {
+      console.log('[Compression] Not an image, skipping');
       return file;
     }
 
-    // Skip compression entirely on very slow connections - it wastes time
+    // Skip HEIC files - they don't compress well in browsers
+    const isHEIC = file.type === 'image/heic' || file.type === 'image/heif' || 
+                   file.name.toLowerCase().endsWith('.heic') || file.name.toLowerCase().endsWith('.heif');
+    if (isHEIC) {
+      console.log('[Compression] HEIC format detected, skipping compression');
+      return file;
+    }
+
+    // Skip compression entirely on very slow connections
     if (isSlowConnection()) {
-      console.log('Slow connection detected, skipping compression');
+      console.log('[Compression] Slow connection detected, skipping');
       return file;
     }
 
@@ -280,24 +291,35 @@ export default function KYCVerification() {
 
     // Skip if already small enough
     if (file.size <= targetSizeKB * 1024) {
-      console.log(`File ${file.name} already small enough: ${(file.size / 1024).toFixed(1)}KB`);
+      console.log(`[Compression] File already small enough: ${(file.size / 1024).toFixed(1)}KB`);
       return file;
     }
 
-    // Compression without aggressive timeouts - let it complete naturally
-    // Falls back to original file on any error
-    try {
-      return await new Promise<File>((resolve) => {
+    // Safety timeout - if compression hangs, return original file
+    const TIMEOUT_MS = isMobile ? 12000 : 20000;
+    
+    const compressionPromise = new Promise<File>((resolve) => {
+      // Use FileReader instead of URL.createObjectURL for better iOS compatibility
+      const reader = new FileReader();
+      
+      reader.onload = (e) => {
+        console.log('[Compression] FileReader loaded successfully');
         const img = new Image();
-        const canvas = document.createElement('canvas');
-        const ctx = canvas.getContext('2d');
-        let objectUrl: string | null = null;
-
+        
         img.onload = () => {
+          console.log(`[Compression] Image loaded: ${img.width}x${img.height}`);
           try {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            
+            if (!ctx) {
+              console.warn('[Compression] No canvas context, using original');
+              resolve(file);
+              return;
+            }
+
             // Calculate new dimensions
             let { width, height } = img;
-
             if (width > maxDimension || height > maxDimension) {
               if (width > height) {
                 height = (height / width) * maxDimension;
@@ -310,67 +332,67 @@ export default function KYCVerification() {
 
             canvas.width = width;
             canvas.height = height;
-            ctx?.drawImage(img, 0, 0, width, height);
+            ctx.drawImage(img, 0, 0, width, height);
 
-            // Start with quality 0.7 on mobile, 0.8 on desktop
-            let quality = isMobile ? 0.7 : 0.8;
-            let attempts = 0;
-            const maxAttempts = 4;
+            // Single compression attempt with fixed quality for speed
+            const quality = isMobile ? 0.65 : 0.75;
+            
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  console.warn('[Compression] toBlob returned null, using original');
+                  resolve(file);
+                  return;
+                }
 
-            const compressWithQuality = () => {
-              attempts++;
-              
-              canvas.toBlob(
-                (blob) => {
-                  if (objectUrl) URL.revokeObjectURL(objectUrl);
-                  
-                  if (!blob) {
-                    console.warn('Compression failed, using original');
-                    resolve(file);
-                    return;
-                  }
-
-                  console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(1)}KB -> ${(blob.size / 1024).toFixed(1)}KB (q=${quality})`);
-
-                  // If still too large and can try again
-                  if (blob.size > targetSizeKB * 1024 && quality > 0.3 && attempts < maxAttempts) {
-                    quality -= 0.15;
-                    compressWithQuality();
-                    return;
-                  }
-
-                  const compressedFile = new File([blob], file.name, {
-                    type: 'image/jpeg',
-                    lastModified: Date.now(),
-                  });
-                  resolve(compressedFile);
-                },
-                'image/jpeg',
-                quality
-              );
-            };
-
-            compressWithQuality();
+                console.log(`[Compression] Success: ${(file.size / 1024).toFixed(1)}KB -> ${(blob.size / 1024).toFixed(1)}KB`);
+                
+                const compressedFile = new File([blob], file.name, {
+                  type: 'image/jpeg',
+                  lastModified: Date.now(),
+                });
+                resolve(compressedFile);
+              },
+              'image/jpeg',
+              quality
+            );
           } catch (err) {
-            console.warn('Compression error, using original:', err);
-            if (objectUrl) URL.revokeObjectURL(objectUrl);
+            console.warn('[Compression] Canvas error, using original:', err);
             resolve(file);
           }
         };
 
         img.onerror = () => {
-          console.warn('Failed to load image for compression, using original');
-          if (objectUrl) URL.revokeObjectURL(objectUrl);
+          console.warn('[Compression] Image load failed, using original');
           resolve(file);
         };
 
-        objectUrl = URL.createObjectURL(file);
-        img.src = objectUrl;
-      });
+        img.src = e.target?.result as string;
+      };
+
+      reader.onerror = () => {
+        console.warn('[Compression] FileReader error, using original');
+        resolve(file);
+      };
+
+      reader.readAsDataURL(file);
+    });
+
+    // Race between compression and timeout
+    const timeoutPromise = new Promise<File>((resolve) => {
+      setTimeout(() => {
+        console.warn(`[Compression] Timeout after ${TIMEOUT_MS}ms, using original file`);
+        resolve(file);
+      }, TIMEOUT_MS);
+    });
+
+    try {
+      return await Promise.race([compressionPromise, timeoutPromise]);
     } catch {
+      console.warn('[Compression] Unexpected error, using original');
       return file;
     }
-  };
+  }, [isMobile]);
 
   // Immediate file upload handler - called when user selects a file
   const handleFileSelect = useCallback(async (
@@ -378,6 +400,8 @@ export default function KYCVerification() {
     type: 'id' | 'selfie' | 'proofOfAddress' | 'sourceOfFunds',
     setUploadState: React.Dispatch<React.SetStateAction<UploadState>>
   ) => {
+    console.log(`[${type}] File selected:`, file.name, `${(file.size / 1024).toFixed(1)}KB`, file.type);
+    
     // Get user ID
     let userId = userIdRef.current;
     if (!userId) {
@@ -387,24 +411,31 @@ export default function KYCVerification() {
     }
     
     if (!userId) {
+      console.error(`[${type}] No user ID found`);
       setUploadState({ status: 'error', progress: 0, url: null, error: 'Not authenticated', file });
       return;
     }
 
     // Start compressing
     setUploadState({ status: 'compressing', progress: 15, url: null, error: null, file });
+    console.log(`[${type}] Starting compression...`);
 
     try {
-      // Compress the image
+      // Compress the image (with timeout protection)
       const compressed = await compressImage(file);
+      console.log(`[${type}] Compression done, size: ${(compressed.size / 1024).toFixed(1)}KB`);
       
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        console.log(`[${type}] Component unmounted, aborting`);
+        return;
+      }
       
       // Start uploading
       setUploadState(prev => ({ ...prev, status: 'uploading', progress: 50 }));
+      console.log(`[${type}] Starting upload...`);
 
       // Upload to Supabase Storage
-      const fileExt = compressed.type === 'image/jpeg' ? 'jpg' : file.name.split('.').pop();
+      const fileExt = compressed.type === 'image/jpeg' ? 'jpg' : file.name.split('.').pop() || 'jpg';
       const folder = type === 'id' ? 'id-documents' : type === 'selfie' ? 'selfies' : type === 'proofOfAddress' ? 'proof-of-address' : 'source-of-funds';
       const fileName = `${userId}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
 
@@ -412,24 +443,29 @@ export default function KYCVerification() {
         .from('kyc-documents')
         .upload(fileName, compressed);
 
-      if (!mountedRef.current) return;
+      if (!mountedRef.current) {
+        console.log(`[${type}] Component unmounted after upload`);
+        return;
+      }
 
       if (uploadError) {
+        console.error(`[${type}] Upload error:`, uploadError);
         throw new Error(uploadError.message);
       }
 
       // Success!
       const url = `kyc-documents/${fileName}`;
+      console.log(`[${type}] Upload complete! URL:`, url);
       setUploadState({ status: 'complete', progress: 100, url, error: null, file });
       
     } catch (err: any) {
-      console.error(`Upload error for ${type}:`, err);
+      console.error(`[${type}] Error:`, err);
       if (mountedRef.current) {
         setUploadState({ 
           status: 'error', 
           progress: 0, 
           url: null, 
-          error: err.message || 'Upload failed', 
+          error: err.message || 'Upload failed. Tap to retry.', 
           file 
         });
       }
