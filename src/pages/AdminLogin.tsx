@@ -31,8 +31,21 @@ const AdminLogin = () => {
         body: { phone_number: phoneNumber, password }
       });
 
-      if (loginError || !loginData?.access_token) {
-        throw new Error(loginError?.message || loginData?.error || 'Login failed');
+      if (loginError) {
+        console.error('Edge function error:', loginError);
+        throw new Error(loginError.message || 'Login failed');
+      }
+
+      if (!loginData) {
+        throw new Error('No response from server');
+      }
+
+      if (loginData.error) {
+        throw new Error(loginData.error);
+      }
+
+      if (!loginData.access_token) {
+        throw new Error('Invalid credentials');
       }
 
       // Set the session
