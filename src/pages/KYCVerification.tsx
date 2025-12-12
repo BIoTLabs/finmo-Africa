@@ -234,29 +234,46 @@ export default function KYCVerification() {
     ]);
   };
 
+  // Detect mobile device for more aggressive compression
+  const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+
   // Compress image for mobile - reduces file size significantly
-  const compressImage = async (file: File, maxSizeKB: number = 500): Promise<File> => {
+  // With timeout protection to prevent hanging on slow devices
+  const compressImage = async (file: File, maxSizeKB?: number): Promise<File> => {
     // Skip compression for non-image files
     if (!file.type.startsWith('image/')) {
       return file;
     }
 
+    // Use more aggressive settings on mobile
+    const targetSizeKB = maxSizeKB ?? (isMobile ? 300 : 500);
+    const maxDimension = isMobile ? 1000 : 1200;
+
     // Skip if already small enough
-    if (file.size <= maxSizeKB * 1024) {
+    if (file.size <= targetSizeKB * 1024) {
       console.log(`File ${file.name} already small enough: ${(file.size / 1024).toFixed(1)}KB`);
       return file;
     }
 
-    return new Promise((resolve, reject) => {
+    // Master timeout for entire compression process (15s max)
+    const compressionPromise = new Promise<File>((resolve) => {
       const img = new Image();
       const canvas = document.createElement('canvas');
       const ctx = canvas.getContext('2d');
+      let objectUrl: string | null = null;
+
+      // Image load timeout (10s)
+      const loadTimeout = setTimeout(() => {
+        console.warn('Image load timed out, using original');
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
+        resolve(file);
+      }, 10000);
 
       img.onload = () => {
+        clearTimeout(loadTimeout);
         try {
-          // Calculate new dimensions (max 1200px on longest side for mobile)
+          // Calculate new dimensions
           let { width, height } = img;
-          const maxDimension = 1200;
 
           if (width > maxDimension || height > maxDimension) {
             if (width > height) {
@@ -272,11 +289,17 @@ export default function KYCVerification() {
           canvas.height = height;
           ctx?.drawImage(img, 0, 0, width, height);
 
-          // Start with quality 0.8, reduce if still too large
-          let quality = 0.8;
+          // Start with quality 0.7 on mobile, 0.8 on desktop
+          let quality = isMobile ? 0.7 : 0.8;
+          let attempts = 0;
+          const maxAttempts = 4;
+
           const compressWithQuality = () => {
+            attempts++;
             canvas.toBlob(
               (blob) => {
+                if (objectUrl) URL.revokeObjectURL(objectUrl);
+                
                 if (!blob) {
                   console.warn('Compression failed, using original');
                   resolve(file);
@@ -285,8 +308,8 @@ export default function KYCVerification() {
 
                 console.log(`Compressed ${file.name}: ${(file.size / 1024).toFixed(1)}KB -> ${(blob.size / 1024).toFixed(1)}KB (q=${quality})`);
 
-                // If still too large and quality can be reduced, try again
-                if (blob.size > maxSizeKB * 1024 && quality > 0.3) {
+                // If still too large and can try again
+                if (blob.size > targetSizeKB * 1024 && quality > 0.3 && attempts < maxAttempts) {
                   quality -= 0.15;
                   compressWithQuality();
                   return;
@@ -306,28 +329,48 @@ export default function KYCVerification() {
           compressWithQuality();
         } catch (err) {
           console.warn('Compression error, using original:', err);
+          if (objectUrl) URL.revokeObjectURL(objectUrl);
           resolve(file);
         }
       };
 
       img.onerror = () => {
+        clearTimeout(loadTimeout);
         console.warn('Failed to load image for compression, using original');
+        if (objectUrl) URL.revokeObjectURL(objectUrl);
         resolve(file);
       };
 
-      img.src = URL.createObjectURL(file);
+      objectUrl = URL.createObjectURL(file);
+      img.src = objectUrl;
     });
+
+    // Wrap with master timeout - if compression takes too long, use original
+    try {
+      return await Promise.race([
+        compressionPromise,
+        new Promise<File>((resolve) => {
+          setTimeout(() => {
+            console.warn('Compression master timeout, using original');
+            resolve(file);
+          }, 15000); // 15 second max for entire compression
+        })
+      ]);
+    } catch {
+      return file;
+    }
   };
 
   const uploadFile = async (file: File, folder: string, userId: string): Promise<string> => {
     // Compress image before upload (critical for mobile)
-    const compressedFile = await compressImage(file, 500);
+    const compressedFile = await compressImage(file);
     
     const fileExt = compressedFile.type === 'image/jpeg' ? 'jpg' : file.name.split('.').pop();
     const fileName = `${userId}/${folder}/${Date.now()}.${fileExt}`;
     
-    // Convert Supabase PromiseLike to real Promise with .then() and add timeout
-    // Increased timeout to 60s for slower mobile connections
+    // Reduced timeout since files are now smaller after compression
+    const uploadTimeout = isMobile ? 45000 : 60000;
+    
     const uploadPromise = supabase.storage
       .from('kyc-documents')
       .upload(fileName, compressedFile)
@@ -335,7 +378,7 @@ export default function KYCVerification() {
     
     const { error: uploadError } = await withTimeout(
       uploadPromise,
-      60000, // 60 seconds for mobile
+      uploadTimeout,
       'Upload timed out. Please ensure you have a stable connection and try again.'
     );
 
@@ -344,24 +387,33 @@ export default function KYCVerification() {
       throw new Error(`Failed to upload ${folder.replace(/-/g, ' ')}: ${uploadError.message}`);
     }
 
-    // Convert Supabase PromiseLike to real Promise with .then() and add timeout
-    const signedUrlPromise = supabase.storage
-      .from('kyc-documents')
-      .createSignedUrl(fileName, 60 * 60 * 24 * 365)
-      .then(result => result);
-
-    const { data: signedUrlData, error: signedUrlError } = await withTimeout(
-      signedUrlPromise,
-      15000, // 15 seconds
-      'Failed to generate document URL. Please try again.'
-    );
-
-    if (signedUrlError || !signedUrlData?.signedUrl) {
-      // Fallback to path-based URL if signed URL fails
+    // Skip signed URL generation on mobile to save time - use path directly
+    // Admin can access via service role, user doesn't need direct access during submission
+    if (isMobile) {
       return `kyc-documents/${fileName}`;
     }
 
-    return signedUrlData.signedUrl;
+    // On desktop, try to get signed URL but with quick timeout
+    try {
+      const signedUrlPromise = supabase.storage
+        .from('kyc-documents')
+        .createSignedUrl(fileName, 60 * 60 * 24 * 365)
+        .then(result => result);
+
+      const { data: signedUrlData } = await withTimeout(
+        signedUrlPromise,
+        8000, // Reduced to 8 seconds
+        'Signed URL timeout'
+      );
+
+      if (signedUrlData?.signedUrl) {
+        return signedUrlData.signedUrl;
+      }
+    } catch {
+      // Fallback silently
+    }
+
+    return `kyc-documents/${fileName}`;
   };
 
   const handleCancel = () => {
@@ -384,8 +436,24 @@ export default function KYCVerification() {
     setLoading(true);
     setLoadingStep("Validating...");
 
+    // Master timeout for entire submission (3 minutes)
+    const masterTimeoutId = setTimeout(() => {
+      if (mountedRef.current && loading) {
+        setLoading(false);
+        setLoadingStep("");
+        toast({
+          title: "Submission Timed Out",
+          description: isMobile 
+            ? "The process took too long on mobile. Please try on a stronger WiFi connection or reduce image quality in camera settings."
+            : "The process took too long. Please check your connection and try again.",
+          variant: "destructive",
+        });
+        abortControllerRef.current?.abort();
+      }
+    }, 180000); // 3 minutes max
+
     try {
-      // Get user once with timeout to prevent endless loading on slow connections
+      // Get user once with timeout
       const authResult = await withTimeout(
         supabase.auth.getUser().then(result => result),
         10000,
@@ -393,7 +461,10 @@ export default function KYCVerification() {
       );
       const user = authResult.data?.user;
       if (!user) throw new Error("Not authenticated");
-      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
+      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) {
+        clearTimeout(masterTimeoutId);
+        return;
+      }
 
       if (!idDocument || !selfie) {
         throw new Error("Please upload both ID document and selfie");
@@ -418,27 +489,36 @@ export default function KYCVerification() {
         }
       }
 
-      // Upload files with progress - pass userId to avoid redundant auth calls
-      // Files are automatically compressed for mobile before upload
-      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
-      setLoadingStep("Preparing & uploading ID document...");
-      const idDocumentUrl = await uploadFile(idDocument, 'id-documents', user.id);
+      // Upload ID and selfie in PARALLEL for faster mobile experience
+      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) {
+        clearTimeout(masterTimeoutId);
+        return;
+      }
+      setLoadingStep(isMobile ? "Compressing & uploading documents..." : "Uploading ID & selfie...");
       
-      if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
-      setLoadingStep("Preparing & uploading selfie...");
-      const selfieUrl = await uploadFile(selfie, 'selfies', user.id);
+      const [idDocumentUrl, selfieUrl] = await Promise.all([
+        uploadFile(idDocument, 'id-documents', user.id),
+        uploadFile(selfie, 'selfies', user.id),
+      ]);
       
+      // Upload additional documents if needed (these are optional, so sequential is fine)
       let proofOfAddressUrl = null;
       if (proofOfAddress) {
-        if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
-        setLoadingStep("Preparing & uploading proof of address...");
+        if (!mountedRef.current || abortControllerRef.current?.signal.aborted) {
+          clearTimeout(masterTimeoutId);
+          return;
+        }
+        setLoadingStep(isMobile ? "Uploading address proof..." : "Uploading proof of address...");
         proofOfAddressUrl = await uploadFile(proofOfAddress, 'proof-of-address', user.id);
       }
       
       let sourceOfFundsDocUrl = null;
       if (sourceOfFundsDoc) {
-        if (!mountedRef.current || abortControllerRef.current?.signal.aborted) return;
-        setLoadingStep("Preparing & uploading source of funds...");
+        if (!mountedRef.current || abortControllerRef.current?.signal.aborted) {
+          clearTimeout(masterTimeoutId);
+          return;
+        }
+        setLoadingStep("Uploading source of funds...");
         sourceOfFundsDocUrl = await uploadFile(sourceOfFundsDoc, 'source-of-funds', user.id);
       }
 
@@ -534,6 +614,7 @@ export default function KYCVerification() {
         });
       }
     } finally {
+      clearTimeout(masterTimeoutId);
       if (mountedRef.current) {
         setLoading(false);
         setLoadingStep("");
