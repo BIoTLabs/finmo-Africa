@@ -63,6 +63,7 @@ import AdminAnalytics from "./pages/AdminAnalytics";
 import ApiDocs from "./pages/ApiDocs";
 import PartnerPricing from "./pages/PartnerPricing";
 import PartnerDashboard from "./pages/PartnerDashboard";
+import AdminLogin from "./pages/AdminLogin";
 
 const queryClient = new QueryClient();
 
@@ -80,6 +81,7 @@ const App = () => {
           <Route path="/verify-phone" element={<PhoneVerification />} />
           <Route path="/phone-verification" element={<PhoneVerification />} />
           <Route path="/delete-account" element={<DeleteAccount />} />
+          <Route path="/admin-login" element={<AdminLogin />} />
           <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
           <Route path="/explorer" element={<ProtectedRoute><Explorer /></ProtectedRoute>} />
           <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
