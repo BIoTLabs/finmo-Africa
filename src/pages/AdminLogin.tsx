@@ -28,7 +28,7 @@ const AdminLogin = () => {
     try {
       // Use server-side login to get email from phone
       const { data: loginData, error: loginError } = await supabase.functions.invoke('phone-password-login', {
-        body: { phone_number: phoneNumber, password }
+        body: { phoneNumber, password }
       });
 
       if (loginError) {
@@ -44,14 +44,14 @@ const AdminLogin = () => {
         throw new Error(loginData.error);
       }
 
-      if (!loginData.access_token) {
+      if (!loginData.session?.access_token) {
         throw new Error('Invalid credentials');
       }
 
       // Set the session
       const { error: sessionError } = await supabase.auth.setSession({
-        access_token: loginData.access_token,
-        refresh_token: loginData.refresh_token
+        access_token: loginData.session.access_token,
+        refresh_token: loginData.session.refresh_token
       });
 
       if (sessionError) {
