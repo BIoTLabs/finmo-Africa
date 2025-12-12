@@ -74,13 +74,20 @@ const COUNTRY_MAP: Record<string, { name: string; flag: string }> = {
   '+260': { name: 'Zambia', flag: '🇿🇲' },
 };
 
-export function useOverviewMetrics(dateRange: DateRange) {
+export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true) {
   const [data, setData] = useState<OverviewMetrics | null>(null);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchMetrics() {
       setLoading(true);
+      setError(null);
       try {
         const [
           usersResult,
@@ -102,7 +109,6 @@ export function useOverviewMetrics(dateRange: DateRange) {
             .eq('is_enabled', true),
           supabase.from('staking_positions').select('staked_amount')
             .eq('status', 'active'),
-          // Previous period for growth calculation
           supabase.from('profiles').select('id', { count: 'exact', head: true })
             .lte('created_at', dateRange.from.toISOString()),
           supabase.from('platform_revenue').select('amount')
@@ -128,26 +134,34 @@ export function useOverviewMetrics(dateRange: DateRange) {
           userGrowth,
           revenueGrowth,
         });
-      } catch (error) {
-        console.error('Error fetching overview metrics:', error);
+      } catch (err: any) {
+        console.error('Error fetching overview metrics:', err);
+        setError(err.message || 'Failed to fetch metrics');
       } finally {
         setLoading(false);
       }
     }
 
     fetchMetrics();
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, enabled]);
 
-  return { data, loading };
+  return { data, loading, error };
 }
 
-export function useRevenueAnalytics(dateRange: DateRange) {
+export function useRevenueAnalytics(dateRange: DateRange, enabled: boolean = true) {
   const [data, setData] = useState<RevenueData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchRevenue() {
       setLoading(true);
+      setError(null);
       try {
         const { data: revenueData } = await supabase
           .from('platform_revenue')
@@ -156,7 +170,6 @@ export function useRevenueAnalytics(dateRange: DateRange) {
           .lte('created_at', dateRange.to.toISOString())
           .order('created_at', { ascending: true });
 
-        // Group by date
         const grouped: Record<string, RevenueData> = {};
         revenueData?.forEach((r) => {
           const date = format(new Date(r.created_at), 'yyyy-MM-dd');
@@ -175,26 +188,34 @@ export function useRevenueAnalytics(dateRange: DateRange) {
         });
 
         setData(Object.values(grouped));
-      } catch (error) {
-        console.error('Error fetching revenue:', error);
+      } catch (err: any) {
+        console.error('Error fetching revenue:', err);
+        setError(err.message || 'Failed to fetch revenue');
       } finally {
         setLoading(false);
       }
     }
 
     fetchRevenue();
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, enabled]);
 
-  return { data, loading };
+  return { data, loading, error };
 }
 
-export function useTokenAnalytics(dateRange: DateRange) {
+export function useTokenAnalytics(dateRange: DateRange, enabled: boolean = true) {
   const [data, setData] = useState<TokenData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchTokenData() {
       setLoading(true);
+      setError(null);
       try {
         const [transactionsResult, stakingResult] = await Promise.all([
           supabase.from('transactions').select('token, amount')
@@ -204,7 +225,6 @@ export function useTokenAnalytics(dateRange: DateRange) {
             .eq('status', 'active'),
         ]);
 
-        // Aggregate by token
         const tokenMap: Record<string, TokenData> = {};
         
         transactionsResult.data?.forEach((t) => {
@@ -223,26 +243,34 @@ export function useTokenAnalytics(dateRange: DateRange) {
         });
 
         setData(Object.values(tokenMap).sort((a, b) => b.volume - a.volume));
-      } catch (error) {
-        console.error('Error fetching token data:', error);
+      } catch (err: any) {
+        console.error('Error fetching token data:', err);
+        setError(err.message || 'Failed to fetch token data');
       } finally {
         setLoading(false);
       }
     }
 
     fetchTokenData();
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, enabled]);
 
-  return { data, loading };
+  return { data, loading, error };
 }
 
-export function useCountryAnalytics(dateRange: DateRange) {
+export function useCountryAnalytics(dateRange: DateRange, enabled: boolean = true) {
   const [data, setData] = useState<CountryData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchCountryData() {
       setLoading(true);
+      setError(null);
       try {
         const { data: profilesData } = await supabase
           .from('profiles')
@@ -250,13 +278,11 @@ export function useCountryAnalytics(dateRange: DateRange) {
           .gte('created_at', dateRange.from.toISOString())
           .lte('created_at', dateRange.to.toISOString());
 
-        // Count by country code
         const countryMap: Record<string, CountryData> = {};
         
         profilesData?.forEach((p) => {
           if (!p.phone_number) return;
           
-          // Find matching country code
           let matchedCode = '';
           for (const code of Object.keys(COUNTRY_MAP)) {
             if (p.phone_number.startsWith(code)) {
@@ -281,26 +307,34 @@ export function useCountryAnalytics(dateRange: DateRange) {
         });
 
         setData(Object.values(countryMap).sort((a, b) => b.users - a.users));
-      } catch (error) {
-        console.error('Error fetching country data:', error);
+      } catch (err: any) {
+        console.error('Error fetching country data:', err);
+        setError(err.message || 'Failed to fetch country data');
       } finally {
         setLoading(false);
       }
     }
 
     fetchCountryData();
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, enabled]);
 
-  return { data, loading };
+  return { data, loading, error };
 }
 
-export function useFeatureAnalytics(dateRange: DateRange) {
+export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = true) {
   const [data, setData] = useState<FeatureData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchFeatureData() {
       setLoading(true);
+      setError(null);
       try {
         const [
           p2pOrders,
@@ -364,26 +398,34 @@ export function useFeatureAnalytics(dateRange: DateRange) {
             users: transferUsers,
           },
         ]);
-      } catch (error) {
-        console.error('Error fetching feature data:', error);
+      } catch (err: any) {
+        console.error('Error fetching feature data:', err);
+        setError(err.message || 'Failed to fetch feature data');
       } finally {
         setLoading(false);
       }
     }
 
     fetchFeatureData();
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, enabled]);
 
-  return { data, loading };
+  return { data, loading, error };
 }
 
-export function useUserAnalytics(dateRange: DateRange) {
+export function useUserAnalytics(dateRange: DateRange, enabled: boolean = true) {
   const [data, setData] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
+    if (!enabled) {
+      setLoading(false);
+      return;
+    }
+
     async function fetchUserData() {
       setLoading(true);
+      setError(null);
       try {
         const { data: profilesData } = await supabase
           .from('profiles')
@@ -392,11 +434,9 @@ export function useUserAnalytics(dateRange: DateRange) {
           .lte('created_at', dateRange.to.toISOString())
           .order('created_at', { ascending: true });
 
-        // Group by date
         const grouped: Record<string, UserData> = {};
         let runningTotal = 0;
 
-        // Get initial count before date range
         const { count: initialCount } = await supabase
           .from('profiles')
           .select('id', { count: 'exact', head: true })
@@ -415,15 +455,16 @@ export function useUserAnalytics(dateRange: DateRange) {
         });
 
         setData(Object.values(grouped));
-      } catch (error) {
-        console.error('Error fetching user data:', error);
+      } catch (err: any) {
+        console.error('Error fetching user data:', err);
+        setError(err.message || 'Failed to fetch user data');
       } finally {
         setLoading(false);
       }
     }
 
     fetchUserData();
-  }, [dateRange.from, dateRange.to]);
+  }, [dateRange.from, dateRange.to, enabled]);
 
-  return { data, loading };
+  return { data, loading, error };
 }
