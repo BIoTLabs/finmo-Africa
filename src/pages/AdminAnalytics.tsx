@@ -26,6 +26,15 @@ import { toast } from "sonner";
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--secondary))', 'hsl(142, 76%, 36%)', 'hsl(38, 92%, 50%)', 'hsl(280, 65%, 60%)', 'hsl(199, 89%, 48%)'];
 
+// Empty state component for charts
+const EmptyChartState = ({ message = "No data available" }: { message?: string }) => (
+  <div className="flex flex-col items-center justify-center h-[300px] text-muted-foreground">
+    <AlertCircle className="h-12 w-12 mb-3 opacity-50" />
+    <p className="text-sm">{message}</p>
+    <p className="text-xs mt-1">Try selecting a different date range</p>
+  </div>
+);
+
 export default function AdminAnalytics() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
@@ -40,10 +49,12 @@ export default function AdminAnalytics() {
     }
   }, [isAdmin, adminLoading, navigate]);
   
-  const dateRange: DateRange = {
-    from: startOfDay(subDays(new Date(), parseInt(dateRangeOption))),
-    to: endOfDay(new Date()),
-  };
+  const dateRange: DateRange | null = dateRangeOption === "all" 
+    ? null 
+    : {
+        from: startOfDay(subDays(new Date(), parseInt(dateRangeOption))),
+        to: endOfDay(new Date()),
+      };
 
   // Only fetch data after admin is verified
   const isReady = isAdmin && !adminLoading;
@@ -107,6 +118,7 @@ export default function AdminAnalytics() {
                 <SelectValue />
               </SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Time</SelectItem>
                 <SelectItem value="7">Last 7 days</SelectItem>
                 <SelectItem value="30">Last 30 days</SelectItem>
                 <SelectItem value="90">Last 90 days</SelectItem>
@@ -204,6 +216,8 @@ export default function AdminAnalytics() {
                 <CardContent>
                   {revenueLoading ? (
                     <Skeleton className="h-[300px]" />
+                  ) : revenueData.length === 0 ? (
+                    <EmptyChartState message="No revenue data recorded yet" />
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <AreaChart data={revenueData}>
@@ -229,6 +243,8 @@ export default function AdminAnalytics() {
                 <CardContent>
                   {revenueLoading ? (
                     <Skeleton className="h-[300px]" />
+                  ) : revenueData.length === 0 ? (
+                    <EmptyChartState message="No revenue data to display" />
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>
@@ -274,6 +290,8 @@ export default function AdminAnalytics() {
                 <CardContent>
                   {tokenLoading ? (
                     <Skeleton className="h-[300px]" />
+                  ) : tokenData.length === 0 ? (
+                    <EmptyChartState message="No token transaction data" />
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={tokenData} layout="vertical">
@@ -296,6 +314,8 @@ export default function AdminAnalytics() {
                 <CardContent>
                   {tokenLoading ? (
                     <Skeleton className="h-[300px]" />
+                  ) : tokenData.filter(t => t.staked > 0).length === 0 ? (
+                    <EmptyChartState message="No staking positions yet" />
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={tokenData.filter(t => t.staked > 0)}>
@@ -358,6 +378,8 @@ export default function AdminAnalytics() {
                 <CardContent>
                   {countryLoading ? (
                     <Skeleton className="h-[300px]" />
+                  ) : countryData.length === 0 ? (
+                    <EmptyChartState message="No user data by country" />
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart data={countryData} layout="vertical">
@@ -386,6 +408,8 @@ export default function AdminAnalytics() {
                 <CardContent>
                   {countryLoading ? (
                     <Skeleton className="h-[300px]" />
+                  ) : countryData.length === 0 ? (
+                    <EmptyChartState message="No country distribution data" />
                   ) : (
                     <ResponsiveContainer width="100%" height={300}>
                       <PieChart>

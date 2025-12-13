@@ -85,7 +85,7 @@ const withTimeout = <T>(promiseLike: PromiseLike<T>, timeoutMs: number = 15000):
   ]);
 };
 
-export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
+export function useOverviewMetrics(dateRange: DateRange | null, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<OverviewMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -102,46 +102,50 @@ export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true
       setLoading(true);
       setError(null);
       try {
+        // Total users - always all time (no date filter)
+        const usersQuery = supabase.from('profiles').select('id', { count: 'exact', head: true });
+        
+        // Transactions - date filter only if dateRange provided
+        let transactionsQuery = supabase.from('transactions').select('id', { count: 'exact', head: true });
+        if (dateRange) {
+          transactionsQuery = transactionsQuery
+            .gte('created_at', dateRange.from.toISOString())
+            .lte('created_at', dateRange.to.toISOString());
+        }
+        
+        // Revenue - date filter only if dateRange provided
+        let revenueQuery = supabase.from('platform_revenue').select('amount');
+        if (dateRange) {
+          revenueQuery = revenueQuery
+            .gte('created_at', dateRange.from.toISOString())
+            .lte('created_at', dateRange.to.toISOString());
+        }
+
         const results = await withTimeout(Promise.all([
-          supabase.from('profiles').select('id', { count: 'exact', head: true }),
-          supabase.from('transactions').select('id', { count: 'exact', head: true })
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
-          supabase.from('platform_revenue').select('amount')
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
+          usersQuery,
+          transactionsQuery,
+          revenueQuery,
           supabase.from('supported_countries').select('id', { count: 'exact', head: true })
             .eq('is_enabled', true),
           supabase.from('staking_positions').select('staked_amount')
             .eq('status', 'active'),
-          supabase.from('profiles').select('id', { count: 'exact', head: true })
-            .lte('created_at', dateRange.from.toISOString()),
-          supabase.from('platform_revenue').select('amount')
-            .gte('created_at', subDays(dateRange.from, 30).toISOString())
-            .lte('created_at', dateRange.from.toISOString()),
         ]));
 
         if (cancelled) return;
 
-        const [usersResult, transactionsResult, revenueResult, countriesResult, stakingResult, prevUsersResult, prevRevenueResult] = results;
+        const [usersResult, transactionsResult, revenueResult, countriesResult, stakingResult] = results;
 
         const totalRevenue = revenueResult.data?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0;
-        const prevRevenue = prevRevenueResult.data?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0;
         const totalStaked = stakingResult.data?.reduce((sum, s) => sum + (s.staked_amount || 0), 0) || 0;
 
-        const currentUsers = usersResult.count || 0;
-        const prevUsers = prevUsersResult.count || 0;
-        const userGrowth = prevUsers > 0 ? ((currentUsers - prevUsers) / prevUsers) * 100 : 0;
-        const revenueGrowth = prevRevenue > 0 ? ((totalRevenue - prevRevenue) / prevRevenue) * 100 : 0;
-
         setData({
-          totalUsers: currentUsers,
+          totalUsers: usersResult.count || 0,
           totalTransactions: transactionsResult.count || 0,
           totalRevenue,
           activeCountries: countriesResult.count || 0,
           totalStaked,
-          userGrowth,
-          revenueGrowth,
+          userGrowth: 0, // Growth calculation removed for simplicity
+          revenueGrowth: 0,
         });
       } catch (err: any) {
         if (cancelled) return;
@@ -154,12 +158,12 @@ export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true
 
     fetchMetrics();
     return () => { cancelled = true; };
-  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
+  }, [dateRange?.from, dateRange?.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useRevenueAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
+export function useRevenueAnalytics(dateRange: DateRange | null, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<RevenueData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -176,14 +180,18 @@ export function useRevenueAnalytics(dateRange: DateRange, enabled: boolean = tru
       setLoading(true);
       setError(null);
       try {
-        const { data: revenueData, error: queryError } = await withTimeout(
-          supabase
-            .from('platform_revenue')
-            .select('amount, wallet_type, created_at')
+        let query = supabase
+          .from('platform_revenue')
+          .select('amount, wallet_type, created_at')
+          .order('created_at', { ascending: true });
+          
+        if (dateRange) {
+          query = query
             .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString())
-            .order('created_at', { ascending: true })
-        );
+            .lte('created_at', dateRange.to.toISOString());
+        }
+
+        const { data: revenueData, error: queryError } = await withTimeout(query);
 
         if (cancelled) return;
         if (queryError) throw queryError;
@@ -217,12 +225,12 @@ export function useRevenueAnalytics(dateRange: DateRange, enabled: boolean = tru
 
     fetchRevenue();
     return () => { cancelled = true; };
-  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
+  }, [dateRange?.from, dateRange?.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useTokenAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
+export function useTokenAnalytics(dateRange: DateRange | null, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<TokenData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -239,10 +247,16 @@ export function useTokenAnalytics(dateRange: DateRange, enabled: boolean = true,
       setLoading(true);
       setError(null);
       try {
-        const [transactionsResult, stakingResult] = await withTimeout(Promise.all([
-          supabase.from('transactions').select('token, amount')
+        // Transactions - date filter only if dateRange provided
+        let transactionsQuery = supabase.from('transactions').select('token, amount');
+        if (dateRange) {
+          transactionsQuery = transactionsQuery
             .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
+            .lte('created_at', dateRange.to.toISOString());
+        }
+
+        const [transactionsResult, stakingResult] = await withTimeout(Promise.all([
+          transactionsQuery,
           supabase.from('staking_positions').select('token, staked_amount')
             .eq('status', 'active'),
         ]));
@@ -278,12 +292,12 @@ export function useTokenAnalytics(dateRange: DateRange, enabled: boolean = true,
 
     fetchTokenData();
     return () => { cancelled = true; };
-  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
+  }, [dateRange?.from, dateRange?.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useCountryAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
+export function useCountryAnalytics(dateRange: DateRange | null, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<CountryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -300,12 +314,11 @@ export function useCountryAnalytics(dateRange: DateRange, enabled: boolean = tru
       setLoading(true);
       setError(null);
       try {
+        // Always fetch ALL users for country distribution (no date filter)
         const { data: profilesData, error: queryError } = await withTimeout(
           supabase
             .from('profiles')
             .select('phone_number, id')
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString())
         );
 
         if (cancelled) return;
@@ -351,12 +364,12 @@ export function useCountryAnalytics(dateRange: DateRange, enabled: boolean = tru
 
     fetchCountryData();
     return () => { cancelled = true; };
-  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
+  }, [enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
+export function useFeatureAnalytics(dateRange: DateRange | null, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<FeatureData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -373,28 +386,30 @@ export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = tru
       setLoading(true);
       setError(null);
       try {
+        // Build queries with optional date filtering
+        let p2pQuery = supabase.from('p2p_orders').select('id, buyer_id', { count: 'exact' });
+        let marketplaceQuery = supabase.from('marketplace_orders').select('id, buyer_id', { count: 'exact' });
+        let stakingQuery = supabase.from('staking_positions').select('id, user_id', { count: 'exact' });
+        let transfersQuery = supabase.from('transactions').select('id, sender_id', { count: 'exact' }).eq('transaction_type', 'internal');
+        let p2pRevenueQuery = supabase.from('platform_revenue').select('amount').eq('wallet_type', 'p2p_fees');
+        let marketplaceRevenueQuery = supabase.from('platform_revenue').select('amount').eq('wallet_type', 'marketplace_fees');
+
+        if (dateRange) {
+          p2pQuery = p2pQuery.gte('created_at', dateRange.from.toISOString()).lte('created_at', dateRange.to.toISOString());
+          marketplaceQuery = marketplaceQuery.gte('created_at', dateRange.from.toISOString()).lte('created_at', dateRange.to.toISOString());
+          stakingQuery = stakingQuery.gte('created_at', dateRange.from.toISOString()).lte('created_at', dateRange.to.toISOString());
+          transfersQuery = transfersQuery.gte('created_at', dateRange.from.toISOString()).lte('created_at', dateRange.to.toISOString());
+          p2pRevenueQuery = p2pRevenueQuery.gte('created_at', dateRange.from.toISOString()).lte('created_at', dateRange.to.toISOString());
+          marketplaceRevenueQuery = marketplaceRevenueQuery.gte('created_at', dateRange.from.toISOString()).lte('created_at', dateRange.to.toISOString());
+        }
+
         const results = await withTimeout(Promise.all([
-          supabase.from('p2p_orders').select('id, buyer_id', { count: 'exact' })
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
-          supabase.from('marketplace_orders').select('id, buyer_id', { count: 'exact' })
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
-          supabase.from('staking_positions').select('id, user_id', { count: 'exact' })
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
-          supabase.from('transactions').select('id, sender_id', { count: 'exact' })
-            .eq('transaction_type', 'internal')
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
-          supabase.from('platform_revenue').select('amount')
-            .eq('wallet_type', 'p2p_fees')
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
-          supabase.from('platform_revenue').select('amount')
-            .eq('wallet_type', 'marketplace_fees')
-            .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString()),
+          p2pQuery,
+          marketplaceQuery,
+          stakingQuery,
+          transfersQuery,
+          p2pRevenueQuery,
+          marketplaceRevenueQuery,
         ]));
 
         if (cancelled) return;
@@ -443,12 +458,12 @@ export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = tru
 
     fetchFeatureData();
     return () => { cancelled = true; };
-  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
+  }, [dateRange?.from, dateRange?.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useUserAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
+export function useUserAnalytics(dateRange: DateRange | null, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -465,32 +480,47 @@ export function useUserAnalytics(dateRange: DateRange, enabled: boolean = true, 
       setLoading(true);
       setError(null);
       try {
-        const { data: profilesData, error: queryError } = await withTimeout(
-          supabase
-            .from('profiles')
-            .select('created_at')
+        // Always fetch all profiles for user analytics
+        let query = supabase
+          .from('profiles')
+          .select('created_at')
+          .order('created_at', { ascending: true });
+
+        if (dateRange) {
+          query = query
             .gte('created_at', dateRange.from.toISOString())
-            .lte('created_at', dateRange.to.toISOString())
-            .order('created_at', { ascending: true })
-        );
+            .lte('created_at', dateRange.to.toISOString());
+        }
+
+        const { data: profilesData, error: queryError } = await withTimeout(query);
 
         if (cancelled) return;
         if (queryError) throw queryError;
 
+        // Handle empty data gracefully
+        if (!profilesData?.length) {
+          setData([]);
+          setLoading(false);
+          return;
+        }
+
         const grouped: Record<string, UserData> = {};
         let runningTotal = 0;
 
-        const { count: initialCount, error: countError } = await withTimeout(
-          supabase
-            .from('profiles')
-            .select('id', { count: 'exact', head: true })
-            .lt('created_at', dateRange.from.toISOString())
-        );
+        // Only calculate initial count if we have a date range
+        if (dateRange) {
+          const { count: initialCount, error: countError } = await withTimeout(
+            supabase
+              .from('profiles')
+              .select('id', { count: 'exact', head: true })
+              .lt('created_at', dateRange.from.toISOString())
+          );
 
-        if (cancelled) return;
-        if (countError) throw countError;
+          if (cancelled) return;
+          if (countError) throw countError;
 
-        runningTotal = initialCount || 0;
+          runningTotal = initialCount || 0;
+        }
 
         profilesData?.forEach((p) => {
           const date = format(new Date(p.created_at), 'yyyy-MM-dd');
