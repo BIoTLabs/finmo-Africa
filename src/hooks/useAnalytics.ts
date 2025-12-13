@@ -74,7 +74,18 @@ const COUNTRY_MAP: Record<string, { name: string; flag: string }> = {
   '+260': { name: 'Zambia', flag: '🇿🇲' },
 };
 
-export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true) {
+// Timeout wrapper for queries - converts PromiseLike to true Promise
+const withTimeout = <T>(promiseLike: PromiseLike<T>, timeoutMs: number = 15000): Promise<T> => {
+  const promise = Promise.resolve(promiseLike);
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) =>
+      setTimeout(() => reject(new Error('Query timeout - please retry')), timeoutMs)
+    ),
+  ]);
+};
+
+export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<OverviewMetrics | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -85,19 +96,13 @@ export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true
       return;
     }
 
+    let cancelled = false;
+
     async function fetchMetrics() {
       setLoading(true);
       setError(null);
       try {
-        const [
-          usersResult,
-          transactionsResult,
-          revenueResult,
-          countriesResult,
-          stakingResult,
-          prevUsersResult,
-          prevRevenueResult,
-        ] = await Promise.all([
+        const results = await withTimeout(Promise.all([
           supabase.from('profiles').select('id', { count: 'exact', head: true }),
           supabase.from('transactions').select('id', { count: 'exact', head: true })
             .gte('created_at', dateRange.from.toISOString())
@@ -114,7 +119,11 @@ export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true
           supabase.from('platform_revenue').select('amount')
             .gte('created_at', subDays(dateRange.from, 30).toISOString())
             .lte('created_at', dateRange.from.toISOString()),
-        ]);
+        ]));
+
+        if (cancelled) return;
+
+        const [usersResult, transactionsResult, revenueResult, countriesResult, stakingResult, prevUsersResult, prevRevenueResult] = results;
 
         const totalRevenue = revenueResult.data?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0;
         const prevRevenue = prevRevenueResult.data?.reduce((sum, r) => sum + (r.amount || 0), 0) || 0;
@@ -135,20 +144,22 @@ export function useOverviewMetrics(dateRange: DateRange, enabled: boolean = true
           revenueGrowth,
         });
       } catch (err: any) {
+        if (cancelled) return;
         console.error('Error fetching overview metrics:', err);
         setError(err.message || 'Failed to fetch metrics');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchMetrics();
-  }, [dateRange.from, dateRange.to, enabled]);
+    return () => { cancelled = true; };
+  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useRevenueAnalytics(dateRange: DateRange, enabled: boolean = true) {
+export function useRevenueAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<RevenueData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -159,16 +170,23 @@ export function useRevenueAnalytics(dateRange: DateRange, enabled: boolean = tru
       return;
     }
 
+    let cancelled = false;
+
     async function fetchRevenue() {
       setLoading(true);
       setError(null);
       try {
-        const { data: revenueData } = await supabase
-          .from('platform_revenue')
-          .select('amount, wallet_type, created_at')
-          .gte('created_at', dateRange.from.toISOString())
-          .lte('created_at', dateRange.to.toISOString())
-          .order('created_at', { ascending: true });
+        const { data: revenueData, error: queryError } = await withTimeout(
+          supabase
+            .from('platform_revenue')
+            .select('amount, wallet_type, created_at')
+            .gte('created_at', dateRange.from.toISOString())
+            .lte('created_at', dateRange.to.toISOString())
+            .order('created_at', { ascending: true })
+        );
+
+        if (cancelled) return;
+        if (queryError) throw queryError;
 
         const grouped: Record<string, RevenueData> = {};
         revenueData?.forEach((r) => {
@@ -189,20 +207,22 @@ export function useRevenueAnalytics(dateRange: DateRange, enabled: boolean = tru
 
         setData(Object.values(grouped));
       } catch (err: any) {
+        if (cancelled) return;
         console.error('Error fetching revenue:', err);
         setError(err.message || 'Failed to fetch revenue');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchRevenue();
-  }, [dateRange.from, dateRange.to, enabled]);
+    return () => { cancelled = true; };
+  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useTokenAnalytics(dateRange: DateRange, enabled: boolean = true) {
+export function useTokenAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<TokenData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -213,17 +233,21 @@ export function useTokenAnalytics(dateRange: DateRange, enabled: boolean = true)
       return;
     }
 
+    let cancelled = false;
+
     async function fetchTokenData() {
       setLoading(true);
       setError(null);
       try {
-        const [transactionsResult, stakingResult] = await Promise.all([
+        const [transactionsResult, stakingResult] = await withTimeout(Promise.all([
           supabase.from('transactions').select('token, amount')
             .gte('created_at', dateRange.from.toISOString())
             .lte('created_at', dateRange.to.toISOString()),
           supabase.from('staking_positions').select('token, staked_amount')
             .eq('status', 'active'),
-        ]);
+        ]));
+
+        if (cancelled) return;
 
         const tokenMap: Record<string, TokenData> = {};
         
@@ -244,20 +268,22 @@ export function useTokenAnalytics(dateRange: DateRange, enabled: boolean = true)
 
         setData(Object.values(tokenMap).sort((a, b) => b.volume - a.volume));
       } catch (err: any) {
+        if (cancelled) return;
         console.error('Error fetching token data:', err);
         setError(err.message || 'Failed to fetch token data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchTokenData();
-  }, [dateRange.from, dateRange.to, enabled]);
+    return () => { cancelled = true; };
+  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useCountryAnalytics(dateRange: DateRange, enabled: boolean = true) {
+export function useCountryAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<CountryData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -268,15 +294,22 @@ export function useCountryAnalytics(dateRange: DateRange, enabled: boolean = tru
       return;
     }
 
+    let cancelled = false;
+
     async function fetchCountryData() {
       setLoading(true);
       setError(null);
       try {
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('phone_number, id')
-          .gte('created_at', dateRange.from.toISOString())
-          .lte('created_at', dateRange.to.toISOString());
+        const { data: profilesData, error: queryError } = await withTimeout(
+          supabase
+            .from('profiles')
+            .select('phone_number, id')
+            .gte('created_at', dateRange.from.toISOString())
+            .lte('created_at', dateRange.to.toISOString())
+        );
+
+        if (cancelled) return;
+        if (queryError) throw queryError;
 
         const countryMap: Record<string, CountryData> = {};
         
@@ -308,20 +341,22 @@ export function useCountryAnalytics(dateRange: DateRange, enabled: boolean = tru
 
         setData(Object.values(countryMap).sort((a, b) => b.users - a.users));
       } catch (err: any) {
+        if (cancelled) return;
         console.error('Error fetching country data:', err);
         setError(err.message || 'Failed to fetch country data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchCountryData();
-  }, [dateRange.from, dateRange.to, enabled]);
+    return () => { cancelled = true; };
+  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = true) {
+export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<FeatureData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -332,18 +367,13 @@ export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = tru
       return;
     }
 
+    let cancelled = false;
+
     async function fetchFeatureData() {
       setLoading(true);
       setError(null);
       try {
-        const [
-          p2pOrders,
-          marketplaceOrders,
-          stakingPositions,
-          transfers,
-          p2pRevenue,
-          marketplaceRevenue,
-        ] = await Promise.all([
+        const results = await withTimeout(Promise.all([
           supabase.from('p2p_orders').select('id, buyer_id', { count: 'exact' })
             .gte('created_at', dateRange.from.toISOString())
             .lte('created_at', dateRange.to.toISOString()),
@@ -365,7 +395,11 @@ export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = tru
             .eq('wallet_type', 'marketplace_fees')
             .gte('created_at', dateRange.from.toISOString())
             .lte('created_at', dateRange.to.toISOString()),
-        ]);
+        ]));
+
+        if (cancelled) return;
+
+        const [p2pOrders, marketplaceOrders, stakingPositions, transfers, p2pRevenue, marketplaceRevenue] = results;
 
         const p2pUsers = new Set(p2pOrders.data?.map(o => o.buyer_id)).size;
         const marketplaceUsers = new Set(marketplaceOrders.data?.map(o => o.buyer_id)).size;
@@ -399,20 +433,22 @@ export function useFeatureAnalytics(dateRange: DateRange, enabled: boolean = tru
           },
         ]);
       } catch (err: any) {
+        if (cancelled) return;
         console.error('Error fetching feature data:', err);
         setError(err.message || 'Failed to fetch feature data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchFeatureData();
-  }, [dateRange.from, dateRange.to, enabled]);
+    return () => { cancelled = true; };
+  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }
 
-export function useUserAnalytics(dateRange: DateRange, enabled: boolean = true) {
+export function useUserAnalytics(dateRange: DateRange, enabled: boolean = true, retryTrigger: number = 0) {
   const [data, setData] = useState<UserData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -423,24 +459,36 @@ export function useUserAnalytics(dateRange: DateRange, enabled: boolean = true) 
       return;
     }
 
+    let cancelled = false;
+
     async function fetchUserData() {
       setLoading(true);
       setError(null);
       try {
-        const { data: profilesData } = await supabase
-          .from('profiles')
-          .select('created_at')
-          .gte('created_at', dateRange.from.toISOString())
-          .lte('created_at', dateRange.to.toISOString())
-          .order('created_at', { ascending: true });
+        const { data: profilesData, error: queryError } = await withTimeout(
+          supabase
+            .from('profiles')
+            .select('created_at')
+            .gte('created_at', dateRange.from.toISOString())
+            .lte('created_at', dateRange.to.toISOString())
+            .order('created_at', { ascending: true })
+        );
+
+        if (cancelled) return;
+        if (queryError) throw queryError;
 
         const grouped: Record<string, UserData> = {};
         let runningTotal = 0;
 
-        const { count: initialCount } = await supabase
-          .from('profiles')
-          .select('id', { count: 'exact', head: true })
-          .lt('created_at', dateRange.from.toISOString());
+        const { count: initialCount, error: countError } = await withTimeout(
+          supabase
+            .from('profiles')
+            .select('id', { count: 'exact', head: true })
+            .lt('created_at', dateRange.from.toISOString())
+        );
+
+        if (cancelled) return;
+        if (countError) throw countError;
 
         runningTotal = initialCount || 0;
 
@@ -456,15 +504,17 @@ export function useUserAnalytics(dateRange: DateRange, enabled: boolean = true) 
 
         setData(Object.values(grouped));
       } catch (err: any) {
+        if (cancelled) return;
         console.error('Error fetching user data:', err);
         setError(err.message || 'Failed to fetch user data');
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     }
 
     fetchUserData();
-  }, [dateRange.from, dateRange.to, enabled]);
+    return () => { cancelled = true; };
+  }, [dateRange.from, dateRange.to, enabled, retryTrigger]);
 
   return { data, loading, error };
 }

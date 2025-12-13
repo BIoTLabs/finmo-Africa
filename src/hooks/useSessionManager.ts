@@ -60,7 +60,7 @@ export const useSessionManager = () => {
       }
     });
 
-    // Periodic session check (every 60 seconds - less aggressive)
+    // Periodic session check (every 120 seconds - reduced aggressiveness for admin operations)
     const intervalId = setInterval(async () => {
       if (!mountedRef.current) return;
       
@@ -87,7 +87,7 @@ export const useSessionManager = () => {
           .update({ last_active: new Date().toISOString() })
           .eq('user_id', session.user.id);
       }
-    }, 60000); // Check every 60 seconds
+    }, 120000); // Check every 120 seconds (2 minutes) - less aggressive for heavy admin pages
 
     return () => {
       mountedRef.current = false;
