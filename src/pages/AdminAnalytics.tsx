@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Users, TrendingUp, DollarSign, Globe, Coins, Download, Calendar, AlertCircle } from "lucide-react";
+import { ArrowLeft, Users, TrendingUp, DollarSign, Globe, Coins, Download, Calendar, AlertCircle, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -30,6 +30,7 @@ export default function AdminAnalytics() {
   const navigate = useNavigate();
   const { isAdmin, loading: adminLoading } = useAdminCheck();
   const [dateRangeOption, setDateRangeOption] = useState("30");
+  const [retryTrigger, setRetryTrigger] = useState(0);
   
   // Redirect non-admins
   useEffect(() => {
@@ -47,12 +48,20 @@ export default function AdminAnalytics() {
   // Only fetch data after admin is verified
   const isReady = isAdmin && !adminLoading;
   
-  const { data: overview, loading: overviewLoading, error: overviewError } = useOverviewMetrics(dateRange, isReady);
-  const { data: revenueData, loading: revenueLoading, error: revenueError } = useRevenueAnalytics(dateRange, isReady);
-  const { data: tokenData, loading: tokenLoading, error: tokenError } = useTokenAnalytics(dateRange, isReady);
-  const { data: countryData, loading: countryLoading, error: countryError } = useCountryAnalytics(dateRange, isReady);
-  const { data: featureData, loading: featureLoading, error: featureError } = useFeatureAnalytics(dateRange, isReady);
-  const { data: userData, loading: userLoading, error: userError } = useUserAnalytics(dateRange, isReady);
+  const { data: overview, loading: overviewLoading, error: overviewError } = useOverviewMetrics(dateRange, isReady, retryTrigger);
+  const { data: revenueData, loading: revenueLoading, error: revenueError } = useRevenueAnalytics(dateRange, isReady, retryTrigger);
+  const { data: tokenData, loading: tokenLoading, error: tokenError } = useTokenAnalytics(dateRange, isReady, retryTrigger);
+  const { data: countryData, loading: countryLoading, error: countryError } = useCountryAnalytics(dateRange, isReady, retryTrigger);
+  const { data: featureData, loading: featureLoading, error: featureError } = useFeatureAnalytics(dateRange, isReady, retryTrigger);
+  const { data: userData, loading: userLoading, error: userError } = useUserAnalytics(dateRange, isReady, retryTrigger);
+
+  const hasAnyError = overviewError || revenueError || tokenError || countryError || featureError || userError;
+  const isAnyLoading = overviewLoading || revenueLoading || tokenLoading || countryLoading || featureLoading || userLoading;
+
+  const handleRetry = () => {
+    setRetryTrigger(prev => prev + 1);
+    toast.info("Retrying data fetch...");
+  };
 
   // Show loading while checking admin status
   if (adminLoading) {
@@ -107,17 +116,28 @@ export default function AdminAnalytics() {
           </div>
         </div>
 
-        {/* Error Alert */}
-        {(overviewError || revenueError || tokenError || countryError || featureError || userError) && (
+        {/* Error Alert with Retry */}
+        {hasAnyError && (
           <Card className="mb-6 border-destructive bg-destructive/10">
-            <CardContent className="p-4 flex items-center gap-3">
-              <AlertCircle className="h-5 w-5 text-destructive" />
-              <div>
-                <p className="font-medium text-destructive">Some data failed to load</p>
-                <p className="text-sm text-muted-foreground">
-                  {overviewError || revenueError || tokenError || countryError || featureError || userError}
-                </p>
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <AlertCircle className="h-5 w-5 text-destructive" />
+                <div>
+                  <p className="font-medium text-destructive">Some data failed to load</p>
+                  <p className="text-sm text-muted-foreground">
+                    {overviewError || revenueError || tokenError || countryError || featureError || userError}
+                  </p>
+                </div>
               </div>
+              <Button 
+                variant="outline" 
+                size="sm" 
+                onClick={handleRetry}
+                disabled={isAnyLoading}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${isAnyLoading ? 'animate-spin' : ''}`} />
+                Retry
+              </Button>
             </CardContent>
           </Card>
         )}
