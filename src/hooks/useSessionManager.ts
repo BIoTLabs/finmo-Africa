@@ -48,10 +48,13 @@ export const useSessionManager = () => {
         await registerSession();
       } else if (event === 'TOKEN_REFRESHED' && session) {
         if (!mountedRef.current) return;
-        // Update last active time
+        // CRITICAL: Update BOTH last_active AND session_id with new token
         await supabase
           .from('user_sessions')
-          .update({ last_active: new Date().toISOString() })
+          .update({ 
+            last_active: new Date().toISOString(),
+            session_id: session.access_token  // Keep session_id in sync with refreshed token
+          })
           .eq('user_id', session.user.id);
       } else if (event === 'SIGNED_OUT') {
         if (mountedRef.current) {
@@ -60,7 +63,7 @@ export const useSessionManager = () => {
       }
     });
 
-    // Periodic session check (every 120 seconds - reduced aggressiveness for admin operations)
+    // Periodic session check (every 5 minutes - reduced for heavy admin pages)
     const intervalId = setInterval(async () => {
       if (!mountedRef.current) return;
       
@@ -77,9 +80,26 @@ export const useSessionManager = () => {
       if (!mountedRef.current) return;
 
       if (activeSession && activeSession.session_id !== session.access_token) {
-        // Another device has logged in, sign out this session
-        toast.error("You've been logged out because you signed in on another device");
-        await supabase.auth.signOut();
+        // Token mismatch detected - wait and re-check to handle recent token refresh
+        await new Promise(r => setTimeout(r, 2000));
+        
+        if (!mountedRef.current) return;
+        
+        // Re-fetch both fresh session and database record
+        const { data: { session: freshSession } } = await supabase.auth.getSession();
+        const { data: freshActiveSession } = await supabase
+          .from('user_sessions')
+          .select('session_id')
+          .eq('user_id', session.user.id)
+          .maybeSingle();
+        
+        if (!mountedRef.current) return;
+        
+        // Only logout if STILL mismatched after retry
+        if (freshActiveSession && freshSession && freshActiveSession.session_id !== freshSession.access_token) {
+          toast.error("You've been logged out because you signed in on another device");
+          await supabase.auth.signOut();
+        }
       } else if (activeSession) {
         // Update last active
         await supabase
@@ -87,7 +107,7 @@ export const useSessionManager = () => {
           .update({ last_active: new Date().toISOString() })
           .eq('user_id', session.user.id);
       }
-    }, 120000); // Check every 120 seconds (2 minutes) - less aggressive for heavy admin pages
+    }, 300000); // Check every 5 minutes - less aggressive for heavy admin pages
 
     return () => {
       mountedRef.current = false;
