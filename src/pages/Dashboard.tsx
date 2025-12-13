@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -7,8 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "sonner";
 import MobileNav from "@/components/MobileNav";
-import { useRealtimeTransactions } from "@/hooks/useRealtimeTransactions";
-import { useRealtimeBalance } from "@/hooks/useRealtimeBalance";
+import { useConsolidatedRealtime } from "@/hooks/useConsolidatedRealtime";
 import { useAutoBalanceSync } from "@/hooks/useAutoBalanceSync";
 import RealtimeStatus from "@/components/RealtimeStatus";
 import { RewardsNotification } from "@/components/RewardsNotification";
@@ -41,12 +40,11 @@ const Dashboard = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [syncing, setSyncing] = useState(false);
 
-  // Use real-time hooks
-  const { transactions, connected } = useRealtimeTransactions(userId);
-  const { balances } = useRealtimeBalance(userId);
+  // Use consolidated realtime hook - single channel for all data
+  const { transactions, balances, connected } = useConsolidatedRealtime(userId);
   
-  // Auto-sync blockchain balances every 2 minutes
-  useAutoBalanceSync(userId, profile?.wallet_address);
+  // Auto-sync blockchain balances (5 min interval, on-demand)
+  const { syncBalances } = useAutoBalanceSync(userId, profile?.wallet_address);
 
   useEffect(() => {
     loadUserData();
@@ -86,26 +84,17 @@ const Dashboard = () => {
     }
   };
 
-  // Aggregate balances by token across all chains for display
-  const aggregatedBalances = balances.reduce((acc, b) => {
-    const existing = acc.find(item => item.token === b.token);
-    if (existing) {
-      existing.balance += Number(b.balance);
-    } else {
-      acc.push({ 
-        token: b.token, 
-        balance: Number(b.balance),
-        id: b.id,
-        user_id: b.user_id,
-        updated_at: b.updated_at
-      });
-    }
-    return acc;
-  }, [] as typeof balances);
+  // Memoized aggregated balances - already aggregated by consolidated hook
+  const aggregatedBalances = useMemo(() => balances, [balances]);
 
-  const totalUsdValue = aggregatedBalances.reduce((sum, b) => sum + b.balance, 0);
+  // Memoized total USD value
+  const totalUsdValue = useMemo(() => 
+    aggregatedBalances.reduce((sum, b) => sum + b.balance, 0),
+    [aggregatedBalances]
+  );
 
-  const formatTimestamp = (timestamp: string) => {
+  // Memoized timestamp formatter
+  const formatTimestamp = useCallback((timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -116,16 +105,13 @@ const Dashboard = () => {
     if (diffHours < 24) return `${diffHours} hours ago`;
     if (diffDays < 7) return `${diffDays} days ago`;
     return date.toLocaleDateString();
-  };
+  }, []);
 
-  const handleSyncBlockchain = async () => {
+  const handleSyncBlockchain = useCallback(async () => {
     setSyncing(true);
     try {
       toast.info("Refreshing balances...");
-      
-      // Simply reload the page to refresh all data
-      window.location.reload();
-      
+      await syncBalances();
       toast.success("Balance refresh completed!");
     } catch (error: any) {
       console.error('Sync error:', error);
@@ -133,7 +119,7 @@ const Dashboard = () => {
     } finally {
       setSyncing(false);
     }
-  };
+  }, [syncBalances]);
 
   if (!profile) return null;
 

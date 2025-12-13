@@ -1,5 +1,4 @@
-import { useState, useEffect } from "react";
-import { blockchainService } from "@/utils/blockchain";
+import { useState, useCallback } from "react";
 import { supabase } from "@/integrations/supabase/client";
 
 interface BlockchainBalances {
@@ -7,52 +6,27 @@ interface BlockchainBalances {
   USDC: string;
 }
 
+/**
+ * Hook for blockchain balance operations
+ * Removed aggressive polling - now only syncs on-demand
+ */
 export const useBlockchainBalance = (walletAddress: string | null) => {
   const [balances, setBalances] = useState<BlockchainBalances>({
     MATIC: "0",
     USDC: "0",
   });
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [syncing, setSyncing] = useState(false);
 
-  useEffect(() => {
-    if (walletAddress) {
-      fetchBalances();
-      // Refresh every 30 seconds
-      const interval = setInterval(fetchBalances, 30000);
-      return () => clearInterval(interval);
-    }
-  }, [walletAddress]);
-
-  const fetchBalances = async () => {
-    if (!walletAddress) return;
-
-    try {
-      const maticBalance = await blockchainService.getMaticBalance(walletAddress);
-      
-      setBalances({
-        MATIC: maticBalance,
-        USDC: "0", // USDC balance is now fetched per chain
-      });
-    } catch (error) {
-      console.error("Error fetching blockchain balances:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const syncToDatabase = async (userId: string) => {
+  const syncToDatabase = useCallback(async (userId: string) => {
     if (!walletAddress || syncing) return false;
 
     setSyncing(true);
     try {
       // Call the edge function to sync balances from blockchain
-      const { data, error } = await supabase.functions.invoke('sync-multichain-balances');
+      const { error } = await supabase.functions.invoke('sync-multichain-balances');
       
       if (error) throw error;
-      
-      // Refresh local state after sync
-      await fetchBalances();
       
       return true;
     } catch (error) {
@@ -61,7 +35,12 @@ export const useBlockchainBalance = (walletAddress: string | null) => {
     } finally {
       setSyncing(false);
     }
-  };
+  }, [walletAddress, syncing]);
 
-  return { balances, loading, syncing, syncToDatabase, refetch: fetchBalances };
+  const refetch = useCallback(async () => {
+    // No-op - balances come from database via useRealtimeBalance
+    // This is kept for API compatibility
+  }, []);
+
+  return { balances, loading, syncing, syncToDatabase, refetch };
 };
