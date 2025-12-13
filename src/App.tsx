@@ -2,70 +2,89 @@ import { Toaster } from "@/components/ui/toaster";
 import { Toaster as Sonner } from "@/components/ui/sonner";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
-import NotFound from "./pages/NotFound";
-import Auth from "./pages/Auth";
-import RootRedirect from "./components/RootRedirect";
-import ForgotPassword from "./pages/ForgotPassword";
-import ResetPassword from "./pages/ResetPassword";
-import Dashboard from "./pages/Dashboard";
-import Contacts from "./pages/Contacts";
-import Send from "./pages/Send";
-import Settings from "./pages/Settings";
-import Receive from "./pages/Receive";
-import TransactionDetails from "./pages/TransactionDetails";
-import AddFunds from "./pages/AddFunds";
-import Admin from "./pages/Admin";
-import Profile from "./pages/Profile";
-import P2P from "./pages/P2P";
-import VirtualCard from "./pages/VirtualCard";
-import P2PCreateListing from "./pages/P2PCreateListing";
-import VirtualCardCreate from "./pages/VirtualCardCreate";
-import VirtualCardFund from "./pages/VirtualCardFund";
-import PaymentMethods from "./pages/PaymentMethods";
-import P2POrderDetail from "./pages/P2POrderDetail";
-import P2POrderStatus from "./pages/P2POrderStatus";
-import VirtualCardTransactions from "./pages/VirtualCardTransactions";
-import RequestPayment from "./pages/RequestPayment";
-import PaymentRequest from "./pages/PaymentRequest";
-import PaymentHistory from "./pages/PaymentHistory";
-import ProtectedRoute from "./components/ProtectedRoute";
-import PhoneVerification from "./pages/PhoneVerification";
-import AllTransactions from "./pages/AllTransactions";
-import Explorer from "./pages/Explorer";
-import Marketplace from "./pages/Marketplace";
-import MarketplaceCreate from "./pages/MarketplaceCreate";
-import MarketplaceListing from "./pages/MarketplaceListing";
-import MarketplaceListingBids from "./pages/MarketplaceListingBids";
-import MarketplaceOrders from "./pages/MarketplaceOrders";
-import MarketplaceOrderDetail from "./pages/MarketplaceOrderDetail";
-import KYCVerification from "./pages/KYCVerification";
-import AccountStatement from "./pages/AccountStatement";
-import MyAds from "./pages/MyAds";
-import Staking from "./pages/Staking";
-import ComingSoon from "./pages/ComingSoon";
-import Rewards from "./pages/Rewards";
-import RewardsDetails from "./pages/RewardsDetails";
-import AdminRewardsBackfill from "./pages/AdminRewardsBackfill";
-import AdminKYC from "./pages/AdminKYC";
-import AdminListings from "./pages/AdminListings";
-import AdminMessaging from "./pages/AdminMessaging";
-import AdminDisputes from "./pages/AdminDisputes";
-import DeleteAccount from "./pages/DeleteAccount";
-import PartnerRegister from "./pages/PartnerRegister";
-import AdminUserDeletion from "./pages/AdminUserDeletion";
-import AdminUserManagement from "./pages/AdminUserManagement";
-import AdminAuditLogs from "./pages/AdminAuditLogs";
-import AdminPartnerManagement from "./pages/AdminPartnerManagement";
-import AdminRevenue from "./pages/AdminRevenue";
-import AdminStakingReserves from "./pages/AdminStakingReserves";
-import AdminCountries from "./pages/AdminCountries";
-import AdminAnalytics from "./pages/AdminAnalytics";
-import ApiDocs from "./pages/ApiDocs";
-import PartnerPricing from "./pages/PartnerPricing";
-import PartnerDashboard from "./pages/PartnerDashboard";
-import AdminLogin from "./pages/AdminLogin";
+import { lazy, Suspense } from "react";
+import LoadingScreen from "@/components/LoadingScreen";
 
-const queryClient = new QueryClient();
+// Eagerly loaded routes (critical path)
+import RootRedirect from "./components/RootRedirect";
+import Auth from "./pages/Auth";
+import ProtectedRoute from "./components/ProtectedRoute";
+
+// Lazy loaded routes - User pages
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Contacts = lazy(() => import('./pages/Contacts'));
+const Send = lazy(() => import('./pages/Send'));
+const Settings = lazy(() => import('./pages/Settings'));
+const Receive = lazy(() => import('./pages/Receive'));
+const TransactionDetails = lazy(() => import('./pages/TransactionDetails'));
+const AddFunds = lazy(() => import('./pages/AddFunds'));
+const Profile = lazy(() => import('./pages/Profile'));
+const P2P = lazy(() => import('./pages/P2P'));
+const P2PCreateListing = lazy(() => import('./pages/P2PCreateListing'));
+const P2POrderDetail = lazy(() => import('./pages/P2POrderDetail'));
+const P2POrderStatus = lazy(() => import('./pages/P2POrderStatus'));
+const PaymentMethods = lazy(() => import('./pages/PaymentMethods'));
+const RequestPayment = lazy(() => import('./pages/RequestPayment'));
+const PaymentRequest = lazy(() => import('./pages/PaymentRequest'));
+const PaymentHistory = lazy(() => import('./pages/PaymentHistory'));
+const AllTransactions = lazy(() => import('./pages/AllTransactions'));
+const Explorer = lazy(() => import('./pages/Explorer'));
+const Marketplace = lazy(() => import('./pages/Marketplace'));
+const MarketplaceCreate = lazy(() => import('./pages/MarketplaceCreate'));
+const MarketplaceListing = lazy(() => import('./pages/MarketplaceListing'));
+const MarketplaceListingBids = lazy(() => import('./pages/MarketplaceListingBids'));
+const MarketplaceOrders = lazy(() => import('./pages/MarketplaceOrders'));
+const MarketplaceOrderDetail = lazy(() => import('./pages/MarketplaceOrderDetail'));
+const KYCVerification = lazy(() => import('./pages/KYCVerification'));
+const AccountStatement = lazy(() => import('./pages/AccountStatement'));
+const MyAds = lazy(() => import('./pages/MyAds'));
+const Staking = lazy(() => import('./pages/Staking'));
+const Rewards = lazy(() => import('./pages/Rewards'));
+const RewardsDetails = lazy(() => import('./pages/RewardsDetails'));
+
+// Lazy loaded routes - Virtual Card (Coming Soon)
+const ComingSoon = lazy(() => import('./pages/ComingSoon'));
+
+// Lazy loaded routes - Auth & Account
+const ForgotPassword = lazy(() => import('./pages/ForgotPassword'));
+const ResetPassword = lazy(() => import('./pages/ResetPassword'));
+const PhoneVerification = lazy(() => import('./pages/PhoneVerification'));
+const DeleteAccount = lazy(() => import('./pages/DeleteAccount'));
+const NotFound = lazy(() => import('./pages/NotFound'));
+
+// Lazy loaded routes - Admin pages (heavy, rarely accessed)
+const Admin = lazy(() => import('./pages/Admin'));
+const AdminLogin = lazy(() => import('./pages/AdminLogin'));
+const AdminRewardsBackfill = lazy(() => import('./pages/AdminRewardsBackfill'));
+const AdminKYC = lazy(() => import('./pages/AdminKYC'));
+const AdminListings = lazy(() => import('./pages/AdminListings'));
+const AdminMessaging = lazy(() => import('./pages/AdminMessaging'));
+const AdminDisputes = lazy(() => import('./pages/AdminDisputes'));
+const AdminUserDeletion = lazy(() => import('./pages/AdminUserDeletion'));
+const AdminUserManagement = lazy(() => import('./pages/AdminUserManagement'));
+const AdminAuditLogs = lazy(() => import('./pages/AdminAuditLogs'));
+const AdminPartnerManagement = lazy(() => import('./pages/AdminPartnerManagement'));
+const AdminRevenue = lazy(() => import('./pages/AdminRevenue'));
+const AdminStakingReserves = lazy(() => import('./pages/AdminStakingReserves'));
+const AdminCountries = lazy(() => import('./pages/AdminCountries'));
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+
+// Lazy loaded routes - Partner pages
+const PartnerRegister = lazy(() => import('./pages/PartnerRegister'));
+const PartnerPricing = lazy(() => import('./pages/PartnerPricing'));
+const PartnerDashboard = lazy(() => import('./pages/PartnerDashboard'));
+const ApiDocs = lazy(() => import('./pages/ApiDocs'));
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 1000 * 60 * 5, // 5 minutes
+      gcTime: 1000 * 60 * 10, // 10 minutes (previously cacheTime)
+      retry: 1,
+      refetchOnWindowFocus: false,
+    },
+  },
+});
 
 const App = () => {
   return (
@@ -73,35 +92,36 @@ const App = () => {
       <Toaster />
       <Sonner />
       <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<RootRedirect />} />
-          <Route path="/auth" element={<Auth />} />
-          <Route path="/forgot-password" element={<ForgotPassword />} />
-          <Route path="/reset-password" element={<ResetPassword />} />
-          <Route path="/verify-phone" element={<PhoneVerification />} />
-          <Route path="/phone-verification" element={<PhoneVerification />} />
-          <Route path="/delete-account" element={<DeleteAccount />} />
-          <Route path="/admin-login" element={<AdminLogin />} />
-          <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
-          <Route path="/explorer" element={<ProtectedRoute><Explorer /></ProtectedRoute>} />
-          <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
-          <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
-          <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
-          <Route path="/receive" element={<ProtectedRoute><Receive /></ProtectedRoute>} />
-          <Route path="/add-funds" element={<ProtectedRoute><AddFunds /></ProtectedRoute>} />
-          <Route path="/transaction/:id" element={<ProtectedRoute><TransactionDetails /></ProtectedRoute>} />
-          <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
-          <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
-          <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
-          <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
-          <Route path="/p2p/create-listing" element={<ProtectedRoute><P2PCreateListing /></ProtectedRoute>} />
-          <Route path="/virtual-card" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
-          <Route path="/virtual-card/create" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
-          <Route path="/virtual-card/:cardId/fund" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
-          <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
-          <Route path="/p2p/order/:listingId" element={<ProtectedRoute><P2POrderDetail /></ProtectedRoute>} />
-          <Route path="/p2p/order-status/:orderId" element={<ProtectedRoute><P2POrderStatus /></ProtectedRoute>} />
-          <Route path="/virtual-card/:cardId/transactions" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
+        <Suspense fallback={<LoadingScreen />}>
+          <Routes>
+            <Route path="/" element={<RootRedirect />} />
+            <Route path="/auth" element={<Auth />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
+            <Route path="/verify-phone" element={<PhoneVerification />} />
+            <Route path="/phone-verification" element={<PhoneVerification />} />
+            <Route path="/delete-account" element={<DeleteAccount />} />
+            <Route path="/admin-login" element={<AdminLogin />} />
+            <Route path="/all-transactions" element={<ProtectedRoute><AllTransactions /></ProtectedRoute>} />
+            <Route path="/explorer" element={<ProtectedRoute><Explorer /></ProtectedRoute>} />
+            <Route path="/dashboard" element={<ProtectedRoute><Dashboard /></ProtectedRoute>} />
+            <Route path="/contacts" element={<ProtectedRoute><Contacts /></ProtectedRoute>} />
+            <Route path="/send" element={<ProtectedRoute><Send /></ProtectedRoute>} />
+            <Route path="/receive" element={<ProtectedRoute><Receive /></ProtectedRoute>} />
+            <Route path="/add-funds" element={<ProtectedRoute><AddFunds /></ProtectedRoute>} />
+            <Route path="/transaction/:id" element={<ProtectedRoute><TransactionDetails /></ProtectedRoute>} />
+            <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
+            <Route path="/admin" element={<ProtectedRoute><Admin /></ProtectedRoute>} />
+            <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+            <Route path="/p2p" element={<ProtectedRoute><P2P /></ProtectedRoute>} />
+            <Route path="/p2p/create-listing" element={<ProtectedRoute><P2PCreateListing /></ProtectedRoute>} />
+            <Route path="/virtual-card" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
+            <Route path="/virtual-card/create" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
+            <Route path="/virtual-card/:cardId/fund" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
+            <Route path="/payment-methods" element={<ProtectedRoute><PaymentMethods /></ProtectedRoute>} />
+            <Route path="/p2p/order/:listingId" element={<ProtectedRoute><P2POrderDetail /></ProtectedRoute>} />
+            <Route path="/p2p/order-status/:orderId" element={<ProtectedRoute><P2POrderStatus /></ProtectedRoute>} />
+            <Route path="/virtual-card/:cardId/transactions" element={<ProtectedRoute><ComingSoon /></ProtectedRoute>} />
             <Route path="/request-payment" element={<ProtectedRoute><RequestPayment /></ProtectedRoute>} />
             <Route path="/payment-history" element={<ProtectedRoute><PaymentHistory /></ProtectedRoute>} />
             <Route path="/pay/:id" element={<PaymentRequest />} />
@@ -135,9 +155,10 @@ const App = () => {
             <Route path="/partner/register" element={<PartnerRegister />} />
             <Route path="/partner/pricing" element={<PartnerPricing />} />
             <Route path="/partner/dashboard" element={<PartnerDashboard />} />
-          {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
-          <Route path="*" element={<NotFound />} />
-        </Routes>
+            {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </Suspense>
       </BrowserRouter>
     </QueryClientProvider>
   );
