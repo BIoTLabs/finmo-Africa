@@ -485,6 +485,7 @@ const uploadWithProgress = useCallback(async (
     });
   }, []);
 
+
   // Immediate file upload handler - called when user selects a file
   const handleFileSelect = useCallback(async (
     file: File, 
@@ -637,9 +638,47 @@ const uploadWithProgress = useCallback(async (
     return idReady && selfieReady && proofReady && sourceOfFundsReady;
   }, [idDocumentUpload, selfieUpload, proofOfAddressUpload, sourceOfFundsUpload, targetTier, loading]);
 
+  // Debug logging for upload state changes
+  useEffect(() => {
+    console.log('[Upload States]', {
+      id: { status: idDocumentUpload.status, progress: idDocumentUpload.progress },
+      selfie: { status: selfieUpload.status, progress: selfieUpload.progress },
+      proof: { status: proofOfAddressUpload.status, progress: proofOfAddressUpload.progress },
+      source: { status: sourceOfFundsUpload.status, progress: sourceOfFundsUpload.progress },
+      targetTier,
+      canSubmit
+    });
+  }, [idDocumentUpload, selfieUpload, proofOfAddressUpload, sourceOfFundsUpload, targetTier, canSubmit]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!mountedRef.current) return;
+    
+    console.log('[handleSubmit] Attempting submission with upload states:', {
+      id: idDocumentUpload.status,
+      selfie: selfieUpload.status,
+      proof: proofOfAddressUpload.status,
+      source: sourceOfFundsUpload.status,
+      targetTier
+    });
+    
+    // Check for missing required documents (idle = never uploaded)
+    if (idDocumentUpload.status === 'idle') {
+      toast({ title: "Missing Document", description: "Please upload your ID document", variant: "destructive" });
+      return;
+    }
+    if (selfieUpload.status === 'idle') {
+      toast({ title: "Missing Document", description: "Please upload your selfie photo", variant: "destructive" });
+      return;
+    }
+    if ((targetTier === 'tier_2' || targetTier === 'tier_3') && proofOfAddressUpload.status === 'idle') {
+      toast({ title: "Missing Document", description: "Please upload your proof of address", variant: "destructive" });
+      return;
+    }
+    if ((targetTier === 'tier_2' || targetTier === 'tier_3') && sourceOfFundsUpload.status === 'idle') {
+      toast({ title: "Missing Document", description: "Please upload your supporting documentation (bank statement, pay slip, etc.)", variant: "destructive" });
+      return;
+    }
     
     // Verify all required uploads are complete (files already uploaded!)
     if (idDocumentUpload.status !== 'complete') {
@@ -1392,7 +1431,10 @@ const uploadWithProgress = useCallback(async (
                 </div>
 
                 <div>
-                  <Label htmlFor="tax_id">{taxIdLabel}</Label>
+                  <Label htmlFor="tax_id">
+                    {taxIdLabel}
+                    {(targetTier === 'tier_2' || targetTier === 'tier_3') && <span className="text-destructive ml-1">*</span>}
+                  </Label>
                   <Input
                     id="tax_id"
                     value={formData.tax_id}
@@ -1535,8 +1577,26 @@ const uploadWithProgress = useCallback(async (
                     </span>
                   ) : !canSubmit ? (
                     <span className="flex items-center gap-2">
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                      Waiting for uploads...
+                      {/* Check if any required document is missing (idle) vs still uploading */}
+                      {(() => {
+                        const idMissing = idDocumentUpload.status === 'idle';
+                        const selfieMissing = selfieUpload.status === 'idle';
+                        const proofMissing = (targetTier === 'tier_2' || targetTier === 'tier_3') && proofOfAddressUpload.status === 'idle';
+                        const sourceMissing = (targetTier === 'tier_2' || targetTier === 'tier_3') && sourceOfFundsUpload.status === 'idle';
+                        
+                        if (idMissing) return "Upload ID document";
+                        if (selfieMissing) return "Upload selfie photo";
+                        if (proofMissing) return "Upload proof of address";
+                        if (sourceMissing) return "Upload supporting document";
+                        
+                        // If not missing but not complete, it's uploading
+                        return (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin" />
+                            Waiting for uploads...
+                          </>
+                        );
+                      })()}
                     </span>
                   ) : (
                     "Submit for Verification"
