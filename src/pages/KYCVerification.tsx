@@ -702,16 +702,44 @@ const uploadWithProgress = useCallback(async (
         kyc_tier: 'tier_0',
       };
 
-      console.log('Inserting KYC data:', JSON.stringify(insertData, null, 2));
-      
-      const { error } = await supabase
-        .from("kyc_verifications")
-        .insert(insertData)
-        .select();
+      // Use UPDATE for upgrades (existing user), INSERT for new submissions
+      if (isUpgradeFlow) {
+        console.log('Updating existing KYC for upgrade:', JSON.stringify(insertData, null, 2));
+        
+        const { error } = await supabase
+          .from("kyc_verifications")
+          .update({
+            address: insertData.address,
+            proof_of_address_url: insertData.proof_of_address_url,
+            tax_id: insertData.tax_id,
+            tax_id_type: insertData.tax_id_type,
+            source_of_funds: insertData.source_of_funds,
+            source_of_funds_documents: insertData.source_of_funds_documents,
+            occupation: insertData.occupation,
+            employer_name: insertData.employer_name,
+            verification_level: targetTier as "tier_0" | "tier_1" | "tier_2" | "tier_3",
+            status: 'pending',
+            updated_at: new Date().toISOString(),
+          })
+          .eq('user_id', user.id)
+          .select();
 
-      if (error) {
-        console.error('Insert error:', error);
-        throw new Error(error.message || 'Failed to save verification data');
+        if (error) {
+          console.error('Update error:', error);
+          throw new Error(error.message || 'Failed to update verification data');
+        }
+      } else {
+        console.log('Inserting new KYC data:', JSON.stringify(insertData, null, 2));
+        
+        const { error } = await supabase
+          .from("kyc_verifications")
+          .insert(insertData)
+          .select();
+
+        if (error) {
+          console.error('Insert error:', error);
+          throw new Error(error.message || 'Failed to save verification data');
+        }
       }
 
       toast({
