@@ -21,16 +21,23 @@ import { useKYCTiers, useCountryKYCRequirements, useUserKYCTier, getTierDisplayN
 
 // Upload state interface for immediate file uploads
 interface UploadState {
-  status: 'idle' | 'compressing' | 'uploading' | 'complete' | 'error';
+  status: 'idle' | 'compressing' | 'uploading' | 'complete' | 'error' | 'stalled';
   progress: number;
   url: string | null;
   error: string | null;
   file: File | null;
+  startedAt?: number; // Track when upload started for stall detection
+  abortController?: AbortController; // Allow cancellation
 }
 
 const initialUploadState: UploadState = { 
-  status: 'idle', progress: 0, url: null, error: null, file: null 
+  status: 'idle', progress: 0, url: null, error: null, file: null, startedAt: undefined, abortController: undefined 
 };
+
+// Constants for upload behavior
+const STALL_DETECTION_MS = 20000; // 20 seconds without progress = stalled
+const UPLOAD_TIMEOUT_MS = 120000; // 2 minutes max for full upload
+const PROGRESS_CHECK_INTERVAL_MS = 5000; // Check for stall every 5 seconds
 
 const ID_TYPES: Record<string, { value: string; label: string }[]> = {
   NG: [
@@ -147,6 +154,13 @@ export default function KYCVerification() {
   const [selfieUpload, setSelfieUpload] = useState<UploadState>(initialUploadState);
   const [proofOfAddressUpload, setProofOfAddressUpload] = useState<UploadState>(initialUploadState);
   const [sourceOfFundsUpload, setSourceOfFundsUpload] = useState<UploadState>(initialUploadState);
+  
+  // Track last progress update for stall detection
+  const lastProgressRef = useRef<Record<string, { progress: number; timestamp: number }>>({});
+  const stallCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  
+  // Flag to indicate if this is an upgrade flow
+  const [isUpgradeFlow, setIsUpgradeFlow] = useState(false);
   
   const mountedRef = useRef(true);
   const userIdRef = useRef<string | null>(null);
@@ -394,6 +408,82 @@ export default function KYCVerification() {
     }
   }, [isMobile]);
 
+  // Cancel an in-progress upload
+  const cancelUpload = useCallback((
+    setUploadState: React.Dispatch<React.SetStateAction<UploadState>>,
+    uploadState: UploadState
+  ) => {
+    if (uploadState.abortController) {
+      uploadState.abortController.abort();
+    }
+    setUploadState(initialUploadState);
+  }, []);
+
+  // XHR-based upload with real progress tracking
+  const uploadWithProgress = useCallback(async (
+    file: File,
+    filePath: string,
+    type: string,
+    setUploadState: React.Dispatch<React.SetStateAction<UploadState>>,
+    abortController: AbortController
+  ): Promise<string> => {
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      
+      // Track progress for stall detection
+      lastProgressRef.current[type] = { progress: 0, timestamp: Date.now() };
+      
+      xhr.upload.onprogress = (event) => {
+        if (event.lengthComputable) {
+          const percentComplete = Math.round((event.loaded / event.total) * 100);
+          // Scale to 30-95 range (leaving room for compression at start, finalization at end)
+          const scaledProgress = 30 + Math.round((percentComplete / 100) * 65);
+          
+          // Update stall detection tracker
+          lastProgressRef.current[type] = { progress: scaledProgress, timestamp: Date.now() };
+          
+          if (mountedRef.current) {
+            setUploadState(prev => ({ ...prev, progress: scaledProgress }));
+          }
+        }
+      };
+
+      xhr.onload = () => {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          resolve(filePath);
+        } else {
+          try {
+            const errorData = JSON.parse(xhr.responseText);
+            reject(new Error(errorData.message || errorData.error || `Upload failed (${xhr.status})`));
+          } catch {
+            reject(new Error(`Upload failed with status ${xhr.status}`));
+          }
+        }
+      };
+
+      xhr.onerror = () => reject(new Error('Network error during upload'));
+      xhr.ontimeout = () => reject(new Error('Upload timed out'));
+      
+      // Handle abort
+      abortController.signal.addEventListener('abort', () => {
+        xhr.abort();
+        reject(new Error('Upload cancelled'));
+      });
+
+      // Get Supabase storage URL
+      const supabaseUrl = import.meta.env.VITE_SUPABASE_URL;
+      const anonKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY;
+      const uploadUrl = `${supabaseUrl}/storage/v1/object/kyc-documents/${filePath}`;
+
+      xhr.open('POST', uploadUrl, true);
+      xhr.timeout = UPLOAD_TIMEOUT_MS;
+      xhr.setRequestHeader('Authorization', `Bearer ${anonKey}`);
+      xhr.setRequestHeader('x-upsert', 'true');
+      
+      xhr.send(file);
+    });
+  }, []);
+
   // Immediate file upload handler - called when user selects a file
   const handleFileSelect = useCallback(async (
     file: File, 
@@ -416,8 +506,18 @@ export default function KYCVerification() {
       return;
     }
 
+    const abortController = new AbortController();
+
     // Start compressing
-    setUploadState({ status: 'compressing', progress: 15, url: null, error: null, file });
+    setUploadState({ 
+      status: 'compressing', 
+      progress: 10, 
+      url: null, 
+      error: null, 
+      file,
+      startedAt: Date.now(),
+      abortController 
+    });
     console.log(`[${type}] Starting compression...`);
 
     try {
@@ -425,32 +525,30 @@ export default function KYCVerification() {
       const compressed = await compressImage(file);
       console.log(`[${type}] Compression done, size: ${(compressed.size / 1024).toFixed(1)}KB`);
       
-      if (!mountedRef.current) {
-        console.log(`[${type}] Component unmounted, aborting`);
+      if (!mountedRef.current || abortController.signal.aborted) {
+        console.log(`[${type}] Component unmounted or cancelled, aborting`);
         return;
       }
       
       // Start uploading
-      setUploadState(prev => ({ ...prev, status: 'uploading', progress: 50 }));
-      console.log(`[${type}] Starting upload...`);
+      setUploadState(prev => ({ 
+        ...prev, 
+        status: 'uploading', 
+        progress: 30 
+      }));
+      console.log(`[${type}] Starting upload with real progress...`);
 
-      // Upload to Supabase Storage
+      // Generate file path
       const fileExt = compressed.type === 'image/jpeg' ? 'jpg' : file.name.split('.').pop() || 'jpg';
       const folder = type === 'id' ? 'id-documents' : type === 'selfie' ? 'selfies' : type === 'proofOfAddress' ? 'proof-of-address' : 'source-of-funds';
       const fileName = `${userId}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
 
-      const { error: uploadError } = await supabase.storage
-        .from('kyc-documents')
-        .upload(fileName, compressed);
+      // Upload with XHR for real progress
+      await uploadWithProgress(compressed, fileName, type, setUploadState, abortController);
 
-      if (!mountedRef.current) {
-        console.log(`[${type}] Component unmounted after upload`);
+      if (!mountedRef.current || abortController.signal.aborted) {
+        console.log(`[${type}] Component unmounted or cancelled after upload`);
         return;
-      }
-
-      if (uploadError) {
-        console.error(`[${type}] Upload error:`, uploadError);
-        throw new Error(uploadError.message);
       }
 
       // Success!
@@ -458,9 +556,15 @@ export default function KYCVerification() {
       console.log(`[${type}] Upload complete! URL:`, url);
       setUploadState({ status: 'complete', progress: 100, url, error: null, file });
       
+      // Clean up stall tracker
+      delete lastProgressRef.current[type];
+      
     } catch (err: any) {
       console.error(`[${type}] Error:`, err);
-      if (mountedRef.current) {
+      // Clean up stall tracker
+      delete lastProgressRef.current[type];
+      
+      if (mountedRef.current && !abortController.signal.aborted) {
         setUploadState({ 
           status: 'error', 
           progress: 0, 
@@ -470,12 +574,47 @@ export default function KYCVerification() {
         });
       }
     }
-  }, [compressImage]);
+  }, [compressImage, uploadWithProgress]);
 
   // Reset upload state for retry
   const resetUpload = useCallback((setUploadState: React.Dispatch<React.SetStateAction<UploadState>>) => {
     setUploadState(initialUploadState);
   }, []);
+  
+  // Stall detection - check if any uploads have stalled
+  useEffect(() => {
+    const checkForStalls = () => {
+      const now = Date.now();
+      
+      const checkAndMarkStalled = (
+        type: string, 
+        uploadState: UploadState, 
+        setUploadState: React.Dispatch<React.SetStateAction<UploadState>>
+      ) => {
+        if (uploadState.status !== 'uploading' && uploadState.status !== 'compressing') return;
+        
+        const lastProgress = lastProgressRef.current[type];
+        if (lastProgress && (now - lastProgress.timestamp) > STALL_DETECTION_MS) {
+          console.warn(`[${type}] Upload stalled - no progress for ${STALL_DETECTION_MS/1000}s`);
+          setUploadState(prev => ({ ...prev, status: 'stalled' }));
+        }
+      };
+      
+      checkAndMarkStalled('id', idDocumentUpload, setIdDocumentUpload);
+      checkAndMarkStalled('selfie', selfieUpload, setSelfieUpload);
+      checkAndMarkStalled('proofOfAddress', proofOfAddressUpload, setProofOfAddressUpload);
+      checkAndMarkStalled('sourceOfFunds', sourceOfFundsUpload, setSourceOfFundsUpload);
+    };
+    
+    // Run stall check every 5 seconds
+    stallCheckIntervalRef.current = setInterval(checkForStalls, PROGRESS_CHECK_INTERVAL_MS);
+    
+    return () => {
+      if (stallCheckIntervalRef.current) {
+        clearInterval(stallCheckIntervalRef.current);
+      }
+    };
+  }, [idDocumentUpload, selfieUpload, proofOfAddressUpload, sourceOfFundsUpload]);
 
   // Check if all required uploads are complete
   const canSubmit = useMemo(() => {
@@ -616,13 +755,15 @@ export default function KYCVerification() {
       return formData.full_name && formData.date_of_birth && formData.country_code;
     }
     if (currentStep === 2) {
-      // Can proceed if uploads are complete or in progress
-      const idOk = ['uploading', 'compressing', 'complete'].includes(idDocumentUpload.status);
-      const selfieOk = ['uploading', 'compressing', 'complete'].includes(selfieUpload.status);
+      // Can proceed if uploads are complete or in progress (stalled counts as in progress)
+      const activeStatuses = ['uploading', 'compressing', 'complete', 'stalled'];
+      const idOk = activeStatuses.includes(idDocumentUpload.status);
+      const selfieOk = activeStatuses.includes(selfieUpload.status);
       return formData.id_type && formData.id_number && idOk && selfieOk;
     }
     if (currentStep === 3) {
-      const proofOk = ['uploading', 'compressing', 'complete'].includes(proofOfAddressUpload.status);
+      const activeStatuses = ['uploading', 'compressing', 'complete', 'stalled'];
+      const proofOk = activeStatuses.includes(proofOfAddressUpload.status);
       return formData.address && proofOk && formData.tax_id;
     }
     return true;
@@ -633,12 +774,14 @@ export default function KYCVerification() {
     uploadState, 
     icon: Icon, 
     idleLabel,
-    onRetry
+    onRetry,
+    onCancel
   }: { 
     uploadState: UploadState; 
     icon: React.ElementType; 
     idleLabel: string;
     onRetry?: () => void;
+    onCancel?: () => void;
   }) => {
     switch (uploadState.status) {
       case 'idle':
@@ -655,21 +798,74 @@ export default function KYCVerification() {
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
             <span className="text-sm font-medium">Compressing...</span>
             <Progress value={uploadState.progress} className="w-32 h-2" />
+            {onCancel && (
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm" 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCancel(); }}
+                className="text-xs h-6"
+              >
+                Cancel
+              </Button>
+            )}
           </div>
         );
       case 'uploading':
         return (
           <div className="flex flex-col items-center gap-2">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-sm font-medium">Uploading...</span>
+            <span className="text-sm font-medium">Uploading {uploadState.progress}%</span>
             <Progress value={uploadState.progress} className="w-32 h-2" />
+            {onCancel && (
+              <Button 
+                type="button" 
+                variant="ghost" 
+                size="sm" 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCancel(); }}
+                className="text-xs h-6"
+              >
+                Cancel
+              </Button>
+            )}
+          </div>
+        );
+      case 'stalled':
+        return (
+          <div className="flex flex-col items-center gap-2 text-yellow-600">
+            <AlertTriangle className="h-8 w-8" />
+            <span className="text-sm font-medium">Upload seems slow</span>
+            <span className="text-xs">Network may be unstable</span>
+            <div className="flex gap-2 mt-1">
+              {onCancel && (
+                <Button 
+                  type="button" 
+                  variant="ghost" 
+                  size="sm" 
+                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCancel(); }}
+                  className="text-xs h-6"
+                >
+                  Cancel
+                </Button>
+              )}
+              <Button 
+                type="button" 
+                variant="outline" 
+                size="sm" 
+                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRetry?.(); }}
+                className="text-xs h-6"
+              >
+                <RefreshCw className="h-3 w-3 mr-1" />
+                Retry
+              </Button>
+            </div>
           </div>
         );
       case 'complete':
         return (
           <div className="flex flex-col items-center gap-2 text-green-600">
             <CheckCircle2 className="h-8 w-8" />
-            <span className="text-sm font-medium truncate max-w-[200px]">{uploadState.file?.name}</span>
+            <span className="text-sm font-medium truncate max-w-[200px]">{uploadState.file?.name || 'Previously uploaded'}</span>
             <span className="text-xs">✓ Uploaded</span>
           </div>
         );
@@ -768,8 +964,45 @@ export default function KYCVerification() {
                           </p>
                         </div>
                         <Button onClick={() => {
+                          // Pre-populate form with existing verified data
+                          setFormData(prev => ({
+                            ...prev,
+                            full_name: kycStatus.full_name || prev.full_name,
+                            date_of_birth: kycStatus.date_of_birth || prev.date_of_birth,
+                            id_type: kycStatus.id_type || prev.id_type,
+                            id_number: kycStatus.id_number || prev.id_number,
+                            country_code: kycStatus.country_code || prev.country_code,
+                          }));
+                          
+                          // Mark previous documents as "already uploaded"
+                          if (kycStatus.id_document_url) {
+                            setIdDocumentUpload({ 
+                              status: 'complete', 
+                              progress: 100, 
+                              url: kycStatus.id_document_url, 
+                              error: null, 
+                              file: null 
+                            });
+                          }
+                          if (kycStatus.selfie_url) {
+                            setSelfieUpload({ 
+                              status: 'complete', 
+                              progress: 100, 
+                              url: kycStatus.selfie_url, 
+                              error: null, 
+                              file: null 
+                            });
+                          }
+                          
+                          // Set upgrade flow flag and target tier
+                          setIsUpgradeFlow(true);
+                          const newTier = kycStatus.kyc_tier === 'tier_1' ? 'tier_2' : 'tier_3';
+                          setTargetTier(newTier);
+                          
+                          // Skip to step 3 (Address & Tax) for upgrades since ID/selfie already verified
+                          setCurrentStep(3);
+                          
                           setKycStatus(null);
-                          setTargetTier(kycStatus.kyc_tier === 'tier_1' ? 'tier_2' : 'tier_3');
                         }}>
                           Upgrade
                         </Button>
@@ -988,6 +1221,7 @@ export default function KYCVerification() {
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         idDocumentUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         idDocumentUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
+                        idDocumentUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
                         'hover:bg-accent'
                       }`}
                     >
@@ -996,6 +1230,7 @@ export default function KYCVerification() {
                         icon={FileText} 
                         idleLabel="Upload ID Document"
                         onRetry={() => resetUpload(setIdDocumentUpload)}
+                        onCancel={() => cancelUpload(setIdDocumentUpload, idDocumentUpload)}
                       />
                     </label>
                     <input
@@ -1020,6 +1255,7 @@ export default function KYCVerification() {
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         selfieUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         selfieUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
+                        selfieUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
                         'hover:bg-accent'
                       }`}
                     >
@@ -1028,6 +1264,7 @@ export default function KYCVerification() {
                         icon={Camera} 
                         idleLabel="Take Selfie"
                         onRetry={() => resetUpload(setSelfieUpload)}
+                        onCancel={() => cancelUpload(setSelfieUpload, selfieUpload)}
                       />
                     </label>
                     <input
@@ -1076,6 +1313,7 @@ export default function KYCVerification() {
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         proofOfAddressUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         proofOfAddressUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
+                        proofOfAddressUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
                         'hover:bg-accent'
                       }`}
                     >
@@ -1084,6 +1322,7 @@ export default function KYCVerification() {
                         icon={MapPin} 
                         idleLabel="Upload Proof of Address"
                         onRetry={() => resetUpload(setProofOfAddressUpload)}
+                        onCancel={() => cancelUpload(setProofOfAddressUpload, proofOfAddressUpload)}
                       />
                     </label>
                     <input
@@ -1184,6 +1423,7 @@ export default function KYCVerification() {
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         sourceOfFundsUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         sourceOfFundsUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
+                        sourceOfFundsUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-50 dark:bg-yellow-950/20' :
                         'hover:bg-accent'
                       }`}
                     >
@@ -1192,6 +1432,7 @@ export default function KYCVerification() {
                         icon={Briefcase} 
                         idleLabel="Upload Document (Optional)"
                         onRetry={() => resetUpload(setSourceOfFundsUpload)}
+                        onCancel={() => cancelUpload(setSourceOfFundsUpload, sourceOfFundsUpload)}
                       />
                     </label>
                     <input
