@@ -631,8 +631,11 @@ const uploadWithProgress = useCallback(async (
     // Tier 2+ requires proof of address
     const proofReady = targetTier === 'tier_1' || proofOfAddressUpload.status === 'complete';
     
-    return idReady && selfieReady && proofReady;
-  }, [idDocumentUpload, selfieUpload, proofOfAddressUpload, targetTier, loading]);
+    // Tier 2+ requires source of funds document
+    const sourceOfFundsReady = targetTier === 'tier_1' || sourceOfFundsUpload.status === 'complete';
+    
+    return idReady && selfieReady && proofReady && sourceOfFundsReady;
+  }, [idDocumentUpload, selfieUpload, proofOfAddressUpload, sourceOfFundsUpload, targetTier, loading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -649,6 +652,10 @@ const uploadWithProgress = useCallback(async (
     }
     if ((targetTier === 'tier_2' || targetTier === 'tier_3') && proofOfAddressUpload.status !== 'complete') {
       toast({ title: "Please wait", description: "Proof of address is still uploading", variant: "destructive" });
+      return;
+    }
+    if ((targetTier === 'tier_2' || targetTier === 'tier_3') && sourceOfFundsUpload.status !== 'complete') {
+      toast({ title: "Required Document Missing", description: "Source of funds document is required for Premium verification", variant: "destructive" });
       return;
     }
 
@@ -706,7 +713,7 @@ const uploadWithProgress = useCallback(async (
       if (isUpgradeFlow) {
         console.log('Updating existing KYC for upgrade:', JSON.stringify(insertData, null, 2));
         
-        const { error } = await supabase
+        const { data, error } = await supabase
           .from("kyc_verifications")
           .update({
             address: insertData.address,
@@ -727,6 +734,12 @@ const uploadWithProgress = useCallback(async (
         if (error) {
           console.error('Update error:', error);
           throw new Error(error.message || 'Failed to update verification data');
+        }
+        
+        // Check if update actually affected any rows (RLS may silently block)
+        if (!data || data.length === 0) {
+          console.error('Update returned no data - RLS may have blocked the operation');
+          throw new Error('Unable to update your verification. Please try again or contact support.');
         }
       } else {
         console.log('Inserting new KYC data:', JSON.stringify(insertData, null, 2));
@@ -779,7 +792,7 @@ const uploadWithProgress = useCallback(async (
 
   const getTotalSteps = () => {
     if (targetTier === 'tier_3') return 4;
-    if (targetTier === 'tier_2') return 3;
+    if (targetTier === 'tier_2') return 4; // Premium also requires source of funds
     return 2;
   };
 
@@ -798,6 +811,12 @@ const uploadWithProgress = useCallback(async (
       const activeStatuses = ['uploading', 'compressing', 'complete', 'stalled'];
       const proofOk = activeStatuses.includes(proofOfAddressUpload.status);
       return formData.address && proofOk && formData.tax_id;
+    }
+    if (currentStep === 4) {
+      // For Tier 2+, source of funds document is required
+      const activeStatuses = ['uploading', 'compressing', 'complete', 'stalled'];
+      const sourceOk = activeStatuses.includes(sourceOfFundsUpload.status);
+      return formData.source_of_funds && formData.occupation && sourceOk;
     }
     return true;
   };
@@ -1390,8 +1409,8 @@ const uploadWithProgress = useCallback(async (
               </div>
             )}
 
-            {/* Step 4: Source of Funds (Tier 3) */}
-            {currentStep === 4 && targetTier === 'tier_3' && (
+            {/* Step 4: Source of Funds (Tier 2+) */}
+            {currentStep === 4 && (targetTier === 'tier_2' || targetTier === 'tier_3') && (
               <div className="space-y-4">
                 <div className="flex items-center gap-2 mb-4">
                   <DollarSign className="h-5 w-5 text-primary" />
@@ -1446,7 +1465,10 @@ const uploadWithProgress = useCallback(async (
                 )}
 
                 <div>
-                  <Label>Supporting Documentation (Optional)</Label>
+                  <Label>
+                    Supporting Documentation 
+                    {(targetTier === 'tier_2' || targetTier === 'tier_3') ? ' (Required)' : ' (Optional)'}
+                  </Label>
                   <p className="text-xs text-muted-foreground mb-2">
                     Bank statement, pay slip, or business registration
                   </p>
@@ -1463,7 +1485,7 @@ const uploadWithProgress = useCallback(async (
                       <FileUploadStatus 
                         uploadState={sourceOfFundsUpload} 
                         icon={Briefcase} 
-                        idleLabel="Upload Document (Optional)"
+                        idleLabel={`Upload Document ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
                         onRetry={() => resetUpload(setSourceOfFundsUpload)}
                         onCancel={() => cancelUpload(setSourceOfFundsUpload, sourceOfFundsUpload)}
                       />
