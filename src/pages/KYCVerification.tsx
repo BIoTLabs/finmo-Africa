@@ -420,12 +420,13 @@ export default function KYCVerification() {
   }, []);
 
   // XHR-based upload with real progress tracking
-  const uploadWithProgress = useCallback(async (
+const uploadWithProgress = useCallback(async (
     file: File,
     filePath: string,
     type: string,
     setUploadState: React.Dispatch<React.SetStateAction<UploadState>>,
-    abortController: AbortController
+    abortController: AbortController,
+    accessToken: string
   ): Promise<string> => {
     return new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest();
@@ -477,7 +478,7 @@ export default function KYCVerification() {
 
       xhr.open('POST', uploadUrl, true);
       xhr.timeout = UPLOAD_TIMEOUT_MS;
-      xhr.setRequestHeader('Authorization', `Bearer ${anonKey}`);
+      xhr.setRequestHeader('Authorization', `Bearer ${accessToken}`);
       xhr.setRequestHeader('x-upsert', 'true');
       
       xhr.send(file);
@@ -492,16 +493,20 @@ export default function KYCVerification() {
   ) => {
     console.log(`[${type}] File selected:`, file.name, `${(file.size / 1024).toFixed(1)}KB`, file.type);
     
-    // Get user ID
+    // Get user ID and access token
     let userId = userIdRef.current;
     if (!userId) {
       const { data } = await supabase.auth.getUser();
       userId = data.user?.id || null;
       userIdRef.current = userId;
     }
+
+    // Get fresh access token for upload (required for RLS)
+    const { data: { session } } = await supabase.auth.getSession();
+    const accessToken = session?.access_token;
     
-    if (!userId) {
-      console.error(`[${type}] No user ID found`);
+    if (!userId || !accessToken) {
+      console.error(`[${type}] No user ID or access token found`);
       setUploadState({ status: 'error', progress: 0, url: null, error: 'Not authenticated', file });
       return;
     }
@@ -544,7 +549,7 @@ export default function KYCVerification() {
       const fileName = `${userId}/${folder}/${Date.now()}-${Math.random().toString(36).slice(2, 8)}.${fileExt}`;
 
       // Upload with XHR for real progress
-      await uploadWithProgress(compressed, fileName, type, setUploadState, abortController);
+      await uploadWithProgress(compressed, fileName, type, setUploadState, abortController, accessToken);
 
       if (!mountedRef.current || abortController.signal.aborted) {
         console.log(`[${type}] Component unmounted or cancelled after upload`);
