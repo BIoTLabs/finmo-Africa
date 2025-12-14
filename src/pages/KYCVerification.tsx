@@ -1309,6 +1309,12 @@ const uploadWithProgress = useCallback(async (
                   <div className="mt-2">
                     <label 
                       htmlFor="id-document-upload"
+                      onClick={(e) => {
+                        console.log('[id-document] Upload area clicked');
+                        e.preventDefault();
+                        const input = document.getElementById('id-document-upload') as HTMLInputElement;
+                        input?.click();
+                      }}
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         idDocumentUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         idDocumentUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
@@ -1327,10 +1333,10 @@ const uploadWithProgress = useCallback(async (
                     <input
                       id="id-document-upload"
                       type="file"
-                      className="sr-only"
+                      className="opacity-0 absolute w-0 h-0"
                       accept="image/*,.pdf"
-                      capture="environment"
                       onChange={(e) => {
+                        console.log('[id-document] onChange fired, files:', e.target.files);
                         const file = e.target.files?.[0];
                         if (file) handleFileSelect(file, 'id', setIdDocumentUpload);
                       }}
@@ -1343,6 +1349,12 @@ const uploadWithProgress = useCallback(async (
                   <div className="mt-2">
                     <label 
                       htmlFor="selfie-upload"
+                      onClick={(e) => {
+                        console.log('[selfie] Upload area clicked');
+                        e.preventDefault();
+                        const input = document.getElementById('selfie-upload') as HTMLInputElement;
+                        input?.click();
+                      }}
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         selfieUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         selfieUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
@@ -1361,10 +1373,10 @@ const uploadWithProgress = useCallback(async (
                     <input
                       id="selfie-upload"
                       type="file"
-                      className="sr-only"
+                      className="opacity-0 absolute w-0 h-0"
                       accept="image/*"
-                      capture="user"
                       onChange={(e) => {
+                        console.log('[selfie] onChange fired, files:', e.target.files);
                         const file = e.target.files?.[0];
                         if (file) handleFileSelect(file, 'selfie', setSelfieUpload);
                       }}
@@ -1380,6 +1392,46 @@ const uploadWithProgress = useCallback(async (
                 <div className="flex items-center gap-2 mb-4">
                   <MapPin className="h-5 w-5 text-primary" />
                   <h3 className="font-semibold">Address & Tax Verification</h3>
+                </div>
+
+                {/* Tax ID Section - Moved to top for visibility */}
+                <div className="border border-primary/20 rounded-lg p-4 bg-primary/5">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-sm">Tax Identification</span>
+                    <span className="text-destructive text-sm">*Required</span>
+                  </div>
+                  <Label htmlFor="tax_id">
+                    {taxIdLabel}
+                  </Label>
+                  <Input
+                    id="tax_id"
+                    value={formData.tax_id}
+                    onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
+                    placeholder={`Enter your ${taxIdLabel}`}
+                    required
+                    className="mt-1"
+                  />
+                  {formData.country_code === 'NG' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Your 11-digit Bank Verification Number
+                    </p>
+                  )}
+                  {formData.country_code === 'KE' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Your Kenya Revenue Authority PIN
+                    </p>
+                  )}
+                  {formData.country_code === 'ZA' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Your South African Tax Number
+                    </p>
+                  )}
+                  {formData.country_code === 'GH' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Your Ghana Revenue Authority TIN
+                    </p>
+                  )}
                 </div>
 
                 <div>
@@ -1401,6 +1453,12 @@ const uploadWithProgress = useCallback(async (
                   <div className="mt-2">
                     <label 
                       htmlFor="proof-address-upload"
+                      onClick={(e) => {
+                        console.log('[proof-address] Upload area clicked');
+                        e.preventDefault();
+                        const input = document.getElementById('proof-address-upload') as HTMLInputElement;
+                        input?.click();
+                      }}
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         proofOfAddressUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         proofOfAddressUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
@@ -1419,34 +1477,15 @@ const uploadWithProgress = useCallback(async (
                     <input
                       id="proof-address-upload"
                       type="file"
-                      className="sr-only"
+                      className="opacity-0 absolute w-0 h-0"
                       accept="image/*,.pdf"
-                      capture="environment"
                       onChange={(e) => {
+                        console.log('[proof-address] onChange fired, files:', e.target.files);
                         const file = e.target.files?.[0];
                         if (file) handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
                       }}
                     />
                   </div>
-                </div>
-
-                <div>
-                  <Label htmlFor="tax_id">
-                    {taxIdLabel}
-                    {(targetTier === 'tier_2' || targetTier === 'tier_3') && <span className="text-destructive ml-1">*</span>}
-                  </Label>
-                  <Input
-                    id="tax_id"
-                    value={formData.tax_id}
-                    onChange={(e) => setFormData({ ...formData, tax_id: e.target.value })}
-                    placeholder={`Enter your ${taxIdLabel}`}
-                    required
-                  />
-                  {formData.country_code === 'NG' && (
-                    <p className="text-xs text-muted-foreground mt-1">
-                      Your 11-digit Bank Verification Number
-                    </p>
-                  )}
                 </div>
               </div>
             )}
@@ -1517,6 +1556,12 @@ const uploadWithProgress = useCallback(async (
                   <div className="mt-2">
                     <label 
                       htmlFor="source-funds-upload"
+                      onClick={(e) => {
+                        console.log('[source-funds] Upload area clicked');
+                        e.preventDefault();
+                        const input = document.getElementById('source-funds-upload') as HTMLInputElement;
+                        input?.click();
+                      }}
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         sourceOfFundsUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         sourceOfFundsUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
@@ -1535,10 +1580,10 @@ const uploadWithProgress = useCallback(async (
                     <input
                       id="source-funds-upload"
                       type="file"
-                      className="sr-only"
+                      className="opacity-0 absolute w-0 h-0"
                       accept="image/*,.pdf"
-                      capture="environment"
                       onChange={(e) => {
+                        console.log('[source-funds] onChange fired, files:', e.target.files);
                         const file = e.target.files?.[0];
                         if (file) handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
                       }}
