@@ -14,10 +14,11 @@ import { useToast } from "@/hooks/use-toast";
 import { 
   Upload, CheckCircle2, XCircle, Clock, ArrowLeft, ArrowRight,
   Shield, AlertTriangle, Camera, FileText, MapPin, Briefcase,
-  DollarSign, User, Info, Loader2, RefreshCw
+  DollarSign, User, Info, Loader2, RefreshCw, FolderOpen
 } from "lucide-react";
 import { useRewardTracking } from "@/hooks/useRewardTracking";
 import { useKYCTiers, useCountryKYCRequirements, useUserKYCTier, getTierDisplayName, getTierColor, type KYCTier, type CountryKYCRequirement } from "@/hooks/useKYCTiers";
+import { requestCameraPermission, requestFrontCameraPermission, isMobileDevice, getCameraPermissionErrorMessage } from "@/utils/cameraPermissions";
 
 // Upload state interface for immediate file uploads
 interface UploadState {
@@ -1305,14 +1306,29 @@ const uploadWithProgress = useCallback(async (
                 </div>
 
                 <div>
-                  <Label htmlFor="id-document-upload">ID Document (Front)</Label>
-                  <div className="mt-2">
+                  <Label>ID Document (Front)</Label>
+                  <div className="mt-2 space-y-2">
+                    {/* Primary: Camera capture */}
                     <label 
-                      htmlFor="id-document-upload"
-                      onClick={(e) => {
-                        console.log('[id-document] Upload area clicked');
+                      htmlFor="id-document-upload-camera"
+                      onClick={async (e) => {
+                        console.log('[id-document] Camera upload area clicked');
                         e.preventDefault();
-                        const input = document.getElementById('id-document-upload') as HTMLInputElement;
+                        
+                        // Request camera permission on mobile
+                        if (isMobileDevice()) {
+                          const hasPermission = await requestCameraPermission();
+                          if (!hasPermission) {
+                            toast({
+                              title: "Camera Access Required",
+                              description: getCameraPermissionErrorMessage(),
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                        }
+                        
+                        const input = document.getElementById('id-document-upload-camera') as HTMLInputElement;
                         input?.click();
                       }}
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
@@ -1324,19 +1340,45 @@ const uploadWithProgress = useCallback(async (
                     >
                       <FileUploadStatus 
                         uploadState={idDocumentUpload} 
-                        icon={FileText} 
-                        idleLabel="Upload ID Document"
+                        icon={Camera} 
+                        idleLabel="Take Photo of ID"
                         onRetry={() => resetUpload(setIdDocumentUpload)}
                         onCancel={() => cancelUpload(setIdDocumentUpload, idDocumentUpload)}
                       />
                     </label>
                     <input
-                      id="id-document-upload"
+                      id="id-document-upload-camera"
                       type="file"
-                      className="opacity-0 absolute w-0 h-0"
+                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => {
+                        console.log('[id-document-camera] onChange fired, files:', e.target.files);
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'id', setIdDocumentUpload);
+                      }}
+                    />
+                    
+                    {/* Secondary: File picker for PDFs */}
+                    {idDocumentUpload.status === 'idle' && (
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => document.getElementById('id-document-upload-file')?.click()}
+                        className="w-full text-muted-foreground"
+                      >
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Upload from Files (PDF/Image)
+                      </Button>
+                    )}
+                    <input
+                      id="id-document-upload-file"
+                      type="file"
+                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
                       accept="image/*,.pdf"
                       onChange={(e) => {
-                        console.log('[id-document] onChange fired, files:', e.target.files);
+                        console.log('[id-document-file] onChange fired, files:', e.target.files);
                         const file = e.target.files?.[0];
                         if (file) handleFileSelect(file, 'id', setIdDocumentUpload);
                       }}
@@ -1345,13 +1387,27 @@ const uploadWithProgress = useCallback(async (
                 </div>
 
                 <div>
-                  <Label htmlFor="selfie-upload">Selfie (holding ID next to face)</Label>
+                  <Label>Selfie (holding ID next to face)</Label>
                   <div className="mt-2">
                     <label 
                       htmlFor="selfie-upload"
-                      onClick={(e) => {
-                        console.log('[selfie] Upload area clicked');
+                      onClick={async (e) => {
+                        console.log('[selfie] Camera upload area clicked');
                         e.preventDefault();
+                        
+                        // Request front camera permission on mobile
+                        if (isMobileDevice()) {
+                          const hasPermission = await requestFrontCameraPermission();
+                          if (!hasPermission) {
+                            toast({
+                              title: "Camera Access Required",
+                              description: getCameraPermissionErrorMessage(),
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                        }
+                        
                         const input = document.getElementById('selfie-upload') as HTMLInputElement;
                         input?.click();
                       }}
@@ -1373,8 +1429,9 @@ const uploadWithProgress = useCallback(async (
                     <input
                       id="selfie-upload"
                       type="file"
-                      className="opacity-0 absolute w-0 h-0"
+                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
                       accept="image/*"
+                      capture="user"
                       onChange={(e) => {
                         console.log('[selfie] onChange fired, files:', e.target.files);
                         const file = e.target.files?.[0];
@@ -1450,13 +1507,27 @@ const uploadWithProgress = useCallback(async (
                   <p className="text-xs text-muted-foreground mb-2">
                     Utility bill, bank statement, or government letter dated within 3 months
                   </p>
-                  <div className="mt-2">
+                  <div className="mt-2 space-y-2">
+                    {/* Primary: Camera capture */}
                     <label 
-                      htmlFor="proof-address-upload"
-                      onClick={(e) => {
-                        console.log('[proof-address] Upload area clicked');
+                      htmlFor="proof-address-upload-camera"
+                      onClick={async (e) => {
+                        console.log('[proof-address] Camera upload area clicked');
                         e.preventDefault();
-                        const input = document.getElementById('proof-address-upload') as HTMLInputElement;
+                        
+                        if (isMobileDevice()) {
+                          const hasPermission = await requestCameraPermission();
+                          if (!hasPermission) {
+                            toast({
+                              title: "Camera Access Required",
+                              description: getCameraPermissionErrorMessage(),
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                        }
+                        
+                        const input = document.getElementById('proof-address-upload-camera') as HTMLInputElement;
                         input?.click();
                       }}
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
@@ -1468,19 +1539,45 @@ const uploadWithProgress = useCallback(async (
                     >
                       <FileUploadStatus 
                         uploadState={proofOfAddressUpload} 
-                        icon={MapPin} 
-                        idleLabel="Upload Proof of Address"
+                        icon={Camera} 
+                        idleLabel="Take Photo of Document"
                         onRetry={() => resetUpload(setProofOfAddressUpload)}
                         onCancel={() => cancelUpload(setProofOfAddressUpload, proofOfAddressUpload)}
                       />
                     </label>
                     <input
-                      id="proof-address-upload"
+                      id="proof-address-upload-camera"
                       type="file"
-                      className="opacity-0 absolute w-0 h-0"
+                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => {
+                        console.log('[proof-address-camera] onChange fired, files:', e.target.files);
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
+                      }}
+                    />
+                    
+                    {/* Secondary: File picker for PDFs */}
+                    {proofOfAddressUpload.status === 'idle' && (
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => document.getElementById('proof-address-upload-file')?.click()}
+                        className="w-full text-muted-foreground"
+                      >
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Upload from Files (PDF/Image)
+                      </Button>
+                    )}
+                    <input
+                      id="proof-address-upload-file"
+                      type="file"
+                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
                       accept="image/*,.pdf"
                       onChange={(e) => {
-                        console.log('[proof-address] onChange fired, files:', e.target.files);
+                        console.log('[proof-address-file] onChange fired, files:', e.target.files);
                         const file = e.target.files?.[0];
                         if (file) handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
                       }}
@@ -1553,13 +1650,27 @@ const uploadWithProgress = useCallback(async (
                   <p className="text-xs text-muted-foreground mb-2">
                     Bank statement, pay slip, or business registration
                   </p>
-                  <div className="mt-2">
+                  <div className="mt-2 space-y-2">
+                    {/* Primary: Camera capture */}
                     <label 
-                      htmlFor="source-funds-upload"
-                      onClick={(e) => {
-                        console.log('[source-funds] Upload area clicked');
+                      htmlFor="source-funds-upload-camera"
+                      onClick={async (e) => {
+                        console.log('[source-funds] Camera upload area clicked');
                         e.preventDefault();
-                        const input = document.getElementById('source-funds-upload') as HTMLInputElement;
+                        
+                        if (isMobileDevice()) {
+                          const hasPermission = await requestCameraPermission();
+                          if (!hasPermission) {
+                            toast({
+                              title: "Camera Access Required",
+                              description: getCameraPermissionErrorMessage(),
+                              variant: "destructive",
+                            });
+                            return;
+                          }
+                        }
+                        
+                        const input = document.getElementById('source-funds-upload-camera') as HTMLInputElement;
                         input?.click();
                       }}
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
@@ -1571,19 +1682,45 @@ const uploadWithProgress = useCallback(async (
                     >
                       <FileUploadStatus 
                         uploadState={sourceOfFundsUpload} 
-                        icon={Briefcase} 
-                        idleLabel={`Upload Document ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
+                        icon={Camera} 
+                        idleLabel={`Take Photo ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
                         onRetry={() => resetUpload(setSourceOfFundsUpload)}
                         onCancel={() => cancelUpload(setSourceOfFundsUpload, sourceOfFundsUpload)}
                       />
                     </label>
                     <input
-                      id="source-funds-upload"
+                      id="source-funds-upload-camera"
                       type="file"
-                      className="opacity-0 absolute w-0 h-0"
+                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
+                      accept="image/*"
+                      capture="environment"
+                      onChange={(e) => {
+                        console.log('[source-funds-camera] onChange fired, files:', e.target.files);
+                        const file = e.target.files?.[0];
+                        if (file) handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                      }}
+                    />
+                    
+                    {/* Secondary: File picker for PDFs */}
+                    {sourceOfFundsUpload.status === 'idle' && (
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => document.getElementById('source-funds-upload-file')?.click()}
+                        className="w-full text-muted-foreground"
+                      >
+                        <FolderOpen className="h-4 w-4 mr-2" />
+                        Upload from Files (PDF/Image)
+                      </Button>
+                    )}
+                    <input
+                      id="source-funds-upload-file"
+                      type="file"
+                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
                       accept="image/*,.pdf"
                       onChange={(e) => {
-                        console.log('[source-funds] onChange fired, files:', e.target.files);
+                        console.log('[source-funds-file] onChange fired, files:', e.target.files);
                         const file = e.target.files?.[0];
                         if (file) handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
                       }}
