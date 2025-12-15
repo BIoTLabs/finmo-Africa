@@ -1,14 +1,17 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Search, RefreshCw, Shield } from "lucide-react";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { ArrowLeft, Search, RefreshCw, Shield, FileText, Upload, Download, HelpCircle, ChevronDown, Users } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
 import { useRewardTracking } from "@/hooks/useRewardTracking";
+import { parseVCardFile, parseCSVFile, downloadContactsAsVCard } from "@/utils/contactFileParser";
+import { saveContactsToDatabase } from "@/utils/contactSync";
 
 interface Contact {
   id: string;
@@ -23,7 +26,12 @@ const Contacts = () => {
   const [searchQuery, setSearchQuery] = useState("");
   const [contacts, setContacts] = useState<Contact[]>([]);
   const [userId, setUserId] = useState<string | null>(null);
+  const [isImporting, setIsImporting] = useState(false);
+  const [showHelp, setShowHelp] = useState(false);
   const { trackActivity } = useRewardTracking();
+  
+  const vcardInputRef = useRef<HTMLInputElement>(null);
+  const csvInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     checkAuth();
@@ -51,7 +59,6 @@ const Contacts = () => {
     if (contactsData) {
       const enrichedContacts = await Promise.all(
         contactsData.map(async (contact) => {
-          // Use secure lookup function to check if contact is a FinMo user
           const { data: registryData, error: lookupError } = await supabase
             .rpc("lookup_user_by_phone", { phone: contact.contact_phone });
 
@@ -61,11 +68,6 @@ const Contacts = () => {
 
           const userInfo = registryData && registryData.length > 0 ? registryData[0] : null;
           
-          console.log(`Contact ${contact.contact_name} (${contact.contact_phone}):`, {
-            isFinMoUser: !!userInfo,
-            hasWallet: !!userInfo?.wallet_address
-          });
-
           return {
             id: contact.id,
             name: contact.contact_name,
@@ -90,7 +92,6 @@ const Contacts = () => {
     try {
       const { syncPhoneContacts, saveContactsToDatabase } = await import("@/utils/contactSync");
       
-      // Check if this is first sync BEFORE opening picker
       const { count } = await supabase
         .from("contacts")
         .select("*", { count: 'exact', head: true })
@@ -99,27 +100,23 @@ const Contacts = () => {
       const isFirstSync = count === 0;
       
       toast.info("Opening contact picker...");
-      const contacts = await syncPhoneContacts();
+      const syncedContacts = await syncPhoneContacts();
       
-      if (contacts.length > 0) {
-        toast.info(`Saving ${contacts.length} contacts...`);
-        await saveContactsToDatabase(contacts);
+      if (syncedContacts.length > 0) {
+        toast.info(`Saving ${syncedContacts.length} contacts...`);
+        await saveContactsToDatabase(syncedContacts);
         
-        // Wait a moment for database to update
         await new Promise(resolve => setTimeout(resolve, 500));
-        
-        // Force reload contacts with fresh data
         await loadContacts(userId);
         
-        toast.success(`Successfully synced ${contacts.length} contacts!`);
+        toast.success(`Successfully synced ${syncedContacts.length} contacts!`);
         
-        // Award points for first contact sync
         if (isFirstSync) {
           console.log("Awarding contact sync points...");
           await trackActivity('contact_sync');
         }
       } else {
-        toast.info("No contacts were selected");
+        toast.info("No contacts were selected. Try importing a vCard or CSV file instead.");
       }
     } catch (error) {
       console.error("Contact sync error:", error);
@@ -127,6 +124,86 @@ const Contacts = () => {
         description: error instanceof Error ? error.message : "An unexpected error occurred"
       });
     }
+  };
+
+  const handleVCardImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    
+    setIsImporting(true);
+    try {
+      console.log('[Contacts] Importing vCard file:', file.name);
+      const parsedContacts = await parseVCardFile(file);
+      
+      if (parsedContacts.length === 0) {
+        toast.error("No contacts found in vCard file");
+        return;
+      }
+      
+      toast.info(`Found ${parsedContacts.length} contacts, saving...`);
+      const result = await saveContactsToDatabase(parsedContacts);
+      
+      await loadContacts(userId);
+      toast.success(`Imported ${result.saved} contacts from vCard${result.skipped > 0 ? ` (${result.skipped} skipped)` : ''}`);
+      
+      // Award points for first sync
+      const { count } = await supabase
+        .from("contacts")
+        .select("*", { count: 'exact', head: true })
+        .eq("user_id", userId);
+      
+      if (count === result.saved) {
+        await trackActivity('contact_sync');
+      }
+    } catch (error) {
+      console.error('[Contacts] vCard import error:', error);
+      toast.error("Failed to import vCard", {
+        description: error instanceof Error ? error.message : "Invalid file format"
+      });
+    } finally {
+      setIsImporting(false);
+      if (vcardInputRef.current) vcardInputRef.current.value = '';
+    }
+  };
+
+  const handleCSVImport = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file || !userId) return;
+    
+    setIsImporting(true);
+    try {
+      console.log('[Contacts] Importing CSV file:', file.name);
+      const parsedContacts = await parseCSVFile(file);
+      
+      if (parsedContacts.length === 0) {
+        toast.error("No contacts found in CSV file");
+        return;
+      }
+      
+      toast.info(`Found ${parsedContacts.length} contacts, saving...`);
+      const result = await saveContactsToDatabase(parsedContacts);
+      
+      await loadContacts(userId);
+      toast.success(`Imported ${result.saved} contacts from CSV${result.skipped > 0 ? ` (${result.skipped} skipped)` : ''}`);
+    } catch (error) {
+      console.error('[Contacts] CSV import error:', error);
+      toast.error("Failed to import CSV", {
+        description: error instanceof Error ? error.message : "Invalid file format"
+      });
+    } finally {
+      setIsImporting(false);
+      if (csvInputRef.current) csvInputRef.current.value = '';
+    }
+  };
+
+  const handleExportContacts = () => {
+    if (contacts.length === 0) {
+      toast.error("No contacts to export");
+      return;
+    }
+    
+    downloadContactsAsVCard(contacts);
+    toast.success(`Exported ${contacts.length} contacts to vCard file`);
   };
 
   const filteredContacts = contacts.filter(
@@ -162,23 +239,97 @@ const Contacts = () => {
           />
         </div>
 
-        {/* Sync Button - Optimized for Mobile */}
+        {/* Primary Sync Button */}
         <Button
           onClick={handleSyncContacts}
-          className="w-full bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 h-10 sm:h-11 font-medium"
+          disabled={isImporting}
+          className="w-full bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 h-10 sm:h-11 font-medium mb-2"
         >
-          <RefreshCw className="w-4 h-4 mr-2" />
-          Sync Phone Contacts
+          <Users className="w-4 h-4 mr-2" />
+          Select from Phone Contacts
         </Button>
+
+        {/* Secondary Import Options */}
+        <div className="flex gap-2">
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => vcardInputRef.current?.click()}
+            disabled={isImporting}
+            className="flex-1 text-primary-foreground hover:bg-white/20 text-xs h-9"
+          >
+            <FileText className="w-3 h-3 mr-1" />
+            Import vCard
+          </Button>
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => csvInputRef.current?.click()}
+            disabled={isImporting}
+            className="flex-1 text-primary-foreground hover:bg-white/20 text-xs h-9"
+          >
+            <Upload className="w-3 h-3 mr-1" />
+            Import CSV
+          </Button>
+          {contacts.length > 0 && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={handleExportContacts}
+              className="flex-1 text-primary-foreground hover:bg-white/20 text-xs h-9"
+            >
+              <Download className="w-3 h-3 mr-1" />
+              Export
+            </Button>
+          )}
+        </div>
+
+        {/* Hidden file inputs */}
+        <input
+          ref={vcardInputRef}
+          type="file"
+          accept=".vcf,.vcard,text/vcard"
+          onChange={handleVCardImport}
+          className="hidden"
+        />
+        <input
+          ref={csvInputRef}
+          type="file"
+          accept=".csv,text/csv"
+          onChange={handleCSVImport}
+          className="hidden"
+        />
+      </div>
+
+      {/* Help Instructions */}
+      <div className="px-4 pt-4">
+        <Collapsible open={showHelp} onOpenChange={setShowHelp}>
+          <CollapsibleTrigger className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground w-full justify-between p-2 rounded-lg hover:bg-muted/50 transition-colors">
+            <div className="flex items-center gap-2">
+              <HelpCircle className="w-4 h-4" />
+              <span>How to export contacts from your phone</span>
+            </div>
+            <ChevronDown className={`w-4 h-4 transition-transform ${showHelp ? 'rotate-180' : ''}`} />
+          </CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 p-3 bg-muted/30 rounded-lg text-sm space-y-2">
+            <p className="font-medium text-foreground">Export as vCard (.vcf):</p>
+            <p><strong>iPhone:</strong> Contacts app → Select contacts → Share → Export vCard</p>
+            <p><strong>Android:</strong> Contacts app → Menu (⋮) → Settings → Export → Share as .vcf</p>
+            <p><strong>Google Contacts:</strong> contacts.google.com → Select → Export → vCard</p>
+            <p className="text-xs text-muted-foreground mt-2">After exporting, share the file to yourself (email, drive) then upload it here.</p>
+          </CollapsibleContent>
+        </Collapsible>
       </div>
 
       {/* Contact List */}
-      <div className="px-4 pt-4 pb-4 space-y-3">
+      <div className="px-4 pt-2 pb-4 space-y-3">
         {filteredContacts.length === 0 ? (
           <Card className="shadow-finmo-sm">
             <CardContent className="p-6 text-center">
               <p className="text-muted-foreground text-sm">No contacts found</p>
-              <p className="text-xs text-muted-foreground mt-1">Sync your contacts to get started</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Use "Select from Phone Contacts" or import a vCard/CSV file
+              </p>
             </CardContent>
           </Card>
         ) : (

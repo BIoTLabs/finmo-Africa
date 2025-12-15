@@ -77,19 +77,27 @@ const normalizePhoneNumber = (phone: string): string => {
 
 // Web Contact Picker API implementation
 const syncContactsWeb = async (): Promise<PhoneContact[]> => {
+  console.log('[Contact Sync] Checking Contact Picker API availability...');
+  console.log('[Contact Sync] navigator.contacts:', 'contacts' in navigator);
+  console.log('[Contact Sync] window.ContactsManager:', 'ContactsManager' in window);
+  console.log('[Contact Sync] User Agent:', navigator.userAgent);
+  
   try {
     if (!isContactPickerAvailable()) {
-      toast.error('Contact Picker not supported', {
-        description: 'Your browser doesn\'t support contact picking. Please use Chrome, Edge, or a Chromium-based browser on Android.'
-      });
+      console.warn('[Contact Sync] Contact Picker API not available on this browser/device');
+      // Don't show error toast - caller will handle fallback UI
       return [];
     }
 
+    console.log('[Contact Sync] Contact Picker API is available, opening picker...');
+    
     const props = ['name', 'tel'];
     const opts = { multiple: true };
 
     // @ts-ignore - Contact Picker API types may not be fully available
     const contacts = await navigator.contacts.select(props, opts);
+    
+    console.log('[Contact Sync] Raw contacts received:', contacts?.length || 0);
     
     const phoneContacts: PhoneContact[] = [];
 
@@ -103,20 +111,24 @@ const syncContactsWeb = async (): Promise<PhoneContact[]> => {
             name,
             phoneNumber: normalizedPhone,
           });
+          console.log('[Contact Sync] Added contact:', name, normalizedPhone);
         }
       });
     });
 
-    console.log(`Synced ${phoneContacts.length} contacts from web`);
+    console.log(`[Contact Sync] Synced ${phoneContacts.length} contacts from web`);
     return phoneContacts;
   } catch (error: any) {
     // User cancelled the picker
     if (error.name === 'AbortError') {
-      console.log('User cancelled contact selection');
+      console.log('[Contact Sync] User cancelled contact selection');
       return [];
     }
     
-    console.error('Error syncing contacts from web:', error);
+    console.error('[Contact Sync] Error syncing contacts from web:', error);
+    console.error('[Contact Sync] Error name:', error.name);
+    console.error('[Contact Sync] Error message:', error.message);
+    
     toast.error('Failed to sync contacts', {
       description: error.message || 'An error occurred while accessing contacts'
     });
