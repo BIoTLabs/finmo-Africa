@@ -82,15 +82,15 @@ const syncContactsWeb = async (): Promise<PhoneContact[]> => {
   console.log('[Contact Sync] window.ContactsManager:', 'ContactsManager' in window);
   console.log('[Contact Sync] User Agent:', navigator.userAgent);
   
-  try {
-    if (!isContactPickerAvailable()) {
-      console.warn('[Contact Sync] Contact Picker API not available on this browser/device');
-      // Don't show error toast - caller will handle fallback UI
-      return [];
-    }
+  if (!isContactPickerAvailable()) {
+    console.warn('[Contact Sync] Contact Picker API not available on this browser/device');
+    // Throw error to signal caller to show file import fallback
+    throw new Error('CONTACT_PICKER_UNAVAILABLE');
+  }
 
-    console.log('[Contact Sync] Contact Picker API is available, opening picker...');
-    
+  console.log('[Contact Sync] Contact Picker API is available, opening picker...');
+  
+  try {
     const props = ['name', 'tel'];
     const opts = { multiple: true };
 
@@ -129,10 +129,7 @@ const syncContactsWeb = async (): Promise<PhoneContact[]> => {
     console.error('[Contact Sync] Error name:', error.name);
     console.error('[Contact Sync] Error message:', error.message);
     
-    toast.error('Failed to sync contacts', {
-      description: error.message || 'An error occurred while accessing contacts'
-    });
-    return [];
+    throw error;
   }
 };
 
@@ -185,27 +182,13 @@ const syncContactsMobile = async (): Promise<PhoneContact[]> => {
 };
 
 export const syncPhoneContacts = async (): Promise<PhoneContact[]> => {
-  try {
-    // Check platform and use appropriate method
-    if (Capacitor.isNativePlatform()) {
-      // Use Capacitor for mobile
-      return await syncContactsMobile();
-    } else {
-      // Use Contact Picker API for web
-      if (!isContactPickerAvailable()) {
-        toast.info('Contact sync on web', {
-          description: 'Contact syncing on web browsers requires user interaction. Click "Sync Contacts" to select contacts to import.',
-          duration: 5000,
-        });
-      }
-      return await syncContactsWeb();
-    }
-  } catch (error) {
-    console.error('Error syncing contacts:', error);
-    toast.error('Failed to sync contacts', {
-      description: error instanceof Error ? error.message : 'An unknown error occurred'
-    });
-    return [];
+  // Check platform and use appropriate method
+  if (Capacitor.isNativePlatform()) {
+    // Use Capacitor for mobile
+    return await syncContactsMobile();
+  } else {
+    // Use Contact Picker API for web - let errors propagate to caller
+    return await syncContactsWeb();
   }
 };
 

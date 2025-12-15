@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
-import { ArrowLeft, Search, RefreshCw, Shield, FileText, Upload, Download, HelpCircle, ChevronDown, Users } from "lucide-react";
+import { ArrowLeft, Search, RefreshCw, Shield, FileText, Upload, Download, HelpCircle, ChevronDown, Users, Loader2 } from "lucide-react";
 import { toast } from "sonner";
 import { supabase } from "@/integrations/supabase/client";
 import MobileNav from "@/components/MobileNav";
@@ -28,6 +28,7 @@ const Contacts = () => {
   const [userId, setUserId] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [showHelp, setShowHelp] = useState(false);
+  const [contactPickerAvailable, setContactPickerAvailable] = useState(false);
   const { trackActivity } = useRewardTracking();
   
   const vcardInputRef = useRef<HTMLInputElement>(null);
@@ -35,6 +36,10 @@ const Contacts = () => {
 
   useEffect(() => {
     checkAuth();
+    // Check if Contact Picker API is available
+    const isAvailable = 'contacts' in navigator && 'ContactsManager' in window;
+    setContactPickerAvailable(isAvailable);
+    console.log('[Contacts] Contact Picker API available:', isAvailable);
   }, []);
 
   const checkAuth = async () => {
@@ -88,6 +93,8 @@ const Contacts = () => {
       toast.error("Please log in to sync contacts");
       return;
     }
+
+    setIsImporting(true);
     
     try {
       const { syncPhoneContacts, saveContactsToDatabase } = await import("@/utils/contactSync");
@@ -99,7 +106,6 @@ const Contacts = () => {
       
       const isFirstSync = count === 0;
       
-      toast.info("Opening contact picker...");
       const syncedContacts = await syncPhoneContacts();
       
       if (syncedContacts.length > 0) {
@@ -117,12 +123,24 @@ const Contacts = () => {
         }
       } else {
         toast.info("No contacts were selected. Try importing a vCard or CSV file instead.");
+        setShowHelp(true);
       }
     } catch (error) {
       console.error("Contact sync error:", error);
-      toast.error("Failed to sync contacts", {
-        description: error instanceof Error ? error.message : "An unexpected error occurred"
-      });
+      
+      if (error instanceof Error && error.message === 'CONTACT_PICKER_UNAVAILABLE') {
+        toast.info("Contact picker not supported", {
+          description: "Your browser doesn't support direct contact access. Use Import vCard or CSV below.",
+          duration: 6000
+        });
+        setShowHelp(true);
+      } else {
+        toast.error("Failed to sync contacts", {
+          description: error instanceof Error ? error.message : "An unexpected error occurred"
+        });
+      }
+    } finally {
+      setIsImporting(false);
     }
   };
 
@@ -240,14 +258,29 @@ const Contacts = () => {
         </div>
 
         {/* Primary Sync Button */}
-        <Button
-          onClick={handleSyncContacts}
-          disabled={isImporting}
-          className="w-full bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 h-10 sm:h-11 font-medium mb-2"
-        >
-          <Users className="w-4 h-4 mr-2" />
-          Select from Phone Contacts
-        </Button>
+              {contactPickerAvailable ? (
+                <Button
+                  onClick={handleSyncContacts}
+                  disabled={isImporting}
+                  className="w-full bg-white/20 hover:bg-white/30 text-primary-foreground border border-white/30 h-10 sm:h-11 font-medium mb-2"
+                >
+                  {isImporting ? (
+                    <>
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      Syncing...
+                    </>
+                  ) : (
+                    <>
+                      <Users className="w-4 h-4 mr-2" />
+                      Select from Phone Contacts
+                    </>
+                  )}
+                </Button>
+              ) : (
+                <p className="text-center text-sm text-primary-foreground/70 py-2 mb-2">
+                  Use Import vCard or CSV below to add contacts
+                </p>
+              )}
 
         {/* Secondary Import Options */}
         <div className="flex gap-2">
