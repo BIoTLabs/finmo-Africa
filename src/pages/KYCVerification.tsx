@@ -1651,27 +1651,22 @@ const uploadWithProgress = useCallback(async (
                     Bank statement, pay slip, or business registration
                   </p>
                   <div className="mt-2 space-y-2">
-                    {/* Primary: Camera capture */}
+                    {/* Primary: File picker for PDFs/documents (more common for bank statements) */}
                     <label 
-                      htmlFor="source-funds-upload-camera"
-                      onClick={async (e) => {
-                        console.log('[source-funds] Camera upload area clicked');
+                      htmlFor="source-funds-upload-file"
+                      onClick={(e) => {
+                        console.log('[source-funds] File upload area clicked');
                         e.preventDefault();
+                        e.stopPropagation();
                         
-                        if (isMobileDevice()) {
-                          const hasPermission = await requestCameraPermission();
-                          if (!hasPermission) {
-                            toast({
-                              title: "Camera Access Required",
-                              description: getCameraPermissionErrorMessage(),
-                              variant: "destructive",
-                            });
-                            return;
-                          }
+                        const input = document.getElementById('source-funds-upload-file') as HTMLInputElement;
+                        if (input) {
+                          input.value = ''; // Clear for re-selection
+                          setTimeout(() => {
+                            console.log('[source-funds] Triggering file input click');
+                            input.click();
+                          }, 0);
                         }
-                        
-                        const input = document.getElementById('source-funds-upload-camera') as HTMLInputElement;
-                        input?.click();
                       }}
                       className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         sourceOfFundsUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
@@ -1682,12 +1677,76 @@ const uploadWithProgress = useCallback(async (
                     >
                       <FileUploadStatus 
                         uploadState={sourceOfFundsUpload} 
-                        icon={Camera} 
-                        idleLabel={`Take Photo ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
+                        icon={FolderOpen} 
+                        idleLabel={`Upload Document ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
                         onRetry={() => resetUpload(setSourceOfFundsUpload)}
                         onCancel={() => cancelUpload(setSourceOfFundsUpload, sourceOfFundsUpload)}
                       />
                     </label>
+                    <input
+                      id="source-funds-upload-file"
+                      type="file"
+                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
+                      accept="image/*,.pdf,application/pdf"
+                      onChange={(e) => {
+                        console.log('[source-funds-file] onChange fired');
+                        console.log('[source-funds-file] files:', e.target.files);
+                        console.log('[source-funds-file] file count:', e.target.files?.length);
+                        
+                        const file = e.target.files?.[0];
+                        if (!file) {
+                          console.warn('[source-funds-file] No file selected');
+                          return;
+                        }
+                        
+                        console.log('[source-funds-file] File selected:', file.name, file.size, file.type);
+                        handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                        e.target.value = ''; // Reset for re-selection
+                      }}
+                    />
+                    
+                    {/* Secondary: Camera capture option */}
+                    {(sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') && (
+                      <Button 
+                        type="button"
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={async () => {
+                          console.log('[source-funds] Camera button clicked');
+                          
+                          if (isMobileDevice()) {
+                            const hasPermission = await requestCameraPermission();
+                            if (!hasPermission) {
+                              toast({
+                                title: "Camera Access Required",
+                                description: getCameraPermissionErrorMessage(),
+                                variant: "destructive",
+                              });
+                              // Still allow file picker as fallback
+                              const fileInput = document.getElementById('source-funds-upload-file') as HTMLInputElement;
+                              if (fileInput) {
+                                fileInput.value = '';
+                                fileInput.click();
+                              }
+                              return;
+                            }
+                          }
+                          
+                          const input = document.getElementById('source-funds-upload-camera') as HTMLInputElement;
+                          if (input) {
+                            input.value = '';
+                            setTimeout(() => {
+                              console.log('[source-funds] Triggering camera input click');
+                              input.click();
+                            }, 0);
+                          }
+                        }}
+                        className="w-full text-muted-foreground"
+                      >
+                        <Camera className="h-4 w-4 mr-2" />
+                        Take Photo Instead
+                      </Button>
+                    )}
                     <input
                       id="source-funds-upload-camera"
                       type="file"
@@ -1695,34 +1754,19 @@ const uploadWithProgress = useCallback(async (
                       accept="image/*"
                       capture="environment"
                       onChange={(e) => {
-                        console.log('[source-funds-camera] onChange fired, files:', e.target.files);
+                        console.log('[source-funds-camera] onChange fired');
+                        console.log('[source-funds-camera] files:', e.target.files);
+                        console.log('[source-funds-camera] file count:', e.target.files?.length);
+                        
                         const file = e.target.files?.[0];
-                        if (file) handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
-                      }}
-                    />
-                    
-                    {/* Secondary: File picker for PDFs */}
-                    {sourceOfFundsUpload.status === 'idle' && (
-                      <Button 
-                        type="button"
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => document.getElementById('source-funds-upload-file')?.click()}
-                        className="w-full text-muted-foreground"
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        Upload from Files (PDF/Image)
-                      </Button>
-                    )}
-                    <input
-                      id="source-funds-upload-file"
-                      type="file"
-                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
-                      accept="image/*,.pdf"
-                      onChange={(e) => {
-                        console.log('[source-funds-file] onChange fired, files:', e.target.files);
-                        const file = e.target.files?.[0];
-                        if (file) handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                        if (!file) {
+                          console.warn('[source-funds-camera] No file selected');
+                          return;
+                        }
+                        
+                        console.log('[source-funds-camera] File selected:', file.name, file.size, file.type);
+                        handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                        e.target.value = ''; // Reset for re-selection
                       }}
                     />
                   </div>
