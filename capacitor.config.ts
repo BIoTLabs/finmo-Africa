@@ -14,6 +14,9 @@ const config: CapacitorConfig = {
         'android.permission.READ_CONTACTS',
         'android.permission.WRITE_CONTACTS'
       ]
+    },
+    Camera: {
+      permissions: ['camera']
     }
   }
 };
