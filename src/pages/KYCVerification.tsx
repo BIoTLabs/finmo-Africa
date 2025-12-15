@@ -648,6 +648,93 @@ const uploadWithProgress = useCallback(async (
     return () => window.removeEventListener('focus', handleFocus);
   }, [awaitingFile, isNative, handleFileSelect]);
 
+  // Native addEventListener fallback for Android - attach native change/input listeners
+  useEffect(() => {
+    if (isNative) return; // Not needed for native app
+
+    const inputConfigs = [
+      { ref: idDocInputRef, type: 'id' as const, setState: setIdDocumentUpload },
+      { ref: selfieInputRef, type: 'selfie' as const, setState: setSelfieUpload },
+      { ref: proofAddressInputRef, type: 'proofOfAddress' as const, setState: setProofOfAddressUpload },
+      { ref: sourceFundsInputRef, type: 'sourceOfFunds' as const, setState: setSourceOfFundsUpload },
+    ];
+
+    const cleanupFns: Array<() => void> = [];
+
+    inputConfigs.forEach(({ ref, type, setState }) => {
+      const input = ref.current;
+      if (!input) return;
+
+      const handleNativeEvent = (e: Event) => {
+        const target = e.target as HTMLInputElement;
+        const file = target.files?.[0];
+        console.log(`[${type}] Native ${e.type} event fired, file:`, file?.name, file?.size);
+        
+        if (file) {
+          handleFileSelect(file, type, setState);
+          setAwaitingFile(null);
+          target.value = '';
+        }
+      };
+
+      // Listen to both 'change' and 'input' events as fallbacks
+      input.addEventListener('change', handleNativeEvent);
+      input.addEventListener('input', handleNativeEvent);
+      
+      console.log(`[${type}] Native event listeners attached`);
+
+      cleanupFns.push(() => {
+        input.removeEventListener('change', handleNativeEvent);
+        input.removeEventListener('input', handleNativeEvent);
+      });
+    });
+
+    return () => cleanupFns.forEach(fn => fn());
+  }, [isNative, handleFileSelect]);
+
+  // Polling fallback for Android - check for files every 500ms when awaiting
+  useEffect(() => {
+    if (!awaitingFile || isNative) return;
+
+    console.log(`[KYC] Starting polling for ${awaitingFile}`);
+    let attempts = 0;
+    const maxAttempts = 20; // Check for 10 seconds (500ms * 20)
+
+    const inputMap: Record<string, { ref: React.RefObject<HTMLInputElement | null>, setState: React.Dispatch<React.SetStateAction<UploadState>> }> = {
+      'id': { ref: idDocInputRef, setState: setIdDocumentUpload },
+      'selfie': { ref: selfieInputRef, setState: setSelfieUpload },
+      'proofOfAddress': { ref: proofAddressInputRef, setState: setProofOfAddressUpload },
+      'sourceOfFunds': { ref: sourceFundsInputRef, setState: setSourceOfFundsUpload },
+    };
+
+    const interval = setInterval(() => {
+      attempts++;
+      const config = inputMap[awaitingFile];
+      
+      if (config?.ref.current?.files?.length) {
+        const file = config.ref.current.files[0];
+        console.log(`[${awaitingFile}] Polling found file at attempt ${attempts}:`, file.name, file.size);
+        
+        handleFileSelect(file, awaitingFile as any, config.setState);
+        config.ref.current.value = '';
+        setAwaitingFile(null);
+        clearInterval(interval);
+        return;
+      }
+
+      if (attempts >= maxAttempts) {
+        console.log(`[${awaitingFile}] Polling timeout after ${maxAttempts} attempts`);
+        setAwaitingFile(null);
+        clearInterval(interval);
+      }
+    }, 500);
+
+    return () => {
+      console.log(`[KYC] Stopping polling for ${awaitingFile}`);
+      clearInterval(interval);
+    };
+  }, [awaitingFile, isNative, handleFileSelect]);
+
   // Native Capacitor Camera capture function
   const captureWithCapacitor = useCallback(async (
     type: 'id' | 'selfie' | 'proofOfAddress' | 'sourceOfFunds',
@@ -1461,6 +1548,10 @@ const uploadWithProgress = useCallback(async (
                             zIndex: 10,
                             pointerEvents: (idDocumentUpload.status === 'idle' || idDocumentUpload.status === 'error' || idDocumentUpload.status === 'stalled') ? 'auto' : 'none',
                           }}
+                          onClick={() => {
+                            console.log('[id-document] Input clicked, setting awaitingFile');
+                            setAwaitingFile('id');
+                          }}
                           onChange={(e) => {
                             console.log('[id-document] onChange fired, files:', e.target.files);
                             const file = e.target.files?.[0];
@@ -1536,6 +1627,10 @@ const uploadWithProgress = useCallback(async (
                             cursor: 'pointer',
                             zIndex: 10,
                             pointerEvents: (selfieUpload.status === 'idle' || selfieUpload.status === 'error' || selfieUpload.status === 'stalled') ? 'auto' : 'none',
+                          }}
+                          onClick={() => {
+                            console.log('[selfie] Input clicked, setting awaitingFile');
+                            setAwaitingFile('selfie');
                           }}
                           onChange={(e) => {
                             console.log('[selfie] onChange fired, files:', e.target.files);
@@ -1655,6 +1750,10 @@ const uploadWithProgress = useCallback(async (
                             top: 0, left: 0, width: '100%', height: '100%',
                             opacity: 0, cursor: 'pointer', zIndex: 10,
                             pointerEvents: (proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') ? 'auto' : 'none',
+                          }}
+                          onClick={() => {
+                            console.log('[proof-address] Input clicked, setting awaitingFile');
+                            setAwaitingFile('proofOfAddress');
                           }}
                           onChange={(e) => {
                             console.log('[proof-address] onChange fired, files:', e.target.files);
@@ -1782,6 +1881,10 @@ const uploadWithProgress = useCallback(async (
                             top: 0, left: 0, width: '100%', height: '100%',
                             opacity: 0, cursor: 'pointer', zIndex: 10,
                             pointerEvents: (sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') ? 'auto' : 'none',
+                          }}
+                          onClick={() => {
+                            console.log('[source-funds] Input clicked, setting awaitingFile');
+                            setAwaitingFile('sourceOfFunds');
                           }}
                           onChange={(e) => {
                             console.log('[source-funds] onChange fired, files:', e.target.files);
