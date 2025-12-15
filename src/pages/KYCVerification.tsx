@@ -1316,38 +1316,10 @@ const uploadWithProgress = useCallback(async (
 
                 <div>
                   <Label>ID Document (Front)</Label>
-                  <div className="mt-2 space-y-2 relative">
-                    {/* Primary: Camera capture */}
-                    <label 
-                      onClick={async (e) => {
-                        console.log('[id-document] Camera upload area clicked');
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        // Request camera permission on mobile
-                        if (isMobileDevice()) {
-                          const hasPermission = await requestCameraPermission();
-                          if (!hasPermission) {
-                            toast({
-                              title: "Camera Access Required",
-                              description: getCameraPermissionErrorMessage(),
-                              variant: "destructive",
-                            });
-                            // Fallback to file picker
-                            if (idDocFileRef.current) {
-                              idDocFileRef.current.value = '';
-                              setTimeout(() => idDocFileRef.current?.click(), 0);
-                            }
-                            return;
-                          }
-                        }
-                        
-                        if (idDocCameraRef.current) {
-                          idDocCameraRef.current.value = '';
-                          setTimeout(() => idDocCameraRef.current?.click(), 0);
-                        }
-                      }}
-                      className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
+                  <div className="mt-2 space-y-2">
+                    {/* Primary: Camera capture - iOS compatible overlay approach */}
+                    <div 
+                      className={`relative flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         idDocumentUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         idDocumentUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
                         idDocumentUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-950/20' :
@@ -1361,94 +1333,82 @@ const uploadWithProgress = useCallback(async (
                         onRetry={() => resetUpload(setIdDocumentUpload)}
                         onCancel={() => cancelUpload(setIdDocumentUpload, idDocumentUpload)}
                       />
-                    </label>
-                    <input
-                      ref={idDocCameraRef}
-                      type="file"
-                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => {
-                        console.log('[id-document-camera] onChange fired, files:', e.target.files);
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('[id-document-camera] Processing file:', file.name, file.size);
-                          handleFileSelect(file, 'id', setIdDocumentUpload);
-                        }
-                        e.target.value = '';
-                      }}
-                    />
+                      {/* Invisible overlay file input - iOS Safari compatible */}
+                      <input
+                        ref={idDocCameraRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          opacity: 0,
+                          cursor: 'pointer',
+                          zIndex: 10,
+                          pointerEvents: (idDocumentUpload.status === 'idle' || idDocumentUpload.status === 'error' || idDocumentUpload.status === 'stalled') ? 'auto' : 'none',
+                        }}
+                        onChange={(e) => {
+                          console.log('[id-document-camera] onChange fired, files:', e.target.files);
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            console.log('[id-document-camera] Processing file:', file.name, file.size);
+                            handleFileSelect(file, 'id', setIdDocumentUpload);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
                     
                     {/* Secondary: File picker for PDFs */}
                     {(idDocumentUpload.status === 'idle' || idDocumentUpload.status === 'error' || idDocumentUpload.status === 'stalled') && (
-                      <Button 
-                        type="button"
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          console.log('[id-document] File picker button clicked');
-                          if (idDocFileRef.current) {
-                            idDocFileRef.current.value = '';
-                            setTimeout(() => idDocFileRef.current?.click(), 0);
-                          }
-                        }}
-                        className="w-full text-muted-foreground"
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        Upload from Files (PDF/Image)
-                      </Button>
+                      <div className="relative">
+                        <Button 
+                          type="button"
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full text-muted-foreground pointer-events-none"
+                        >
+                          <FolderOpen className="h-4 w-4 mr-2" />
+                          Upload from Files (PDF/Image)
+                        </Button>
+                        <input
+                          ref={idDocFileRef}
+                          type="file"
+                          accept="image/*,.pdf,application/pdf"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            opacity: 0,
+                            cursor: 'pointer',
+                            zIndex: 10,
+                          }}
+                          onChange={(e) => {
+                            console.log('[id-document-file] onChange fired, files:', e.target.files);
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              console.log('[id-document-file] Processing file:', file.name, file.size);
+                              handleFileSelect(file, 'id', setIdDocumentUpload);
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                      </div>
                     )}
-                    <input
-                      ref={idDocFileRef}
-                      type="file"
-                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
-                      accept="image/*,.pdf,application/pdf"
-                      onChange={(e) => {
-                        console.log('[id-document-file] onChange fired, files:', e.target.files);
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('[id-document-file] Processing file:', file.name, file.size);
-                          handleFileSelect(file, 'id', setIdDocumentUpload);
-                        }
-                        e.target.value = '';
-                      }}
-                    />
                   </div>
                 </div>
 
                 <div>
                   <Label>Selfie (holding ID next to face)</Label>
-                  <div className="mt-2 relative">
-                    <label 
-                      onClick={async (e) => {
-                        console.log('[selfie] Camera upload area clicked');
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        // Request front camera permission on mobile
-                        if (isMobileDevice()) {
-                          const hasPermission = await requestFrontCameraPermission();
-                          if (!hasPermission) {
-                            toast({
-                              title: "Camera Access Required",
-                              description: getCameraPermissionErrorMessage(),
-                              variant: "destructive",
-                            });
-                            // Still trigger file picker as fallback
-                            if (selfieRef.current) {
-                              selfieRef.current.value = '';
-                              setTimeout(() => selfieRef.current?.click(), 0);
-                            }
-                            return;
-                          }
-                        }
-                        
-                        if (selfieRef.current) {
-                          selfieRef.current.value = '';
-                          setTimeout(() => selfieRef.current?.click(), 0);
-                        }
-                      }}
-                      className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
+                  <div className="mt-2">
+                    {/* Selfie capture - iOS compatible overlay approach */}
+                    <div 
+                      className={`relative flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         selfieUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         selfieUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
                         selfieUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-950/20' :
@@ -1462,23 +1422,34 @@ const uploadWithProgress = useCallback(async (
                         onRetry={() => resetUpload(setSelfieUpload)}
                         onCancel={() => cancelUpload(setSelfieUpload, selfieUpload)}
                       />
-                    </label>
-                    <input
-                      ref={selfieRef}
-                      type="file"
-                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
-                      accept="image/*"
-                      capture="user"
-                      onChange={(e) => {
-                        console.log('[selfie] onChange fired, files:', e.target.files);
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('[selfie] Processing file:', file.name, file.size);
-                          handleFileSelect(file, 'selfie', setSelfieUpload);
-                        }
-                        e.target.value = '';
-                      }}
-                    />
+                      {/* Invisible overlay file input - iOS Safari compatible */}
+                      <input
+                        ref={selfieRef}
+                        type="file"
+                        accept="image/*"
+                        capture="user"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          opacity: 0,
+                          cursor: 'pointer',
+                          zIndex: 10,
+                          pointerEvents: (selfieUpload.status === 'idle' || selfieUpload.status === 'error' || selfieUpload.status === 'stalled') ? 'auto' : 'none',
+                        }}
+                        onChange={(e) => {
+                          console.log('[selfie] onChange fired, files:', e.target.files);
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            console.log('[selfie] Processing file:', file.name, file.size);
+                            handleFileSelect(file, 'selfie', setSelfieUpload);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -1548,37 +1519,10 @@ const uploadWithProgress = useCallback(async (
                   <p className="text-xs text-muted-foreground mb-2">
                     Utility bill, bank statement, or government letter dated within 3 months
                   </p>
-                  <div className="mt-2 space-y-2 relative">
-                    {/* Primary: Camera capture */}
-                    <label 
-                      onClick={async (e) => {
-                        console.log('[proof-address] Camera upload area clicked');
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        if (isMobileDevice()) {
-                          const hasPermission = await requestCameraPermission();
-                          if (!hasPermission) {
-                            toast({
-                              title: "Camera Access Required",
-                              description: getCameraPermissionErrorMessage(),
-                              variant: "destructive",
-                            });
-                            // Fallback to file picker
-                            if (proofAddressFileRef.current) {
-                              proofAddressFileRef.current.value = '';
-                              setTimeout(() => proofAddressFileRef.current?.click(), 0);
-                            }
-                            return;
-                          }
-                        }
-                        
-                        if (proofAddressCameraRef.current) {
-                          proofAddressCameraRef.current.value = '';
-                          setTimeout(() => proofAddressCameraRef.current?.click(), 0);
-                        }
-                      }}
-                      className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
+                  <div className="mt-2 space-y-2">
+                    {/* Primary: Camera capture - iOS compatible overlay approach */}
+                    <div 
+                      className={`relative flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         proofOfAddressUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         proofOfAddressUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
                         proofOfAddressUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-950/20' :
@@ -1592,58 +1536,73 @@ const uploadWithProgress = useCallback(async (
                         onRetry={() => resetUpload(setProofOfAddressUpload)}
                         onCancel={() => cancelUpload(setProofOfAddressUpload, proofOfAddressUpload)}
                       />
-                    </label>
-                    <input
-                      ref={proofAddressCameraRef}
-                      type="file"
-                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => {
-                        console.log('[proof-address-camera] onChange fired, files:', e.target.files);
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('[proof-address-camera] Processing file:', file.name, file.size);
-                          handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
-                        }
-                        e.target.value = '';
-                      }}
-                    />
+                      {/* Invisible overlay file input - iOS Safari compatible */}
+                      <input
+                        ref={proofAddressCameraRef}
+                        type="file"
+                        accept="image/*"
+                        capture="environment"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          opacity: 0,
+                          cursor: 'pointer',
+                          zIndex: 10,
+                          pointerEvents: (proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') ? 'auto' : 'none',
+                        }}
+                        onChange={(e) => {
+                          console.log('[proof-address-camera] onChange fired, files:', e.target.files);
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            console.log('[proof-address-camera] Processing file:', file.name, file.size);
+                            handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
                     
                     {/* Secondary: File picker for PDFs */}
                     {(proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') && (
-                      <Button 
-                        type="button"
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={() => {
-                          console.log('[proof-address] File picker button clicked');
-                          if (proofAddressFileRef.current) {
-                            proofAddressFileRef.current.value = '';
-                            setTimeout(() => proofAddressFileRef.current?.click(), 0);
-                          }
-                        }}
-                        className="w-full text-muted-foreground"
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        Upload from Files (PDF/Image)
-                      </Button>
+                      <div className="relative">
+                        <Button 
+                          type="button"
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full text-muted-foreground pointer-events-none"
+                        >
+                          <FolderOpen className="h-4 w-4 mr-2" />
+                          Upload from Files (PDF/Image)
+                        </Button>
+                        <input
+                          ref={proofAddressFileRef}
+                          type="file"
+                          accept="image/*,.pdf,application/pdf"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            opacity: 0,
+                            cursor: 'pointer',
+                            zIndex: 10,
+                          }}
+                          onChange={(e) => {
+                            console.log('[proof-address-file] onChange fired, files:', e.target.files);
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              console.log('[proof-address-file] Processing file:', file.name, file.size);
+                              handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
+                            }
+                            e.target.value = '';
+                          }}
+                        />
+                      </div>
                     )}
-                    <input
-                      ref={proofAddressFileRef}
-                      type="file"
-                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
-                      accept="image/*,.pdf,application/pdf"
-                      onChange={(e) => {
-                        console.log('[proof-address-file] onChange fired, files:', e.target.files);
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('[proof-address-file] Processing file:', file.name, file.size);
-                          handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
-                        }
-                        e.target.value = '';
-                      }}
-                    />
                   </div>
                 </div>
               </div>
@@ -1712,23 +1671,10 @@ const uploadWithProgress = useCallback(async (
                   <p className="text-xs text-muted-foreground mb-2">
                     Bank statement, pay slip, or business registration
                   </p>
-                  <div className="mt-2 space-y-2 relative">
-                    {/* Primary: File picker for PDFs/documents (more common for bank statements) */}
-                    <label 
-                      onClick={(e) => {
-                        console.log('[source-funds] File upload area clicked');
-                        e.preventDefault();
-                        e.stopPropagation();
-                        
-                        if (sourceFundsFileRef.current) {
-                          sourceFundsFileRef.current.value = '';
-                          setTimeout(() => {
-                            console.log('[source-funds] Triggering file input click');
-                            sourceFundsFileRef.current?.click();
-                          }, 0);
-                        }
-                      }}
-                      className={`flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
+                  <div className="mt-2 space-y-2">
+                    {/* Primary: File picker for PDFs/documents - iOS compatible overlay approach */}
+                    <div 
+                      className={`relative flex flex-col items-center gap-2 cursor-pointer border-2 border-dashed rounded-lg p-6 transition-colors ${
                         sourceOfFundsUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
                         sourceOfFundsUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
                         sourceOfFundsUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-950/20' :
@@ -1742,79 +1688,73 @@ const uploadWithProgress = useCallback(async (
                         onRetry={() => resetUpload(setSourceOfFundsUpload)}
                         onCancel={() => cancelUpload(setSourceOfFundsUpload, sourceOfFundsUpload)}
                       />
-                    </label>
-                    <input
-                      ref={sourceFundsFileRef}
-                      type="file"
-                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
-                      accept="image/*,.pdf,application/pdf"
-                      onChange={(e) => {
-                        console.log('[source-funds-file] onChange fired, files:', e.target.files);
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('[source-funds-file] Processing file:', file.name, file.size, file.type);
-                          handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
-                        }
-                        e.target.value = '';
-                      }}
-                    />
+                      {/* Invisible overlay file input - iOS Safari compatible */}
+                      <input
+                        ref={sourceFundsFileRef}
+                        type="file"
+                        accept="image/*,.pdf,application/pdf"
+                        style={{
+                          position: 'absolute',
+                          top: 0,
+                          left: 0,
+                          width: '100%',
+                          height: '100%',
+                          opacity: 0,
+                          cursor: 'pointer',
+                          zIndex: 10,
+                          pointerEvents: (sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') ? 'auto' : 'none',
+                        }}
+                        onChange={(e) => {
+                          console.log('[source-funds-file] onChange fired, files:', e.target.files);
+                          const file = e.target.files?.[0];
+                          if (file) {
+                            console.log('[source-funds-file] Processing file:', file.name, file.size, file.type);
+                            handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                          }
+                          e.target.value = '';
+                        }}
+                      />
+                    </div>
                     
                     {/* Secondary: Camera capture option */}
                     {(sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') && (
-                      <Button 
-                        type="button"
-                        variant="ghost" 
-                        size="sm" 
-                        onClick={async () => {
-                          console.log('[source-funds] Camera button clicked');
-                          
-                          if (isMobileDevice()) {
-                            const hasPermission = await requestCameraPermission();
-                            if (!hasPermission) {
-                              toast({
-                                title: "Camera Access Required",
-                                description: getCameraPermissionErrorMessage(),
-                                variant: "destructive",
-                              });
-                              // Fallback to file picker
-                              if (sourceFundsFileRef.current) {
-                                sourceFundsFileRef.current.value = '';
-                                setTimeout(() => sourceFundsFileRef.current?.click(), 0);
-                              }
-                              return;
+                      <div className="relative">
+                        <Button 
+                          type="button"
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full text-muted-foreground pointer-events-none"
+                        >
+                          <Camera className="h-4 w-4 mr-2" />
+                          Take Photo Instead
+                        </Button>
+                        <input
+                          ref={sourceFundsCameraRef}
+                          type="file"
+                          accept="image/*"
+                          capture="environment"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            opacity: 0,
+                            cursor: 'pointer',
+                            zIndex: 10,
+                          }}
+                          onChange={(e) => {
+                            console.log('[source-funds-camera] onChange fired, files:', e.target.files);
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              console.log('[source-funds-camera] Processing file:', file.name, file.size, file.type);
+                              handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
                             }
-                          }
-                          
-                          if (sourceFundsCameraRef.current) {
-                            sourceFundsCameraRef.current.value = '';
-                            setTimeout(() => {
-                              console.log('[source-funds] Triggering camera input click');
-                              sourceFundsCameraRef.current?.click();
-                            }, 0);
-                          }
-                        }}
-                        className="w-full text-muted-foreground"
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Take Photo Instead
-                      </Button>
+                            e.target.value = '';
+                          }}
+                        />
+                      </div>
                     )}
-                    <input
-                      ref={sourceFundsCameraRef}
-                      type="file"
-                      style={{ position: 'absolute', left: '-9999px', width: '1px', height: '1px' }}
-                      accept="image/*"
-                      capture="environment"
-                      onChange={(e) => {
-                        console.log('[source-funds-camera] onChange fired, files:', e.target.files);
-                        const file = e.target.files?.[0];
-                        if (file) {
-                          console.log('[source-funds-camera] Processing file:', file.name, file.size, file.type);
-                          handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
-                        }
-                        e.target.value = '';
-                      }}
-                    />
                   </div>
                 </div>
               </div>
