@@ -176,8 +176,9 @@ export default function KYCVerification() {
   const proofAddressInputRef = useRef<HTMLInputElement>(null);
   const sourceFundsInputRef = useRef<HTMLInputElement>(null);
   
-  // Track if callback ref listener is already attached for sourceFunds
+  // Track if callback ref listeners are already attached
   const sourceFundsListenerAttached = useRef(false);
+  const proofAddressListenerAttached = useRef(false);
   
   // Detect if running in native app
   const isNative = Capacitor.isNativePlatform();
@@ -656,11 +657,11 @@ const uploadWithProgress = useCallback(async (
   useEffect(() => {
     if (isNative) return; // Not needed for native app
 
-    // Note: sourceFundsInputRef uses callback ref pattern, so exclude from this useEffect
+    // Note: sourceFundsInputRef and proofAddressInputRef use callback ref pattern, so exclude from this useEffect
     const inputConfigs = [
       { ref: idDocInputRef, type: 'id' as const, setState: setIdDocumentUpload },
       { ref: selfieInputRef, type: 'selfie' as const, setState: setSelfieUpload },
-      { ref: proofAddressInputRef, type: 'proofOfAddress' as const, setState: setProofOfAddressUpload },
+      // proofAddressInputRef now uses callback ref pattern
     ];
 
     // Log which inputs are available on this step
@@ -1772,7 +1773,34 @@ const uploadWithProgress = useCallback(async (
                       
                       {!isNative && (
                         <input
-                          ref={proofAddressInputRef}
+                          ref={(node) => {
+                            // Callback ref pattern - attach listeners directly when mounted
+                            proofAddressInputRef.current = node;
+                            
+                            if (node && !proofAddressListenerAttached.current) {
+                              console.log('[proof-address] Callback ref - attaching direct listeners');
+                              proofAddressListenerAttached.current = true;
+                              
+                              const handleDirectEvent = (e: Event) => {
+                                const target = e.target as HTMLInputElement;
+                                const file = target.files?.[0];
+                                console.log(`[proof-address] Direct listener ${e.type}, file:`, file?.name, file?.size);
+                                
+                                if (file) {
+                                  toast({
+                                    title: "File Selected",
+                                    description: `Processing ${file.name}...`,
+                                  });
+                                  handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
+                                  setAwaitingFile(null);
+                                  target.value = '';
+                                }
+                              };
+                              
+                              node.addEventListener('change', handleDirectEvent);
+                              node.addEventListener('input', handleDirectEvent);
+                            }
+                          }}
                           type="file"
                           accept="image/*,.pdf,application/pdf,android/force-camera"
                           style={{
@@ -1782,11 +1810,43 @@ const uploadWithProgress = useCallback(async (
                             pointerEvents: (proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') ? 'auto' : 'none',
                           }}
                           onClick={() => {
-                            console.log('[proof-address] Input clicked, setting awaitingFile');
+                            // Visual feedback
+                            toast({
+                              title: "Opening File Picker",
+                              description: "Select your document...",
+                              duration: 2000,
+                            });
+                            
+                            console.log('[proof-address] Input clicked', {
+                              inputExists: !!proofAddressInputRef.current,
+                              status: proofOfAddressUpload.status,
+                              step: currentStep,
+                              listenerAttached: proofAddressListenerAttached.current,
+                            });
+                            
                             setAwaitingFile('proofOfAddress');
+                            
+                            // Android fallback: check for files after selection
+                            const checkForFile = (attempts = 0) => {
+                              if (attempts > 20) return;
+                              
+                              const input = proofAddressInputRef.current;
+                              if (input?.files?.length) {
+                                const file = input.files[0];
+                                console.log('[proof-address] Post-click check found file:', file.name);
+                                toast({ title: "File Detected", description: `Processing ${file.name}...` });
+                                handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
+                                setAwaitingFile(null);
+                                input.value = '';
+                                return;
+                              }
+                              setTimeout(() => checkForFile(attempts + 1), 500);
+                            };
+                            
+                            setTimeout(() => checkForFile(0), 1000);
                           }}
                           onChange={(e) => {
-                            console.log('[proof-address] onChange fired, files:', e.target.files);
+                            console.log('[proof-address] React onChange fired, files:', e.target.files);
                             const file = e.target.files?.[0];
                             if (file) {
                               handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
