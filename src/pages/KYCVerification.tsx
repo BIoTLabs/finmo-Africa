@@ -176,6 +176,9 @@ export default function KYCVerification() {
   const proofAddressInputRef = useRef<HTMLInputElement>(null);
   const sourceFundsInputRef = useRef<HTMLInputElement>(null);
   
+  // Track if callback ref listener is already attached for sourceFunds
+  const sourceFundsListenerAttached = useRef(false);
+  
   // Detect if running in native app
   const isNative = Capacitor.isNativePlatform();
   console.log('[KYC] Platform:', isNative ? 'native (Capacitor)' : 'browser');
@@ -653,11 +656,11 @@ const uploadWithProgress = useCallback(async (
   useEffect(() => {
     if (isNative) return; // Not needed for native app
 
+    // Note: sourceFundsInputRef uses callback ref pattern, so exclude from this useEffect
     const inputConfigs = [
       { ref: idDocInputRef, type: 'id' as const, setState: setIdDocumentUpload },
       { ref: selfieInputRef, type: 'selfie' as const, setState: setSelfieUpload },
       { ref: proofAddressInputRef, type: 'proofOfAddress' as const, setState: setProofOfAddressUpload },
-      { ref: sourceFundsInputRef, type: 'sourceOfFunds' as const, setState: setSourceOfFundsUpload },
     ];
 
     // Log which inputs are available on this step
@@ -1900,7 +1903,34 @@ const uploadWithProgress = useCallback(async (
                       
                       {!isNative && (
                         <input
-                          ref={sourceFundsInputRef}
+                          ref={(node) => {
+                            // Callback ref pattern - attach listeners directly when mounted
+                            sourceFundsInputRef.current = node;
+                            
+                            if (node && !sourceFundsListenerAttached.current) {
+                              console.log('[source-funds] Callback ref - attaching direct listeners');
+                              sourceFundsListenerAttached.current = true;
+                              
+                              const handleDirectEvent = (e: Event) => {
+                                const target = e.target as HTMLInputElement;
+                                const file = target.files?.[0];
+                                console.log(`[source-funds] Direct listener ${e.type}, file:`, file?.name, file?.size);
+                                
+                                if (file) {
+                                  toast({
+                                    title: "File Selected",
+                                    description: `Processing ${file.name}...`,
+                                  });
+                                  handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                                  setAwaitingFile(null);
+                                  target.value = '';
+                                }
+                              };
+                              
+                              node.addEventListener('change', handleDirectEvent);
+                              node.addEventListener('input', handleDirectEvent);
+                            }
+                          }}
                           type="file"
                           accept="image/*,.pdf,application/pdf,android/force-camera"
                           style={{
@@ -1910,13 +1940,60 @@ const uploadWithProgress = useCallback(async (
                             pointerEvents: (sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') ? 'auto' : 'none',
                           }}
                           onClick={() => {
-                            console.log('[source-funds] Input clicked, setting awaitingFile');
+                            // Visual feedback
+                            toast({
+                              title: "Opening File Picker",
+                              description: "Select your document...",
+                              duration: 2000,
+                            });
+                            
+                            // Detailed logging
+                            console.log('[source-funds] Input clicked', {
+                              inputExists: !!sourceFundsInputRef.current,
+                              files: sourceFundsInputRef.current?.files?.length,
+                              status: sourceOfFundsUpload.status,
+                              step: currentStep,
+                              awaitingFile,
+                              listenerAttached: sourceFundsListenerAttached.current,
+                            });
+                            
                             setAwaitingFile('sourceOfFunds');
+                            
+                            // Immediate post-select polling fallback for Android
+                            const checkForFile = (attempts = 0) => {
+                              if (attempts > 20) {
+                                console.log('[source-funds] Post-click polling timeout');
+                                return;
+                              }
+                              
+                              const input = sourceFundsInputRef.current;
+                              if (input?.files?.length) {
+                                const file = input.files[0];
+                                console.log('[source-funds] Post-click check found file:', file.name);
+                                toast({
+                                  title: "File Detected",
+                                  description: `Uploading ${file.name}...`,
+                                });
+                                handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                                setAwaitingFile(null);
+                                input.value = '';
+                                return;
+                              }
+                              
+                              setTimeout(() => checkForFile(attempts + 1), 500);
+                            };
+                            
+                            // Start checking after file picker has time to open/close
+                            setTimeout(() => checkForFile(0), 1000);
                           }}
                           onChange={(e) => {
-                            console.log('[source-funds] onChange fired, files:', e.target.files);
+                            console.log('[source-funds] React onChange fired, files:', e.target.files);
                             const file = e.target.files?.[0];
                             if (file) {
+                              toast({
+                                title: "File Selected",
+                                description: `Processing ${file.name}...`,
+                              });
                               handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
                               setAwaitingFile(null);
                             }
