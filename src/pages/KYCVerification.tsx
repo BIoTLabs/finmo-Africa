@@ -649,6 +649,7 @@ const uploadWithProgress = useCallback(async (
   }, [awaitingFile, isNative, handleFileSelect]);
 
   // Native addEventListener fallback for Android - attach native change/input listeners
+  // CRITICAL: currentStep in dependency array ensures listeners attach when inputs render
   useEffect(() => {
     if (isNative) return; // Not needed for native app
 
@@ -659,11 +660,22 @@ const uploadWithProgress = useCallback(async (
       { ref: sourceFundsInputRef, type: 'sourceOfFunds' as const, setState: setSourceOfFundsUpload },
     ];
 
+    // Log which inputs are available on this step
+    console.log(`[KYC] Step ${currentStep} - Input availability:`, {
+      id: !!idDocInputRef.current,
+      selfie: !!selfieInputRef.current,
+      proofAddress: !!proofAddressInputRef.current,
+      sourceFunds: !!sourceFundsInputRef.current,
+    });
+
     const cleanupFns: Array<() => void> = [];
 
     inputConfigs.forEach(({ ref, type, setState }) => {
       const input = ref.current;
-      if (!input) return;
+      if (!input) {
+        console.log(`[${type}] Input ref not available yet (currentStep: ${currentStep})`);
+        return;
+      }
 
       const handleNativeEvent = (e: Event) => {
         const target = e.target as HTMLInputElement;
@@ -671,6 +683,11 @@ const uploadWithProgress = useCallback(async (
         console.log(`[${type}] Native ${e.type} event fired, file:`, file?.name, file?.size);
         
         if (file) {
+          // Show toast feedback so user knows file was detected
+          toast({
+            title: "File Selected",
+            description: `Processing ${file.name}...`,
+          });
           handleFileSelect(file, type, setState);
           setAwaitingFile(null);
           target.value = '';
@@ -681,7 +698,7 @@ const uploadWithProgress = useCallback(async (
       input.addEventListener('change', handleNativeEvent);
       input.addEventListener('input', handleNativeEvent);
       
-      console.log(`[${type}] Native event listeners attached`);
+      console.log(`[${type}] Native event listeners attached successfully (step ${currentStep})`);
 
       cleanupFns.push(() => {
         input.removeEventListener('change', handleNativeEvent);
@@ -690,13 +707,13 @@ const uploadWithProgress = useCallback(async (
     });
 
     return () => cleanupFns.forEach(fn => fn());
-  }, [isNative, handleFileSelect]);
+  }, [isNative, handleFileSelect, currentStep]); // Added currentStep to re-attach when step changes
 
   // Polling fallback for Android - check for files every 500ms when awaiting
   useEffect(() => {
     if (!awaitingFile || isNative) return;
 
-    console.log(`[KYC] Starting polling for ${awaitingFile}`);
+    console.log(`[KYC] Starting polling for ${awaitingFile} (step ${currentStep})`);
     let attempts = 0;
     const maxAttempts = 20; // Check for 10 seconds (500ms * 20)
 
@@ -712,10 +729,20 @@ const uploadWithProgress = useCallback(async (
       const config = inputMap[awaitingFile];
       
       if (config?.ref.current?.files?.length) {
-        const file = config.ref.current.files[0];
-        console.log(`[${awaitingFile}] Polling found file at attempt ${attempts}:`, file.name, file.size);
+        // CRITICAL: Store file reference BEFORE clearing input value
+        const fileToUpload = config.ref.current.files[0];
+        console.log(`[${awaitingFile}] Polling found file at attempt ${attempts}:`, fileToUpload.name, fileToUpload.size);
         
-        handleFileSelect(file, awaitingFile as any, config.setState);
+        // Show toast feedback
+        toast({
+          title: "File Selected",
+          description: `Processing ${fileToUpload.name}...`,
+        });
+        
+        // Process the stored file reference
+        handleFileSelect(fileToUpload, awaitingFile as any, config.setState);
+        
+        // Clear input AFTER storing file reference
         config.ref.current.value = '';
         setAwaitingFile(null);
         clearInterval(interval);
@@ -723,7 +750,7 @@ const uploadWithProgress = useCallback(async (
       }
 
       if (attempts >= maxAttempts) {
-        console.log(`[${awaitingFile}] Polling timeout after ${maxAttempts} attempts`);
+        console.log(`[${awaitingFile}] Polling timeout after ${maxAttempts} attempts (step ${currentStep})`);
         setAwaitingFile(null);
         clearInterval(interval);
       }
@@ -733,7 +760,7 @@ const uploadWithProgress = useCallback(async (
       console.log(`[KYC] Stopping polling for ${awaitingFile}`);
       clearInterval(interval);
     };
-  }, [awaitingFile, isNative, handleFileSelect]);
+  }, [awaitingFile, isNative, handleFileSelect, currentStep]);
 
   // Native Capacitor Camera capture function
   const captureWithCapacitor = useCallback(async (
@@ -1536,7 +1563,7 @@ const uploadWithProgress = useCallback(async (
                         <input
                           ref={idDocInputRef}
                           type="file"
-                          accept="image/*,.pdf,application/pdf"
+                          accept="image/*,.pdf,application/pdf,android/force-camera"
                           style={{
                             position: 'absolute',
                             top: 0,
@@ -1744,7 +1771,7 @@ const uploadWithProgress = useCallback(async (
                         <input
                           ref={proofAddressInputRef}
                           type="file"
-                          accept="image/*,.pdf,application/pdf"
+                          accept="image/*,.pdf,application/pdf,android/force-camera"
                           style={{
                             position: 'absolute',
                             top: 0, left: 0, width: '100%', height: '100%',
@@ -1875,7 +1902,7 @@ const uploadWithProgress = useCallback(async (
                         <input
                           ref={sourceFundsInputRef}
                           type="file"
-                          accept="image/*,.pdf,application/pdf"
+                          accept="image/*,.pdf,application/pdf,android/force-camera"
                           style={{
                             position: 'absolute',
                             top: 0, left: 0, width: '100%', height: '100%',
