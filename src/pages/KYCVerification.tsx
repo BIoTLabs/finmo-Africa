@@ -176,13 +176,7 @@ export default function KYCVerification() {
   const proofAddressInputRef = useRef<HTMLInputElement>(null);
   const sourceFundsInputRef = useRef<HTMLInputElement>(null);
   
-  // Track if callback ref listeners are already attached
-  const sourceFundsListenerAttached = useRef(false);
-  const proofAddressListenerAttached = useRef(false);
-  
-  // Stable handler refs to avoid stale closures in callback refs
-  const sourceFundsHandlerRef = useRef<((e: Event) => void) | null>(null);
-  const proofAddressHandlerRef = useRef<((e: Event) => void) | null>(null);
+  // Note: Callback ref pattern removed - using simpler direct overlay pattern like ID/Selfie uploads
   
   // Detect if running in native app
   const isNative = Capacitor.isNativePlatform();
@@ -610,44 +604,7 @@ const uploadWithProgress = useCallback(async (
     setUploadState(initialUploadState);
   }, []);
 
-  // Stable event handlers for source of funds and proof of address - avoid stale closures
-  const handleSourceFundsFileEvent = useCallback((e: Event) => {
-    const target = e.target as HTMLInputElement;
-    const file = target.files?.[0];
-    console.log(`[source-funds] Stable handler ${e.type}, file:`, file?.name, file?.size);
-    
-    if (file) {
-      toast({
-        title: "File Selected",
-        description: `Processing ${file.name}...`,
-      });
-      handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
-      setAwaitingFile(null);
-      target.value = '';
-    }
-  }, [handleFileSelect, toast]);
-
-  const handleProofAddressFileEvent = useCallback((e: Event) => {
-    const target = e.target as HTMLInputElement;
-    const file = target.files?.[0];
-    console.log(`[proof-address] Stable handler ${e.type}, file:`, file?.name, file?.size);
-    
-    if (file) {
-      toast({
-        title: "File Selected", 
-        description: `Processing ${file.name}...`,
-      });
-      handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
-      setAwaitingFile(null);
-      target.value = '';
-    }
-  }, [handleFileSelect, toast]);
-
-  // Keep handler refs updated with latest handlers
-  useEffect(() => {
-    sourceFundsHandlerRef.current = handleSourceFundsFileEvent;
-    proofAddressHandlerRef.current = handleProofAddressFileEvent;
-  }, [handleSourceFundsFileEvent, handleProofAddressFileEvent]);
+  // Note: Callback ref handlers removed - using simpler direct overlay pattern like ID/Selfie uploads
 
   // Window focus fallback for Android Chrome - check for file selection when window regains focus
   useEffect(() => {
@@ -1614,7 +1571,7 @@ const uploadWithProgress = useCallback(async (
                         <input
                           ref={idDocInputRef}
                           type="file"
-                          accept="image/*,.pdf,application/pdf,android/force-camera"
+                          accept="image/*,.pdf,application/pdf"
                           style={{
                             position: 'absolute',
                             top: 0,
@@ -1818,68 +1775,38 @@ const uploadWithProgress = useCallback(async (
                         />
                       )}
                       
-                      {!isNative && (proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') && (
-                        <label className="absolute inset-0 cursor-pointer z-10">
-                          <input
-                            ref={(node) => {
-                              proofAddressInputRef.current = node;
-                              
-                              // Reset flag on unmount
-                              if (node === null) {
-                                proofAddressListenerAttached.current = false;
-                                return;
-                              }
-                              
-                              if (!proofAddressListenerAttached.current) {
-                                console.log('[proof-address] Callback ref - attaching stable handler listeners');
-                                proofAddressListenerAttached.current = true;
-                                
-                                // Use handler ref to always get fresh handler
-                                const wrappedHandler = (e: Event) => {
-                                  proofAddressHandlerRef.current?.(e);
-                                };
-                                
-                                node.addEventListener('change', wrappedHandler);
-                                node.addEventListener('input', wrappedHandler);
-                              }
-                            }}
-                            type="file"
-                            className="sr-only"
-                            accept="image/*,.pdf,application/pdf"
-                            onClickCapture={() => {
-                              console.log('[proof-address] Click captured on input element');
-                              toast({
-                                title: "Opening File Picker",
-                                description: "Select your document...",
-                                duration: 2000,
-                              });
-                              setAwaitingFile('proofOfAddress');
-                              
-                              // Android polling fallback
-                              const checkForFile = (attempts = 0) => {
-                                if (attempts > 20) return;
-                                const input = proofAddressInputRef.current;
-                                if (input?.files?.length) {
-                                  const file = input.files[0];
-                                  console.log('[proof-address] Polling found file:', file.name);
-                                  proofAddressHandlerRef.current?.({ target: input } as unknown as Event);
-                                  return;
-                                }
-                                setTimeout(() => checkForFile(attempts + 1), 500);
-                              };
-                              setTimeout(() => checkForFile(0), 1000);
-                            }}
-                            onChange={(e) => {
-                              console.log('[proof-address] React onChange fired, files:', e.target.files);
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
-                                setAwaitingFile(null);
-                              }
-                              e.target.value = '';
-                            }}
-                          />
-                        </label>
+                      {/* For browser: use file input with overlay pattern (same as ID/Selfie) */}
+                      {!isNative && (
+                        <input
+                          ref={proofAddressInputRef}
+                          type="file"
+                          accept="image/*,.pdf,application/pdf"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            opacity: 0,
+                            cursor: 'pointer',
+                            zIndex: 10,
+                            pointerEvents: (proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') ? 'auto' : 'none',
+                          }}
+                          onClick={() => {
+                            console.log('[proof-address] Input clicked, setting awaitingFile');
+                            setAwaitingFile('proofOfAddress');
+                          }}
+                          onChange={(e) => {
+                            console.log('[proof-address] onChange fired, files:', e.target.files);
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              console.log('[proof-address] Processing file:', file.name, file.size);
+                              handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
+                              setAwaitingFile(null);
+                            }
+                            e.target.value = '';
+                          }}
+                        />
                       )}
                     </div>
                     
@@ -1986,75 +1913,38 @@ const uploadWithProgress = useCallback(async (
                         />
                       )}
                       
-                      {!isNative && (sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') && (
-                        <label className="absolute inset-0 cursor-pointer z-10">
-                          <input
-                            ref={(node) => {
-                              sourceFundsInputRef.current = node;
-                              
-                              // Reset flag on unmount
-                              if (node === null) {
-                                sourceFundsListenerAttached.current = false;
-                                return;
-                              }
-                              
-                              if (!sourceFundsListenerAttached.current) {
-                                console.log('[source-funds] Callback ref - attaching stable handler listeners');
-                                sourceFundsListenerAttached.current = true;
-                                
-                                // Use handler ref to always get fresh handler
-                                const wrappedHandler = (e: Event) => {
-                                  sourceFundsHandlerRef.current?.(e);
-                                };
-                                
-                                node.addEventListener('change', wrappedHandler);
-                                node.addEventListener('input', wrappedHandler);
-                              }
-                            }}
-                            type="file"
-                            className="sr-only"
-                            accept="image/*,.pdf,application/pdf"
-                            onClickCapture={() => {
-                              console.log('[source-funds] Click captured on input element');
-                              toast({
-                                title: "Opening File Picker",
-                                description: "Select your document...",
-                                duration: 2000,
-                              });
-                              setAwaitingFile('sourceOfFunds');
-                              
-                              // Android polling fallback
-                              const checkForFile = (attempts = 0) => {
-                                if (attempts > 20) {
-                                  console.log('[source-funds] Polling timeout');
-                                  return;
-                                }
-                                const input = sourceFundsInputRef.current;
-                                if (input?.files?.length) {
-                                  const file = input.files[0];
-                                  console.log('[source-funds] Polling found file:', file.name);
-                                  sourceFundsHandlerRef.current?.({ target: input } as unknown as Event);
-                                  return;
-                                }
-                                setTimeout(() => checkForFile(attempts + 1), 500);
-                              };
-                              setTimeout(() => checkForFile(0), 1000);
-                            }}
-                            onChange={(e) => {
-                              console.log('[source-funds] React onChange fired, files:', e.target.files);
-                              const file = e.target.files?.[0];
-                              if (file) {
-                                toast({
-                                  title: "File Selected",
-                                  description: `Processing ${file.name}...`,
-                                });
-                                handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
-                                setAwaitingFile(null);
-                              }
-                              e.target.value = '';
-                            }}
-                          />
-                        </label>
+                      {/* For browser: use file input with overlay pattern (same as ID/Selfie) */}
+                      {!isNative && (
+                        <input
+                          ref={sourceFundsInputRef}
+                          type="file"
+                          accept="image/*,.pdf,application/pdf"
+                          style={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            opacity: 0,
+                            cursor: 'pointer',
+                            zIndex: 10,
+                            pointerEvents: (sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') ? 'auto' : 'none',
+                          }}
+                          onClick={() => {
+                            console.log('[source-funds] Input clicked, setting awaitingFile');
+                            setAwaitingFile('sourceOfFunds');
+                          }}
+                          onChange={(e) => {
+                            console.log('[source-funds] onChange fired, files:', e.target.files);
+                            const file = e.target.files?.[0];
+                            if (file) {
+                              console.log('[source-funds] Processing file:', file.name, file.size);
+                              handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
+                              setAwaitingFile(null);
+                            }
+                            e.target.value = '';
+                          }}
+                        />
                       )}
                     </div>
                     
