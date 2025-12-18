@@ -1777,7 +1777,13 @@ const uploadWithProgress = useCallback(async (
                             // Callback ref pattern - attach listeners directly when mounted
                             proofAddressInputRef.current = node;
                             
-                            if (node && !proofAddressListenerAttached.current) {
+                            // CRITICAL: Reset flag on unmount so listeners reattach on remount
+                            if (node === null) {
+                              proofAddressListenerAttached.current = false;
+                              return;
+                            }
+                            
+                            if (!proofAddressListenerAttached.current) {
                               console.log('[proof-address] Callback ref - attaching direct listeners');
                               proofAddressListenerAttached.current = true;
                               
@@ -1967,7 +1973,13 @@ const uploadWithProgress = useCallback(async (
                             // Callback ref pattern - attach listeners directly when mounted
                             sourceFundsInputRef.current = node;
                             
-                            if (node && !sourceFundsListenerAttached.current) {
+                            // CRITICAL: Reset flag on unmount so listeners reattach on remount
+                            if (node === null) {
+                              sourceFundsListenerAttached.current = false;
+                              return;
+                            }
+                            
+                            if (!sourceFundsListenerAttached.current) {
                               console.log('[source-funds] Callback ref - attaching direct listeners');
                               sourceFundsListenerAttached.current = true;
                               
