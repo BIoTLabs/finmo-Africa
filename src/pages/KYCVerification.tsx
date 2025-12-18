@@ -19,7 +19,8 @@ import {
 import { useRewardTracking } from "@/hooks/useRewardTracking";
 import { useKYCTiers, useCountryKYCRequirements, useUserKYCTier, getTierDisplayName, getTierColor, type KYCTier, type CountryKYCRequirement } from "@/hooks/useKYCTiers";
 import { Capacitor } from '@capacitor/core';
-import { Camera as CapacitorCamera, CameraResultType, CameraSource } from '@capacitor/camera';
+import { CameraSource } from '@capacitor/camera';
+import { MobileFileInput } from '@/components/MobileFileInput';
 
 // Upload state interface for immediate file uploads
 interface UploadState {
@@ -164,19 +165,8 @@ export default function KYCVerification() {
   // Flag to indicate if this is an upgrade flow
   const [isUpgradeFlow, setIsUpgradeFlow] = useState(false);
   
-  // Track when awaiting file selection for window.focus fallback
-  const [awaitingFile, setAwaitingFile] = useState<string | null>(null);
-  
   const mountedRef = useRef(true);
   const userIdRef = useRef<string | null>(null);
-  
-  // File input refs for reliable programmatic triggering
-  const idDocInputRef = useRef<HTMLInputElement>(null);
-  const selfieInputRef = useRef<HTMLInputElement>(null);
-  const proofAddressInputRef = useRef<HTMLInputElement>(null);
-  const sourceFundsInputRef = useRef<HTMLInputElement>(null);
-  
-  // Note: Callback ref pattern removed - using simpler direct overlay pattern like ID/Selfie uploads
   
   // Detect if running in native app
   const isNative = Capacitor.isNativePlatform();
@@ -604,221 +594,8 @@ const uploadWithProgress = useCallback(async (
     setUploadState(initialUploadState);
   }, []);
 
-  // Note: Callback ref handlers removed - using simpler direct overlay pattern like ID/Selfie uploads
+  // Note: Mobile file upload handling moved to MobileFileInput component with useMobileFileUpload hook
 
-  // Window focus fallback for Android Chrome - check for file selection when window regains focus
-  useEffect(() => {
-    if (isNative) return; // Not needed for native app
-
-    const handleFocus = () => {
-      if (!awaitingFile) return;
-      
-      console.log('[KYC] Window focus event, awaitingFile:', awaitingFile);
-      
-      // Check each ref based on which one we're waiting for
-      const checkRef = (ref: React.RefObject<HTMLInputElement | null>, type: string) => {
-        if (awaitingFile === type && ref.current?.files?.length) {
-          const file = ref.current.files[0];
-          console.log(`[KYC] Focus fallback - ${type} file found:`, file.name, file.size);
-          
-          if (type === 'id') handleFileSelect(file, 'id', setIdDocumentUpload);
-          else if (type === 'selfie') handleFileSelect(file, 'selfie', setSelfieUpload);
-          else if (type === 'proofOfAddress') handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
-          else if (type === 'sourceOfFunds') handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
-          
-          ref.current.value = '';
-          setAwaitingFile(null);
-          return true;
-        }
-        return false;
-      };
-
-      const found = 
-        checkRef(idDocInputRef, 'id') ||
-        checkRef(selfieInputRef, 'selfie') ||
-        checkRef(proofAddressInputRef, 'proofOfAddress') ||
-        checkRef(sourceFundsInputRef, 'sourceOfFunds');
-
-      if (!found) {
-        // User cancelled or no file - reset after short delay
-        setTimeout(() => {
-          console.log('[KYC] No file selected after focus, resetting awaiting state');
-          setAwaitingFile(null);
-        }, 500);
-      }
-    };
-
-    window.addEventListener('focus', handleFocus);
-    window.addEventListener('pageshow', handleFocus); // Android returns from picker fires pageshow
-    return () => {
-      window.removeEventListener('focus', handleFocus);
-      window.removeEventListener('pageshow', handleFocus);
-    };
-  }, [awaitingFile, isNative, handleFileSelect]);
-
-  // Native addEventListener fallback for Android - attach native change/input listeners
-  // CRITICAL: currentStep in dependency array ensures listeners attach when inputs render
-  useEffect(() => {
-    if (isNative) return; // Not needed for native app
-
-    // Note: sourceFundsInputRef and proofAddressInputRef use callback ref pattern, so exclude from this useEffect
-    const inputConfigs = [
-      { ref: idDocInputRef, type: 'id' as const, setState: setIdDocumentUpload },
-      { ref: selfieInputRef, type: 'selfie' as const, setState: setSelfieUpload },
-      // proofAddressInputRef now uses callback ref pattern
-    ];
-
-    // Log which inputs are available on this step
-    console.log(`[KYC] Step ${currentStep} - Input availability:`, {
-      id: !!idDocInputRef.current,
-      selfie: !!selfieInputRef.current,
-      proofAddress: !!proofAddressInputRef.current,
-      sourceFunds: !!sourceFundsInputRef.current,
-    });
-
-    const cleanupFns: Array<() => void> = [];
-
-    inputConfigs.forEach(({ ref, type, setState }) => {
-      const input = ref.current;
-      if (!input) {
-        console.log(`[${type}] Input ref not available yet (currentStep: ${currentStep})`);
-        return;
-      }
-
-      const handleNativeEvent = (e: Event) => {
-        const target = e.target as HTMLInputElement;
-        const file = target.files?.[0];
-        console.log(`[${type}] Native ${e.type} event fired, file:`, file?.name, file?.size);
-        
-        if (file) {
-          // Show toast feedback so user knows file was detected
-          toast({
-            title: "File Selected",
-            description: `Processing ${file.name}...`,
-          });
-          handleFileSelect(file, type, setState);
-          setAwaitingFile(null);
-          target.value = '';
-        }
-      };
-
-      // Listen to both 'change' and 'input' events as fallbacks
-      input.addEventListener('change', handleNativeEvent);
-      input.addEventListener('input', handleNativeEvent);
-      
-      console.log(`[${type}] Native event listeners attached successfully (step ${currentStep})`);
-
-      cleanupFns.push(() => {
-        input.removeEventListener('change', handleNativeEvent);
-        input.removeEventListener('input', handleNativeEvent);
-      });
-    });
-
-    return () => cleanupFns.forEach(fn => fn());
-  }, [isNative, handleFileSelect, currentStep]); // Added currentStep to re-attach when step changes
-
-  // Polling fallback for Android - check for files every 500ms when awaiting
-  useEffect(() => {
-    if (!awaitingFile || isNative) return;
-
-    console.log(`[KYC] Starting polling for ${awaitingFile} (step ${currentStep})`);
-    let attempts = 0;
-    const maxAttempts = 20; // Check for 10 seconds (500ms * 20)
-
-    const inputMap: Record<string, { ref: React.RefObject<HTMLInputElement | null>, setState: React.Dispatch<React.SetStateAction<UploadState>> }> = {
-      'id': { ref: idDocInputRef, setState: setIdDocumentUpload },
-      'selfie': { ref: selfieInputRef, setState: setSelfieUpload },
-      'proofOfAddress': { ref: proofAddressInputRef, setState: setProofOfAddressUpload },
-      'sourceOfFunds': { ref: sourceFundsInputRef, setState: setSourceOfFundsUpload },
-    };
-
-    const interval = setInterval(() => {
-      attempts++;
-      const config = inputMap[awaitingFile];
-      
-      if (config?.ref.current?.files?.length) {
-        // CRITICAL: Store file reference BEFORE clearing input value
-        const fileToUpload = config.ref.current.files[0];
-        console.log(`[${awaitingFile}] Polling found file at attempt ${attempts}:`, fileToUpload.name, fileToUpload.size);
-        
-        // Show toast feedback
-        toast({
-          title: "File Selected",
-          description: `Processing ${fileToUpload.name}...`,
-        });
-        
-        // Process the stored file reference
-        handleFileSelect(fileToUpload, awaitingFile as any, config.setState);
-        
-        // Clear input AFTER storing file reference
-        config.ref.current.value = '';
-        setAwaitingFile(null);
-        clearInterval(interval);
-        return;
-      }
-
-      if (attempts >= maxAttempts) {
-        console.log(`[${awaitingFile}] Polling timeout after ${maxAttempts} attempts (step ${currentStep})`);
-        setAwaitingFile(null);
-        clearInterval(interval);
-      }
-    }, 500);
-
-    return () => {
-      console.log(`[KYC] Stopping polling for ${awaitingFile}`);
-      clearInterval(interval);
-    };
-  }, [awaitingFile, isNative, handleFileSelect, currentStep]);
-
-  // Native Capacitor Camera capture function
-  const captureWithCapacitor = useCallback(async (
-    type: 'id' | 'selfie' | 'proofOfAddress' | 'sourceOfFunds',
-    setUploadState: React.Dispatch<React.SetStateAction<UploadState>>,
-    source: CameraSource = CameraSource.Camera
-  ) => {
-    console.log(`[KYC] Capacitor camera capture for ${type}, source:`, source);
-    try {
-      const image = await CapacitorCamera.getPhoto({
-        resultType: CameraResultType.DataUrl,
-        source: source,
-        quality: 80,
-      });
-
-      if (image.dataUrl) {
-        console.log(`[KYC] Got image dataUrl for ${type}, converting to File`);
-        const response = await fetch(image.dataUrl);
-        const blob = await response.blob();
-        const file = new File([blob], `${type}-${Date.now()}.jpg`, { type: 'image/jpeg' });
-        console.log(`[KYC] File created for ${type}:`, file.name, file.size);
-        handleFileSelect(file, type, setUploadState);
-      }
-    } catch (error: any) {
-      console.error(`[KYC] Capacitor Camera error for ${type}:`, error);
-      if (error.message !== 'User cancelled photos app') {
-        toast({
-          title: "Camera Error",
-          description: error.message || "Failed to capture photo",
-          variant: "destructive"
-        });
-      }
-    }
-  }, [handleFileSelect, toast]);
-
-  // Trigger file input for browser (with awaiting state for window.focus fallback)
-  const triggerFileInput = useCallback((
-    ref: React.RefObject<HTMLInputElement | null>,
-    type: 'id' | 'selfie' | 'proofOfAddress' | 'sourceOfFunds'
-  ) => {
-    console.log(`[KYC] Triggering file input for ${type}`);
-    setAwaitingFile(type);
-    setTimeout(() => {
-      if (ref.current) {
-        ref.current.click();
-      }
-    }, 0);
-  }, []);
-
-  
   // Stall detection - check if any uploads have stalled
   useEffect(() => {
     const checkForStalls = () => {
@@ -1092,117 +869,7 @@ const uploadWithProgress = useCallback(async (
     return true;
   };
 
-  // File upload status component
-  const FileUploadStatus = ({ 
-    uploadState, 
-    icon: Icon, 
-    idleLabel,
-    onRetry,
-    onCancel
-  }: { 
-    uploadState: UploadState; 
-    icon: React.ElementType; 
-    idleLabel: string;
-    onRetry?: () => void;
-    onCancel?: () => void;
-  }) => {
-    switch (uploadState.status) {
-      case 'idle':
-        return (
-          <>
-            <Icon className="h-8 w-8 text-muted-foreground" />
-            <span className="text-sm font-medium">{idleLabel}</span>
-            <span className="text-xs text-muted-foreground">Tap to take photo or choose file</span>
-          </>
-        );
-      case 'compressing':
-        return (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-sm font-medium">Compressing...</span>
-            <Progress value={uploadState.progress} className="w-32 h-2" />
-            {onCancel && (
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="sm" 
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCancel(); }}
-                className="text-xs h-6"
-              >
-                Cancel
-              </Button>
-            )}
-          </div>
-        );
-      case 'uploading':
-        return (
-          <div className="flex flex-col items-center gap-2">
-            <Loader2 className="h-8 w-8 animate-spin text-primary" />
-            <span className="text-sm font-medium">Uploading {uploadState.progress}%</span>
-            <Progress value={uploadState.progress} className="w-32 h-2" />
-            {onCancel && (
-              <Button 
-                type="button" 
-                variant="ghost" 
-                size="sm" 
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCancel(); }}
-                className="text-xs h-6"
-              >
-                Cancel
-              </Button>
-            )}
-          </div>
-        );
-      case 'stalled':
-        return (
-          <div className="flex flex-col items-center gap-2 text-yellow-600">
-            <AlertTriangle className="h-8 w-8" />
-            <span className="text-sm font-medium">Upload seems slow</span>
-            <span className="text-xs">Network may be unstable</span>
-            <div className="flex gap-2 mt-1">
-              {onCancel && (
-                <Button 
-                  type="button" 
-                  variant="ghost" 
-                  size="sm" 
-                  onClick={(e) => { e.preventDefault(); e.stopPropagation(); onCancel(); }}
-                  className="text-xs h-6"
-                >
-                  Cancel
-                </Button>
-              )}
-              <Button 
-                type="button" 
-                variant="outline" 
-                size="sm" 
-                onClick={(e) => { e.preventDefault(); e.stopPropagation(); onRetry?.(); }}
-                className="text-xs h-6"
-              >
-                <RefreshCw className="h-3 w-3 mr-1" />
-                Retry
-              </Button>
-            </div>
-          </div>
-        );
-      case 'complete':
-        return (
-          <div className="flex flex-col items-center gap-2 text-green-600">
-            <CheckCircle2 className="h-8 w-8" />
-            <span className="text-sm font-medium truncate max-w-[200px]">{uploadState.file?.name || 'Previously uploaded'}</span>
-            <span className="text-xs">✓ Uploaded</span>
-          </div>
-        );
-      case 'error':
-        return (
-          <div className="flex flex-col items-center gap-2 text-destructive">
-            <XCircle className="h-8 w-8" />
-            <span className="text-sm font-medium">Upload failed</span>
-            <span className="text-xs">{uploadState.error}</span>
-            <span className="text-xs underline cursor-pointer" onClick={onRetry}>Tap to retry</span>
-          </div>
-        );
-    }
-  };
+  // FileUploadStatus component moved to MobileFileInput.tsx
 
   // Show status if KYC exists
   if (kycStatus) {
@@ -1538,148 +1205,33 @@ const uploadWithProgress = useCallback(async (
 
                 <div>
                   <Label>ID Document (Front)</Label>
-                  <div className="mt-2 space-y-2">
-                    {/* Primary upload area */}
-                    <div 
-                      className={`relative flex flex-col items-center gap-2 border-2 border-dashed rounded-lg p-6 transition-colors ${
-                        idDocumentUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
-                        idDocumentUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
-                        idDocumentUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-950/20' :
-                        'hover:bg-accent'
-                      }`}
-                    >
-                      <FileUploadStatus 
-                        uploadState={idDocumentUpload} 
-                        icon={Camera} 
-                        idleLabel={isNative ? "Tap to Take Photo" : "Take Photo of ID"}
-                        onRetry={() => resetUpload(setIdDocumentUpload)}
-                        onCancel={() => cancelUpload(setIdDocumentUpload, idDocumentUpload)}
-                      />
-                      
-                      {/* For native: use button with Capacitor Camera */}
-                      {isNative && (idDocumentUpload.status === 'idle' || idDocumentUpload.status === 'error' || idDocumentUpload.status === 'stalled') && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="absolute inset-0 w-full h-full opacity-0"
-                          onClick={() => captureWithCapacitor('id', setIdDocumentUpload, CameraSource.Camera)}
-                        />
-                      )}
-                      
-                      {/* For browser: use file input with no capture attribute for reliability */}
-                      {!isNative && (
-                        <input
-                          ref={idDocInputRef}
-                          type="file"
-                          accept="image/*,.pdf,application/pdf"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            opacity: 0,
-                            cursor: 'pointer',
-                            zIndex: 10,
-                            pointerEvents: (idDocumentUpload.status === 'idle' || idDocumentUpload.status === 'error' || idDocumentUpload.status === 'stalled') ? 'auto' : 'none',
-                          }}
-                          onClick={() => {
-                            console.log('[id-document] Input clicked, setting awaitingFile');
-                            setAwaitingFile('id');
-                          }}
-                          onChange={(e) => {
-                            console.log('[id-document] onChange fired, files:', e.target.files);
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              console.log('[id-document] Processing file:', file.name, file.size);
-                              handleFileSelect(file, 'id', setIdDocumentUpload);
-                              setAwaitingFile(null);
-                            }
-                            e.target.value = '';
-                          }}
-                        />
-                      )}
-                    </div>
-                    
-                    {/* Secondary: Gallery picker for native */}
-                    {isNative && (idDocumentUpload.status === 'idle' || idDocumentUpload.status === 'error' || idDocumentUpload.status === 'stalled') && (
-                      <Button 
-                        type="button"
-                        variant="ghost" 
-                        size="sm" 
-                        className="w-full text-muted-foreground"
-                        onClick={() => captureWithCapacitor('id', setIdDocumentUpload, CameraSource.Photos)}
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        Choose from Gallery
-                      </Button>
-                    )}
+                  <div className="mt-2">
+                    <MobileFileInput
+                      type="id"
+                      accept="image/*,.pdf,application/pdf"
+                      uploadState={idDocumentUpload}
+                      onFileSelect={(file) => handleFileSelect(file, 'id', setIdDocumentUpload)}
+                      onRetry={() => resetUpload(setIdDocumentUpload)}
+                      onCancel={() => cancelUpload(setIdDocumentUpload, idDocumentUpload)}
+                      icon={Camera}
+                      idleLabel={isNative ? "Tap to Take Photo" : "Take Photo of ID"}
+                    />
                   </div>
                 </div>
 
                 <div>
                   <Label>Selfie (holding ID next to face)</Label>
                   <div className="mt-2">
-                    <div 
-                      className={`relative flex flex-col items-center gap-2 border-2 border-dashed rounded-lg p-6 transition-colors ${
-                        selfieUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
-                        selfieUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
-                        selfieUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-950/20' :
-                        'hover:bg-accent'
-                      }`}
-                    >
-                      <FileUploadStatus 
-                        uploadState={selfieUpload} 
-                        icon={Camera} 
-                        idleLabel={isNative ? "Tap to Take Selfie" : "Take Selfie"}
-                        onRetry={() => resetUpload(setSelfieUpload)}
-                        onCancel={() => cancelUpload(setSelfieUpload, selfieUpload)}
-                      />
-                      
-                      {/* For native: use button with Capacitor Camera */}
-                      {isNative && (selfieUpload.status === 'idle' || selfieUpload.status === 'error' || selfieUpload.status === 'stalled') && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="absolute inset-0 w-full h-full opacity-0"
-                          onClick={() => captureWithCapacitor('selfie', setSelfieUpload, CameraSource.Camera)}
-                        />
-                      )}
-                      
-                      {/* For browser: use file input */}
-                      {!isNative && (
-                        <input
-                          ref={selfieInputRef}
-                          type="file"
-                          accept="image/*"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            opacity: 0,
-                            cursor: 'pointer',
-                            zIndex: 10,
-                            pointerEvents: (selfieUpload.status === 'idle' || selfieUpload.status === 'error' || selfieUpload.status === 'stalled') ? 'auto' : 'none',
-                          }}
-                          onClick={() => {
-                            console.log('[selfie] Input clicked, setting awaitingFile');
-                            setAwaitingFile('selfie');
-                          }}
-                          onChange={(e) => {
-                            console.log('[selfie] onChange fired, files:', e.target.files);
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              console.log('[selfie] Processing file:', file.name, file.size);
-                              handleFileSelect(file, 'selfie', setSelfieUpload);
-                              setAwaitingFile(null);
-                            }
-                            e.target.value = '';
-                          }}
-                        />
-                      )}
-                    </div>
+                    <MobileFileInput
+                      type="selfie"
+                      accept="image/*"
+                      uploadState={selfieUpload}
+                      onFileSelect={(file) => handleFileSelect(file, 'selfie', setSelfieUpload)}
+                      onRetry={() => resetUpload(setSelfieUpload)}
+                      onCancel={() => cancelUpload(setSelfieUpload, selfieUpload)}
+                      icon={Camera}
+                      idleLabel={isNative ? "Tap to Take Selfie" : "Take Selfie"}
+                    />
                   </div>
                 </div>
               </div>
@@ -1749,76 +1301,17 @@ const uploadWithProgress = useCallback(async (
                   <p className="text-xs text-muted-foreground mb-2">
                     Utility bill, bank statement, or government letter dated within 3 months
                   </p>
-                  <div className="mt-2 space-y-2">
-                    <div 
-                      className={`relative flex flex-col items-center gap-2 border-2 border-dashed rounded-lg p-6 transition-colors ${
-                        proofOfAddressUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
-                        proofOfAddressUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
-                        proofOfAddressUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-950/20' :
-                        'hover:bg-accent'
-                      }`}
-                    >
-                      <FileUploadStatus 
-                        uploadState={proofOfAddressUpload} 
-                        icon={Camera} 
-                        idleLabel={isNative ? "Tap to Take Photo" : "Take Photo of Document"}
-                        onRetry={() => resetUpload(setProofOfAddressUpload)}
-                        onCancel={() => cancelUpload(setProofOfAddressUpload, proofOfAddressUpload)}
-                      />
-                      
-                      {isNative && (proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="absolute inset-0 w-full h-full opacity-0"
-                          onClick={() => captureWithCapacitor('proofOfAddress', setProofOfAddressUpload, CameraSource.Camera)}
-                        />
-                      )}
-                      
-                      {/* For browser: use file input with overlay pattern (same as ID/Selfie) */}
-                      {!isNative && (
-                        <input
-                          ref={proofAddressInputRef}
-                          type="file"
-                          accept="image/*,.pdf,application/pdf"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            opacity: 0,
-                            cursor: 'pointer',
-                            zIndex: 10,
-                            pointerEvents: (proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') ? 'auto' : 'none',
-                          }}
-                          onClick={() => {
-                            console.log('[proof-address] Input clicked, setting awaitingFile');
-                            setAwaitingFile('proofOfAddress');
-                          }}
-                          onChange={(e) => {
-                            console.log('[proof-address] onChange fired, files:', e.target.files);
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              console.log('[proof-address] Processing file:', file.name, file.size);
-                              handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload);
-                              setAwaitingFile(null);
-                            }
-                            e.target.value = '';
-                          }}
-                        />
-                      )}
-                    </div>
-                    
-                    {isNative && (proofOfAddressUpload.status === 'idle' || proofOfAddressUpload.status === 'error' || proofOfAddressUpload.status === 'stalled') && (
-                      <Button 
-                        type="button" variant="ghost" size="sm" className="w-full text-muted-foreground"
-                        onClick={() => captureWithCapacitor('proofOfAddress', setProofOfAddressUpload, CameraSource.Photos)}
-                      >
-                        <FolderOpen className="h-4 w-4 mr-2" />
-                        Choose from Gallery
-                      </Button>
-                    )}
+                  <div className="mt-2">
+                    <MobileFileInput
+                      type="proofOfAddress"
+                      accept="image/*,.pdf,application/pdf"
+                      uploadState={proofOfAddressUpload}
+                      onFileSelect={(file) => handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload)}
+                      onRetry={() => resetUpload(setProofOfAddressUpload)}
+                      onCancel={() => cancelUpload(setProofOfAddressUpload, proofOfAddressUpload)}
+                      icon={Camera}
+                      idleLabel={isNative ? "Tap to Take Photo" : "Take Photo of Document"}
+                    />
                   </div>
                 </div>
               </div>
@@ -1887,76 +1380,19 @@ const uploadWithProgress = useCallback(async (
                   <p className="text-xs text-muted-foreground mb-2">
                     Bank statement, pay slip, or business registration
                   </p>
-                  <div className="mt-2 space-y-2">
-                    <div 
-                      className={`relative flex flex-col items-center gap-2 border-2 border-dashed rounded-lg p-6 transition-colors ${
-                        sourceOfFundsUpload.status === 'complete' ? 'border-green-500 bg-green-50 dark:bg-green-950/20' : 
-                        sourceOfFundsUpload.status === 'error' ? 'border-destructive bg-destructive/10' : 
-                        sourceOfFundsUpload.status === 'stalled' ? 'border-yellow-500 bg-yellow-950/20' :
-                        'hover:bg-accent'
-                      }`}
-                    >
-                      <FileUploadStatus 
-                        uploadState={sourceOfFundsUpload} 
-                        icon={FolderOpen} 
-                        idleLabel={`Upload Document ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
-                        onRetry={() => resetUpload(setSourceOfFundsUpload)}
-                        onCancel={() => cancelUpload(setSourceOfFundsUpload, sourceOfFundsUpload)}
-                      />
-                      
-                      {isNative && (sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') && (
-                        <Button
-                          type="button"
-                          variant="outline"
-                          className="absolute inset-0 w-full h-full opacity-0"
-                          onClick={() => captureWithCapacitor('sourceOfFunds', setSourceOfFundsUpload, CameraSource.Photos)}
-                        />
-                      )}
-                      
-                      {/* For browser: use file input with overlay pattern (same as ID/Selfie) */}
-                      {!isNative && (
-                        <input
-                          ref={sourceFundsInputRef}
-                          type="file"
-                          accept="image/*,.pdf,application/pdf"
-                          style={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            width: '100%',
-                            height: '100%',
-                            opacity: 0,
-                            cursor: 'pointer',
-                            zIndex: 10,
-                            pointerEvents: (sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') ? 'auto' : 'none',
-                          }}
-                          onClick={() => {
-                            console.log('[source-funds] Input clicked, setting awaitingFile');
-                            setAwaitingFile('sourceOfFunds');
-                          }}
-                          onChange={(e) => {
-                            console.log('[source-funds] onChange fired, files:', e.target.files);
-                            const file = e.target.files?.[0];
-                            if (file) {
-                              console.log('[source-funds] Processing file:', file.name, file.size);
-                              handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload);
-                              setAwaitingFile(null);
-                            }
-                            e.target.value = '';
-                          }}
-                        />
-                      )}
-                    </div>
-                    
-                    {isNative && (sourceOfFundsUpload.status === 'idle' || sourceOfFundsUpload.status === 'error' || sourceOfFundsUpload.status === 'stalled') && (
-                      <Button 
-                        type="button" variant="ghost" size="sm" className="w-full text-muted-foreground"
-                        onClick={() => captureWithCapacitor('sourceOfFunds', setSourceOfFundsUpload, CameraSource.Camera)}
-                      >
-                        <Camera className="h-4 w-4 mr-2" />
-                        Take Photo Instead
-                      </Button>
-                    )}
+                  <div className="mt-2">
+                    <MobileFileInput
+                      type="sourceOfFunds"
+                      accept="image/*,.pdf,application/pdf"
+                      uploadState={sourceOfFundsUpload}
+                      onFileSelect={(file) => handleFileSelect(file, 'sourceOfFunds', setSourceOfFundsUpload)}
+                      onRetry={() => resetUpload(setSourceOfFundsUpload)}
+                      onCancel={() => cancelUpload(setSourceOfFundsUpload, sourceOfFundsUpload)}
+                      icon={FolderOpen}
+                      idleLabel={`Upload Document ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
+                      showGalleryOption={false}
+                      cameraLabel="Take Photo Instead"
+                    />
                   </div>
                 </div>
               </div>
