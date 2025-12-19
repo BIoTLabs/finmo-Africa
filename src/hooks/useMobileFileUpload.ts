@@ -24,6 +24,7 @@ export interface UseMobileFileUploadOptions {
 
 export interface UseMobileFileUploadReturn {
   inputRef: React.RefObject<HTMLInputElement>;
+  setInputRef: (node: HTMLInputElement | null) => void;
   triggerCapture: () => Promise<void>;
   triggerGallery: () => Promise<void>;
   handleChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
@@ -39,6 +40,7 @@ export function useMobileFileUpload({
 }: UseMobileFileUploadOptions): UseMobileFileUploadReturn {
   const inputRef = useRef<HTMLInputElement>(null);
   const [isAwaiting, setIsAwaiting] = useState(false);
+  const [inputMounted, setInputMounted] = useState(false);
   const isNative = Capacitor.isNativePlatform();
   const mountedRef = useRef(true);
   const onCaptureRef = useRef(onCapture);
@@ -56,6 +58,15 @@ export function useMobileFileUpload({
     };
   }, []);
 
+  // Callback ref to detect when input is mounted in DOM
+  const setInputRef = useCallback((node: HTMLInputElement | null) => {
+    inputRef.current = node;
+    setInputMounted(!!node);
+    if (node) {
+      console.log(`[${type}] Input element mounted in DOM`);
+    }
+  }, [type]);
+
   // Process file and reset state
   const processFile = useCallback((file: File, source: string) => {
     console.log(`[${type}] ${source} - file detected:`, file.name, file.size);
@@ -65,14 +76,18 @@ export function useMobileFileUpload({
     }
   }, [type]);
 
-  // Native event listener fallback for browsers
+  // Native event listener fallback for browsers - only attach when input is mounted
   useEffect(() => {
-    if (isNative) return;
+    if (isNative || !inputMounted) return;
     
     const input = inputRef.current;
-    if (!input) return;
+    if (!input) {
+      console.log(`[${type}] Input ref is null despite inputMounted=true`);
+      return;
+    }
 
     const handleNativeEvent = (e: Event) => {
+      console.log(`[${type}] Native ${e.type} event fired`);
       const target = e.target as HTMLInputElement;
       const file = target.files?.[0];
       
@@ -86,13 +101,14 @@ export function useMobileFileUpload({
     input.addEventListener('change', handleNativeEvent);
     input.addEventListener('input', handleNativeEvent);
     
-    console.log(`[${type}] Native event listeners attached`);
+    console.log(`[${type}] Native event listeners attached to mounted input`);
 
     return () => {
       input.removeEventListener('change', handleNativeEvent);
       input.removeEventListener('input', handleNativeEvent);
+      console.log(`[${type}] Native event listeners removed`);
     };
-  }, [isNative, type, processFile]);
+  }, [isNative, inputMounted, type, processFile]);
 
   // Window focus/pageshow fallback for Android Chrome
   useEffect(() => {
@@ -241,6 +257,7 @@ export function useMobileFileUpload({
 
   return {
     inputRef,
+    setInputRef,
     triggerCapture,
     triggerGallery,
     handleChange,

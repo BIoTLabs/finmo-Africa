@@ -54,12 +54,13 @@ export function MobileFileInput({
   cameraLabel = 'Take Photo Instead',
 }: MobileFileInputProps) {
   const {
-    inputRef,
+    setInputRef,
     triggerCapture,
     triggerGallery,
     handleChange,
     isNative,
     isAwaiting,
+    setAwaiting,
   } = useMobileFileUpload({
     onCapture: onFileSelect,
     accept,
@@ -114,9 +115,10 @@ export function MobileFileInput({
         {/* Browser: transparent file input overlay */}
         {!isNative && (
           <input
-            ref={inputRef}
+            ref={setInputRef}
             type="file"
             accept={accept}
+            capture="environment"
             style={{
               position: 'absolute',
               top: 0,
@@ -128,7 +130,12 @@ export function MobileFileInput({
               zIndex: 10,
               pointerEvents: isInteractive ? 'auto' : 'none',
             }}
+            onClick={() => {
+              console.log(`[${type}] Input clicked, setting isAwaiting=true`);
+              setAwaiting(true);
+            }}
             onChange={handleChange}
+            onInput={handleChange as React.FormEventHandler<HTMLInputElement>}
           />
         )}
       </div>
