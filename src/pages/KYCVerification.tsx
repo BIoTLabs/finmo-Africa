@@ -1215,6 +1215,7 @@ const uploadWithProgress = useCallback(async (
                       onCancel={() => cancelUpload(setIdDocumentUpload, idDocumentUpload)}
                       icon={Camera}
                       idleLabel={isNative ? "Tap to Take Photo" : "Take Photo of ID"}
+                      captureMode="camera"
                     />
                   </div>
                 </div>
@@ -1231,6 +1232,7 @@ const uploadWithProgress = useCallback(async (
                       onCancel={() => cancelUpload(setSelfieUpload, selfieUpload)}
                       icon={Camera}
                       idleLabel={isNative ? "Tap to Take Selfie" : "Take Selfie"}
+                      captureMode="user"
                     />
                   </div>
                 </div>
@@ -1310,7 +1312,8 @@ const uploadWithProgress = useCallback(async (
                       onRetry={() => resetUpload(setProofOfAddressUpload)}
                       onCancel={() => cancelUpload(setProofOfAddressUpload, proofOfAddressUpload)}
                       icon={Camera}
-                      idleLabel={isNative ? "Tap to Take Photo" : "Take Photo of Document"}
+                      idleLabel={isNative ? "Tap to Take Photo" : "Upload or Take Photo of Document"}
+                      captureMode="none"
                     />
                   </div>
                 </div>
@@ -1392,6 +1395,7 @@ const uploadWithProgress = useCallback(async (
                       idleLabel={`Upload Document ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
                       showGalleryOption={false}
                       cameraLabel="Take Photo Instead"
+                      captureMode="none"
                     />
                   </div>
                 </div>
