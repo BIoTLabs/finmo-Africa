@@ -38,6 +38,14 @@ interface MobileFileInputProps {
   showGalleryOption?: boolean;
   galleryLabel?: string;
   cameraLabel?: string;
+  /**
+   * Controls the HTML capture attribute behavior:
+   * - 'camera': capture="environment" - prompts rear camera (for ID documents)
+   * - 'user': capture="user" - prompts front camera (for selfies)
+   * - 'none': no capture attribute - shows file picker (for documents/PDFs)
+   * Default: 'none' for maximum compatibility on Android
+   */
+  captureMode?: 'camera' | 'user' | 'none';
 }
 
 export function MobileFileInput({
@@ -52,6 +60,7 @@ export function MobileFileInput({
   showGalleryOption = true,
   galleryLabel = 'Choose from Gallery',
   cameraLabel = 'Take Photo Instead',
+  captureMode = 'none', // Default to 'none' for maximum Android compatibility
 }: MobileFileInputProps) {
   const {
     setInputRef,
@@ -72,6 +81,19 @@ export function MobileFileInput({
                         uploadState.status === 'stalled';
 
   const defaultIdleLabel = isNative ? 'Tap to Take Photo' : 'Take Photo or Select File';
+
+  // Determine capture attribute based on captureMode
+  const getCaptureAttribute = (): 'environment' | 'user' | undefined => {
+    switch (captureMode) {
+      case 'camera':
+        return 'environment';
+      case 'user':
+        return 'user';
+      case 'none':
+      default:
+        return undefined; // No capture attribute - shows file picker
+    }
+  };
 
   // Get container classes based on upload state
   const getContainerClasses = () => {
@@ -118,7 +140,7 @@ export function MobileFileInput({
             ref={setInputRef}
             type="file"
             accept={accept}
-            capture="environment"
+            capture={getCaptureAttribute()}
             style={{
               position: 'absolute',
               top: 0,
@@ -131,7 +153,7 @@ export function MobileFileInput({
               pointerEvents: isInteractive ? 'auto' : 'none',
             }}
             onClick={() => {
-              console.log(`[${type}] Input clicked, setting isAwaiting=true`);
+              console.log(`[${type}] Input clicked, setting isAwaiting=true, captureMode=${captureMode}`);
               setAwaiting(true);
             }}
             onChange={handleChange}
