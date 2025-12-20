@@ -20,7 +20,7 @@ import { useRewardTracking } from "@/hooks/useRewardTracking";
 import { useKYCTiers, useCountryKYCRequirements, useUserKYCTier, getTierDisplayName, getTierColor, type KYCTier, type CountryKYCRequirement } from "@/hooks/useKYCTiers";
 import { Capacitor } from '@capacitor/core';
 import { CameraSource } from '@capacitor/camera';
-import { MobileFileInput } from '@/components/MobileFileInput';
+import { KYCMediaCapture, type KYCUploadState } from '@/components/KYCMediaCapture';
 
 // Upload state interface for immediate file uploads
 interface UploadState {
@@ -1206,16 +1206,13 @@ const uploadWithProgress = useCallback(async (
                 <div>
                   <Label>ID Document (Front)</Label>
                   <div className="mt-2">
-                    <MobileFileInput
+                    <KYCMediaCapture
                       type="id"
                       accept="image/*,.pdf,application/pdf"
                       uploadState={idDocumentUpload}
                       onFileSelect={(file) => handleFileSelect(file, 'id', setIdDocumentUpload)}
                       onRetry={() => resetUpload(setIdDocumentUpload)}
                       onCancel={() => cancelUpload(setIdDocumentUpload, idDocumentUpload)}
-                      icon={Camera}
-                      idleLabel={isNative ? "Tap to Take Photo" : "Take Photo of ID"}
-                      captureMode="camera"
                     />
                   </div>
                 </div>
@@ -1223,16 +1220,13 @@ const uploadWithProgress = useCallback(async (
                 <div>
                   <Label>Selfie (holding ID next to face)</Label>
                   <div className="mt-2">
-                    <MobileFileInput
+                    <KYCMediaCapture
                       type="selfie"
                       accept="image/*"
                       uploadState={selfieUpload}
                       onFileSelect={(file) => handleFileSelect(file, 'selfie', setSelfieUpload)}
                       onRetry={() => resetUpload(setSelfieUpload)}
                       onCancel={() => cancelUpload(setSelfieUpload, selfieUpload)}
-                      icon={Camera}
-                      idleLabel={isNative ? "Tap to Take Selfie" : "Take Selfie"}
-                      captureMode="user"
                     />
                   </div>
                 </div>
@@ -1304,16 +1298,13 @@ const uploadWithProgress = useCallback(async (
                     Utility bill, bank statement, or government letter dated within 3 months
                   </p>
                   <div className="mt-2">
-                    <MobileFileInput
+                    <KYCMediaCapture
                       type="proofOfAddress"
                       accept="image/*,.pdf,application/pdf"
                       uploadState={proofOfAddressUpload}
                       onFileSelect={(file) => handleFileSelect(file, 'proofOfAddress', setProofOfAddressUpload)}
                       onRetry={() => resetUpload(setProofOfAddressUpload)}
                       onCancel={() => cancelUpload(setProofOfAddressUpload, proofOfAddressUpload)}
-                      icon={Camera}
-                      idleLabel={isNative ? "Tap to Take Photo" : "Upload or Take Photo of Document"}
-                      captureMode="none"
                     />
                   </div>
                 </div>
@@ -1384,7 +1375,7 @@ const uploadWithProgress = useCallback(async (
                     Bank statement, pay slip, or business registration
                   </p>
                   <div className="mt-2">
-                    <MobileFileInput
+                    <KYCMediaCapture
                       type="sourceOfFunds"
                       accept="image/*,.pdf,application/pdf"
                       uploadState={sourceOfFundsUpload}
@@ -1392,10 +1383,6 @@ const uploadWithProgress = useCallback(async (
                       onRetry={() => resetUpload(setSourceOfFundsUpload)}
                       onCancel={() => cancelUpload(setSourceOfFundsUpload, sourceOfFundsUpload)}
                       icon={FolderOpen}
-                      idleLabel={`Upload Document ${(targetTier === 'tier_2' || targetTier === 'tier_3') ? '(Required)' : '(Optional)'}`}
-                      showGalleryOption={false}
-                      cameraLabel="Take Photo Instead"
-                      captureMode="none"
                     />
                   </div>
                 </div>
