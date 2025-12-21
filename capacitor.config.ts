@@ -1,8 +1,8 @@
 import { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'app.lovable.39f749dde9834411b0e948f73cf4294c',
-  appName: 'memo-pay-africa',
+  appId: 'africa.finmo.app',
+  appName: 'FinMo Africa',
   webDir: 'dist',
   server: {
     url: 'https://finmo.africa',

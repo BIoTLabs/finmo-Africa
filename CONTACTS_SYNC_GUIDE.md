@@ -7,7 +7,6 @@ The contact syncing feature **only works on physical iOS/Android devices or emul
 ## Setup Instructions
 
 ### 1. Export Your Project
-- Click the "Export to GitHub" button in Lovable
 - Clone your repository locally:
   ```bash
   git clone <your-repo-url>
@@ -95,4 +94,3 @@ Then run from Android Studio on an emulator or connected device.
 
 ## Additional Resources
 - [Capacitor Contacts Plugin](https://github.com/capacitor-community/contacts)
-- [Lovable Mobile Development Guide](https://docs.lovable.dev)

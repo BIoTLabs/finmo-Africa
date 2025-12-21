@@ -1,73 +1,50 @@
-# Welcome to your Lovable project
+# FinMo Africa - Mobile Crypto Wallet
 
-## Project info
+## Overview
+FinMo is Africa's leading mobile-first cryptocurrency wallet enabling instant money transfers using phone numbers.
 
-**URL**: https://lovable.dev/projects/39f749dd-e983-4411-b0e9-48f73cf4294c
+## Technology Stack
+- **Frontend**: React, TypeScript, Vite, Tailwind CSS
+- **Backend**: Supabase (PostgreSQL, Edge Functions, Authentication)
+- **Mobile**: Capacitor (iOS/Android)
+- **Blockchain**: Polygon, Base, Arbitrum, Ethereum (EVM-compatible)
 
-## How can I edit this code?
+## Getting Started
 
-There are several ways of editing your application.
+### Prerequisites
+- Node.js 18+ 
+- npm or yarn
+- Git
 
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/39f749dd-e983-4411-b0e9-48f73cf4294c) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
-**Use your preferred IDE**
-
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
-
-The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
-
-Follow these steps:
-
-```sh
-# Step 1: Clone the repository using the project's Git URL.
-git clone <YOUR_GIT_URL>
-
-# Step 2: Navigate to the project directory.
-cd <YOUR_PROJECT_NAME>
-
-# Step 3: Install the necessary dependencies.
-npm i
-
-# Step 4: Start the development server with auto-reloading and an instant preview.
+### Installation
+```bash
+git clone <repository-url>
+cd finmo-africa
+npm install
 npm run dev
 ```
 
-**Edit a file directly in GitHub**
+### Environment Variables
+Copy `.env.example` to `.env` and configure:
+- `VITE_SUPABASE_URL`
+- `VITE_SUPABASE_PUBLISHABLE_KEY`
 
-- Navigate to the desired file(s).
-- Click the "Edit" button (pencil icon) at the top right of the file view.
-- Make your changes and commit the changes.
+## Project Structure
+- `/src` - React frontend application
+- `/supabase/functions` - Serverless backend functions
+- `/android` - Android native app build
+- `/public` - Static assets
 
-**Use GitHub Codespaces**
+## Deployment
+- Frontend: Vercel/Netlify
+- Backend: Supabase Cloud
+- Mobile: App Store / Google Play
 
-- Navigate to the main page of your repository.
-- Click on the "Code" button (green button) near the top right.
-- Select the "Codespaces" tab.
-- Click on "New codespace" to launch a new Codespace environment.
-- Edit files directly within the Codespace and commit and push your changes once you're done.
+## Security
+- Row-Level Security (RLS) on all database tables
+- AES-256-GCM encryption for sensitive data
+- Two-factor authentication support
+- KYC/AML compliance
 
-## What technologies are used for this project?
-
-This project is built with:
-
-- Vite
-- TypeScript
-- React
-- shadcn-ui
-- Tailwind CSS
-
-## How can I deploy this project?
-
-Simply open [Lovable](https://lovable.dev/projects/39f749dd-e983-4411-b0e9-48f73cf4294c) and click on Share -> Publish.
-
-## Can I connect a custom domain to my Lovable project?
-
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+## License
+Proprietary - FinMo Africa Ltd.
