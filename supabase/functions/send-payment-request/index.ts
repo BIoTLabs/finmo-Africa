@@ -43,7 +43,7 @@ const handler = async (req: Request): Promise<Response> => {
     console.log("Sending payment request email to:", recipient_email);
 
     // Get the site URL from environment
-    const siteUrl = Deno.env.get("SUPABASE_SITE_URL") || "https://memo-pay-africa.lovable.app";
+    const siteUrl = Deno.env.get("SUPABASE_SITE_URL") || "https://myfinmo.app";
     const paymentUrl = `${siteUrl}/payment-request/${payment_request_id}`;
 
     const emailHtml = `
@@ -131,7 +131,7 @@ const handler = async (req: Request): Promise<Response> => {
       }
       
       if (errorData.statusCode === 401) {
-        throw new Error("Invalid Resend API key. Please check RESEND_API_KEY secret in Lovable Cloud backend settings.");
+        throw new Error("Invalid Resend API key. Please check RESEND_API_KEY in your backend environment settings.");
       }
 
       if (errorData.message?.includes("not found")) {

@@ -115,7 +115,7 @@ npx hardhat run scripts/deploy-aa-factory.js --network polygonAmoy
 
 ## Step 3: Configure Supabase Secrets
 
-Add the following secrets in your Lovable/Supabase project:
+Add the following secrets in your backend project:
 
 ```bash
 # Already exists:
